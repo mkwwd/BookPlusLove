@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import Header from '@/components/Header';
 import './globals.css';
 import QueryProvider from '@/providers/QueryProvider';
 
@@ -16,7 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full`}>
       <body className="flex min-h-full flex-col">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <Header />
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );
