@@ -57,6 +57,9 @@ export default function Page0Register() {
   const [emailId, setEmailId] = useState('');
   const [emailDomain, setEmailDomain] = useState('');
   const [userId, setUserId] = useState('');
+  const [userIdCheckStatus, setUserIdCheckStatus] = useState<
+    'idle' | 'available' | 'taken'
+  >('idle');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [birthYear, setBirthYear] = useState('');
@@ -134,6 +137,24 @@ export default function Page0Register() {
   };
 
   const {
+    mutate: checkUserId,
+    isPending: isCheckingUserId,
+    error: userIdCheckError,
+  } = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(
+        `/api/users/check-user-id?userId=${encodeURIComponent(userId)}`,
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '중복 확인에 실패했습니다.');
+      return body.available as boolean;
+    },
+    onSuccess: (available) => {
+      setUserIdCheckStatus(available ? 'available' : 'taken');
+    },
+  });
+
+  const {
     mutate: registerMember,
     isPending: isSubmitting,
     error: submitError,
@@ -173,9 +194,9 @@ export default function Page0Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-amber-50 to-orange-50">
+    <div className="page-bg min-h-screen">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
-        <div className="rounded-lg border border-amber-200 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-8">
+        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-8">
           <div className="mb-8 text-center">
             <h3 className="mb-2 font-serif text-2xl text-amber-900">
               회원가입
@@ -256,22 +277,51 @@ export default function Page0Register() {
               <label className="mb-2 block text-sm font-medium text-amber-900">
                 아이디 <span className="text-red-600">*</span>
               </label>
-              <input
-                type="text"
-                value={userId}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setUserId(value);
-                  setErrors((prev) => ({
-                    ...prev,
-                    userId: validateUserIdValue(value),
-                  }));
-                }}
-                placeholder="아이디를 입력해주세요 (4~12자)"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={userId}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setUserId(value);
+                    setUserIdCheckStatus('idle');
+                    setErrors((prev) => ({
+                      ...prev,
+                      userId: validateUserIdValue(value),
+                    }));
+                  }}
+                  placeholder="아이디를 입력해주세요 (4~12자)"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={isCheckingUserId}
+                  onClick={() => {
+                    const error = validateUserIdValue(userId);
+                    setErrors((prev) => ({ ...prev, userId: error }));
+                    if (!error) checkUserId();
+                  }}
+                  className="flex shrink-0 items-center rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                  {isCheckingUserId ? '확인 중...' : '중복확인'}
+                </button>
+              </div>
               {errors.userId && (
                 <p className="mt-1 text-xs text-red-600">{errors.userId}</p>
+              )}
+              {userIdCheckStatus === 'available' && (
+                <p className="mt-1 text-xs text-green-600">
+                  사용 가능한 아이디입니다
+                </p>
+              )}
+              {userIdCheckStatus === 'taken' && (
+                <p className="mt-1 text-xs text-red-600">
+                  이미 사용 중인 아이디입니다
+                </p>
+              )}
+              {userIdCheckError && (
+                <p className="mt-1 text-xs text-red-600">
+                  {userIdCheckError.message}
+                </p>
               )}
             </div>
 
