@@ -72,7 +72,7 @@ export default function ParishSearchModal({
         className="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white shadow-lg"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-amber-900/20 px-5 py-4">
-          <h2 className="font-serif text-lg text-amber-900">본당 검색</h2>
+          <h2 className="font-serif text-xl text-amber-900">본당 검색</h2>
           <button
             type="button"
             onClick={onClose}
@@ -91,34 +91,34 @@ export default function ParishSearchModal({
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="본당명을 입력해주세요"
-              className="w-full rounded border border-amber-900/30 bg-white/50 py-2 pr-4 pl-9 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+              className="w-full rounded border border-amber-900/30 bg-white/50 py-2 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
             />
           </div>
         </div>
 
         <ul className="overflow-y-auto">
           {isLoading ? (
-            <li className="px-5 py-6 text-center text-sm text-amber-900/50">
+            <li className="px-5 py-6 text-center text-base text-amber-900/50">
               불러오는 중...
             </li>
           ) : !trimmedKeyword ? (
-            <li className="px-5 py-6 text-center text-sm text-amber-900/50">
+            <li className="px-5 py-6 text-center text-base text-amber-900/50">
               본당명을 검색해주세요
             </li>
           ) : filtered.length === 0 ? (
-            <li className="flex flex-col items-center gap-3 px-5 py-6 text-center text-sm">
+            <li className="flex flex-col items-center gap-3 px-5 py-6 text-center text-base">
               <span className="text-amber-900">검색 결과가 없습니다</span>
               <button
                 type="button"
                 disabled={isRegistering}
                 onClick={() => registerParish(trimmedKeyword)}
-                className="rounded bg-red-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+                className="rounded bg-red-900 px-4 py-2 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
                 {isRegistering
                   ? '등록 중...'
                   : `'${trimmedKeyword}'(으)로 직접 입력`}
               </button>
               {registerError && (
-                <span className="text-xs text-red-600">
+                <span className="text-sm text-red-600">
                   {registerError.message}
                 </span>
               )}
@@ -129,7 +129,7 @@ export default function ParishSearchModal({
                 <button
                   type="button"
                   onClick={() => onSelect(parish)}
-                  className="w-full px-5 py-3 text-left text-sm text-amber-900 hover:bg-amber-50">
+                  className="w-full px-5 py-3 text-left text-base text-amber-900 hover:bg-amber-50">
                   {parish.name}
                 </button>
               </li>

@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import EmailFields from '@/components/EmailFields';
 import ParishSearchModal, {
   SelectedParish,
 } from '@/components/ParishSearchModal';
@@ -13,7 +14,6 @@ import ParishSearchModal, {
 const PHONE_REGEX = /^01[0-9]-?\d{3,4}-?\d{4}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SPECIAL_CHAR_REGEX = /[^a-zA-Z0-9]/;
-const EMAIL_DOMAINS = ['gmail.com', 'naver.com', 'daum.net', 'hanmail.net'];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const BIRTH_YEARS = Array.from({ length: 111 }, (_, i) => CURRENT_YEAR - i);
@@ -46,7 +46,7 @@ interface FormErrors {
   birthdate?: string;
 }
 
-export default function Page0Register() {
+export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [parish, setParish] = useState<SelectedParish | null>(null);
@@ -198,14 +198,14 @@ export default function Page0Register() {
       <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
         <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-8">
           <div className="mb-8 text-center">
-            <h3 className="mb-2 font-serif text-2xl text-amber-900">
+            <h3 className="mb-2 font-serif text-3xl text-amber-900">
               회원가입
             </h3>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 이름 <span className="text-red-600">*</span>
               </label>
               <input
@@ -213,15 +213,15 @@ export default function Page0Register() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름을 입력해주세요"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
               {errors.name && (
-                <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 핸드폰번호 <span className="text-red-600">*</span>
               </label>
               <input
@@ -229,52 +229,30 @@ export default function Page0Register() {
                 value={phone}
                 onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
                 placeholder="010-1234-5678"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
               {errors.phone && (
-                <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 이메일 <span className="text-red-600">*</span>
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={emailId}
-                  onChange={(e) => setEmailId(e.target.value)}
-                  placeholder="이메일"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-                <span className="text-amber-900">@</span>
-                <input
-                  type="text"
-                  value={emailDomain}
-                  onChange={(e) => setEmailDomain(e.target.value)}
-                  placeholder="도메인"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-                <select
-                  value={EMAIL_DOMAINS.includes(emailDomain) ? emailDomain : ''}
-                  onChange={(e) => setEmailDomain(e.target.value)}
-                  className="shrink-0 rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
-                  <option value="">직접입력</option>
-                  {EMAIL_DOMAINS.map((domain) => (
-                    <option key={domain} value={domain}>
-                      {domain}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <EmailFields
+                emailId={emailId}
+                emailDomain={emailDomain}
+                onEmailIdChange={setEmailId}
+                onEmailDomainChange={setEmailDomain}
+              />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 아이디 <span className="text-red-600">*</span>
               </label>
               <div className="flex gap-2">
@@ -291,7 +269,7 @@ export default function Page0Register() {
                     }));
                   }}
                   placeholder="아이디를 입력해주세요 (4~12자)"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -301,32 +279,32 @@ export default function Page0Register() {
                     setErrors((prev) => ({ ...prev, userId: error }));
                     if (!error) checkUserId();
                   }}
-                  className="flex shrink-0 items-center rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                  className="flex shrink-0 items-center rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
                   {isCheckingUserId ? '확인 중...' : '중복확인'}
                 </button>
               </div>
               {errors.userId && (
-                <p className="mt-1 text-xs text-red-600">{errors.userId}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.userId}</p>
               )}
               {userIdCheckStatus === 'available' && (
-                <p className="mt-1 text-xs text-green-600">
+                <p className="mt-1 text-sm text-green-600">
                   사용 가능한 아이디입니다
                 </p>
               )}
               {userIdCheckStatus === 'taken' && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   이미 사용 중인 아이디입니다
                 </p>
               )}
               {userIdCheckError && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {userIdCheckError.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 비밀번호 <span className="text-red-600">*</span>
               </label>
               <div className="relative">
@@ -347,7 +325,7 @@ export default function Page0Register() {
                     }));
                   }}
                   placeholder="8자 이상, 특수문자 포함"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -361,22 +339,22 @@ export default function Page0Register() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-600">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
               {errors.passwordLength && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.passwordLength}
                 </p>
               )}
               {errors.passwordSpecialChar && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.passwordSpecialChar}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 비밀번호 확인 <span className="text-red-600">*</span>
               </label>
               <input
@@ -394,17 +372,17 @@ export default function Page0Register() {
                   }));
                 }}
                 placeholder="비밀번호를 다시 입력해주세요"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
               {errors.passwordConfirm && (
-                <p className="mt-1 text-xs text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.passwordConfirm}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 생년월일 <span className="text-red-600">*</span>
               </label>
               <div className="flex gap-2">
@@ -417,7 +395,7 @@ export default function Page0Register() {
                       setBirthDay('');
                     }
                   }}
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                   <option value="">년</option>
                   {BIRTH_YEARS.map((year) => (
                     <option key={year} value={year}>
@@ -434,7 +412,7 @@ export default function Page0Register() {
                       setBirthDay('');
                     }
                   }}
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                   <option value="">월</option>
                   {BIRTH_MONTHS.map((month) => (
                     <option key={month} value={month}>
@@ -445,7 +423,7 @@ export default function Page0Register() {
                 <select
                   value={birthDay}
                   onChange={(e) => setBirthDay(e.target.value)}
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                   <option value="">일</option>
                   {Array.from(
                     { length: daysInSelectedMonth },
@@ -458,12 +436,12 @@ export default function Page0Register() {
                 </select>
               </div>
               {errors.birthdate && (
-                <p className="mt-1 text-xs text-red-600">{errors.birthdate}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.birthdate}</p>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 세례명
               </label>
               <input
@@ -471,12 +449,12 @@ export default function Page0Register() {
                 value={baptismalName}
                 onChange={(e) => setBaptismalName(e.target.value)}
                 placeholder="세례명을 입력해주세요"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 본당
               </label>
               <div className="flex gap-2">
@@ -485,12 +463,12 @@ export default function Page0Register() {
                   readOnly
                   value={parish?.name ?? ''}
                   placeholder="소속 본당을 검색해주세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setIsParishModalOpen(true)}
-                  className="flex shrink-0 items-center gap-1 rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                  className="flex shrink-0 items-center gap-1 rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                   <Search className="h-4 w-4" />
                   검색
                 </button>
@@ -498,7 +476,7 @@ export default function Page0Register() {
             </div>
 
             {submitError && (
-              <p className="text-center text-sm text-red-600">
+              <p className="text-center text-base text-red-600">
                 {submitError.message}
               </p>
             )}
@@ -506,7 +484,7 @@ export default function Page0Register() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded bg-red-900 py-3 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
               {isSubmitting ? '가입 처리 중...' : '회원가입'}
             </button>
           </form>
