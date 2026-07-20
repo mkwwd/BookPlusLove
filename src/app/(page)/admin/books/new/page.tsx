@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 
+import { useMutation } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Barcode,
@@ -22,16 +23,10 @@ interface ScannedBook {
   title: string;
   author: string;
   publisher: string;
+  coverUrl?: string;
+  page?: string;
+  price?: string;
 }
-
-const MOCK_ISBN_DB: Record<string, Omit<ScannedBook, 'isbn'>> = {
-  '9788936434120': { title: '채식주의자', author: '한강', publisher: '창비' },
-  '9788937473142': {
-    title: '기도의 힘',
-    author: '김수은',
-    publisher: '가톨릭출판사',
-  },
-};
 
 const MOCK_EXCEL_ROWS: ScannedBook[] = [
   {
@@ -68,10 +63,13 @@ function ScannedBookTable({
       <table className="w-full text-left text-base">
         <thead className="border-b border-amber-900/20 text-amber-700">
           <tr>
+            <th className="px-5 py-3 font-medium">표지</th>
             <th className="px-5 py-3 font-medium">제목</th>
             <th className="px-5 py-3 font-medium">저자</th>
             <th className="px-5 py-3 font-medium">출판사</th>
             <th className="px-5 py-3 font-medium">ISBN</th>
+            <th className="px-5 py-3 font-medium">페이지</th>
+            <th className="px-5 py-3 font-medium">정가</th>
             <th className="px-5 py-3 font-medium">삭제</th>
           </tr>
         </thead>
@@ -79,7 +77,7 @@ function ScannedBookTable({
           {books.length === 0 ? (
             <tr>
               <td
-                colSpan={5}
+                colSpan={8}
                 className="px-5 py-8 text-center text-amber-900/50">
                 {emptyText}
               </td>
@@ -87,11 +85,27 @@ function ScannedBookTable({
           ) : (
             books.map((book) => (
               <tr key={book.isbn}>
+                <td className="px-5 py-3">
+                  {book.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={book.coverUrl}
+                      alt=""
+                      className="h-14 w-10 rounded-sm object-cover"
+                    />
+                  ) : (
+                    <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                  )}
+                </td>
                 <td className="px-5 py-3 text-amber-900">{book.title}</td>
                 <td className="px-5 py-3 text-amber-700">{book.author}</td>
                 <td className="px-5 py-3 text-amber-700">{book.publisher}</td>
                 <td className="px-5 py-3 font-mono text-sm text-amber-700">
                   {book.isbn}
+                </td>
+                <td className="px-5 py-3 text-amber-700">{book.page ?? '-'}</td>
+                <td className="px-5 py-3 text-amber-700">
+                  {book.price ?? '-'}
                 </td>
                 <td className="px-5 py-3">
                   <button
@@ -131,23 +145,35 @@ function BookRegisterContent() {
     setIsCameraOpen(false);
   };
 
+  const {
+    mutate: lookupIsbn,
+    isPending: isLookingUp,
+    error: lookupError,
+  } = useMutation({
+    mutationFn: async (isbn: string) => {
+      const res = await fetch(
+        `/api/books/isbn?isbn=${encodeURIComponent(isbn)}`,
+      );
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
+      }
+      return body as ScannedBook;
+    },
+    onSuccess: (book) => {
+      setRecognized((prev) =>
+        prev.some((b) => b.isbn === book.isbn) ? prev : [...prev, book],
+      );
+      setJustSubmitted(false);
+    },
+  });
+
   const handleRecognize = (scannedIsbn?: string) => {
     const isbn = (scannedIsbn ?? isbnInput).trim();
-    if (!isbn || recognized.some((book) => book.isbn === isbn)) return;
-    const match = MOCK_ISBN_DB[isbn];
-    setRecognized((prev) => [
-      ...prev,
-      match
-        ? { isbn, ...match }
-        : {
-            isbn,
-            title: '확인 필요 (등록되지 않은 ISBN)',
-            author: '-',
-            publisher: '-',
-          },
-    ]);
+    if (!isbn || isLookingUp) return;
     if (!scannedIsbn) setIsbnInput('');
-    setJustSubmitted(false);
+    if (recognized.some((book) => book.isbn === isbn)) return;
+    lookupIsbn(isbn);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,6 +250,7 @@ function BookRegisterContent() {
               <input
                 type="text"
                 value={isbnInput}
+                disabled={isLookingUp}
                 onChange={(e) => setIsbnInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -232,19 +259,23 @@ function BookRegisterContent() {
                   }
                 }}
                 placeholder="바코드를 스캔하거나 ISBN을 직접 입력해주세요"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="button"
+                disabled={isLookingUp}
                 onClick={() => handleRecognize()}
-                className="shrink-0 rounded bg-red-900 px-5 py-3 text-base font-medium text-white transition hover:bg-red-800">
-                인식
+                className="shrink-0 rounded bg-red-900 px-5 py-3 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+                {isLookingUp ? '조회 중...' : '인식'}
               </button>
             </div>
             <p className="mt-2 text-sm text-amber-700">
               스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
-              인식됩니다.
+              인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
             </p>
+            {lookupError && (
+              <p className="mt-2 text-sm text-red-600">{lookupError.message}</p>
+            )}
 
             {!isCameraOpen && (
               <button
