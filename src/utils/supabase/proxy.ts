@@ -27,7 +27,18 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh the session cookie if needed; the main page is public and
   // no longer requires a redirect for logged-out visitors.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Already-logged-in users shouldn't see the login form again.
+  if (user && request.nextUrl.pathname === '/login') {
+    const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+    return redirectResponse;
+  }
 
   return supabaseResponse;
 }
