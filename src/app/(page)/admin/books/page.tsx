@@ -1,120 +1,115 @@
-const RECENT_BOOKS = [
+import { Barcode, Plus, Search, SquarePen } from 'lucide-react';
+import Link from 'next/link';
+
+const STATUS_STYLE: Record<string, string> = {
+  대여가능: 'bg-green-100 text-green-800',
+  대여중: 'bg-rose-100 text-rose-700',
+};
+
+const BOOKS = [
   {
-    title: '혼자여도 괜찮은 시간',
-    author: '한소연',
-    registeredAt: '2026-07-19',
+    title: '채식주의자',
+    author: '한강',
+    category: '문학 > 자서전',
+    regNo: 'EM0000021622',
+    status: '대여가능',
   },
-  { title: '낯설게 읽는 성경', author: '배승주', registeredAt: '2026-07-19' },
-  { title: '침묵의 기도학교', author: '이현민', registeredAt: '2026-07-18' },
+  {
+    title: '기도의 힘',
+    author: '김수은',
+    category: '종교 > 성서일반',
+    regNo: 'EM0000021623',
+    status: '대여중',
+  },
+  {
+    title: '작별하지 않는다',
+    author: '한강',
+    category: '문학 > 소설',
+    regNo: 'EM0000021624',
+    status: '대여가능',
+  },
+  {
+    title: '고백록',
+    author: '아우구스티노',
+    category: '종교 > 영성',
+    regNo: 'EM0000021625',
+    status: '대여가능',
+  },
 ];
 
 export default function AdminBooksPage() {
   return (
-    <div className="space-y-8">
-      <h2 className="font-serif text-3xl text-amber-900">도서 등록</h2>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="font-serif text-3xl text-amber-900">도서 목록 관리</h2>
 
-      <form className="space-y-6 rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-8">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              제목 <span className="text-red-600">*</span>
-            </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
             <input
               type="text"
-              placeholder="도서 제목을 입력해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              placeholder="제목 또는 저자 검색"
+              className="w-64 rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
             />
           </div>
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              저자 <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="저자명을 입력해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              출판사
-            </label>
-            <input
-              type="text"
-              placeholder="출판사를 입력해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              ISBN
-            </label>
-            <input
-              type="text"
-              placeholder="ISBN을 입력해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              카테고리
-            </label>
-            <select className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
-              <option>신앙/영성</option>
-              <option>인문/소설</option>
-              <option>에세이</option>
-              <option>어린이/청소년</option>
-              <option>기타</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              수량
-            </label>
-            <input
-              type="number"
-              min={1}
-              defaultValue={1}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-            />
-          </div>
+          <Link
+            href="/admin/books/new?method=barcode"
+            className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/70 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+            <Barcode className="h-4 w-4" />
+            바코드
+          </Link>
+          <Link
+            href="/admin/books/new"
+            className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            <Plus className="h-4 w-4" />
+            도서 등록
+          </Link>
         </div>
+      </div>
 
-        <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
-            소개
-          </label>
-          <textarea
-            rows={4}
-            placeholder="도서 소개를 입력해주세요"
-            className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 sm:w-auto sm:px-8">
-          등록
-        </button>
-      </form>
-
-      <div className="rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
-        <h3 className="px-6 pt-6 font-serif text-xl text-amber-900">
-          최근 등록된 도서
-        </h3>
-        <ul className="mt-4 divide-y divide-amber-900/10 pb-2">
-          {RECENT_BOOKS.map((book, i) => (
-            <li key={i} className="flex items-center justify-between px-6 py-3">
-              <div>
-                <p className="text-base text-amber-900">{book.title}</p>
-                <p className="text-sm text-amber-700">{book.author}</p>
-              </div>
-              <span className="text-sm text-amber-700">
-                {book.registeredAt}
-              </span>
-            </li>
-          ))}
-        </ul>
+      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+        <table className="w-full text-left text-base">
+          <thead className="border-b border-amber-900/20 text-amber-700">
+            <tr>
+              <th className="px-5 py-3 font-medium">제목</th>
+              <th className="px-5 py-3 font-medium">저자</th>
+              <th className="px-5 py-3 font-medium">카테고리</th>
+              <th className="px-5 py-3 font-medium">등록번호</th>
+              <th className="px-5 py-3 font-medium">상태</th>
+              <th className="px-5 py-3 font-medium">관리</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-amber-900/10">
+            {BOOKS.map((book) => (
+              <tr key={book.regNo}>
+                <td className="px-5 py-3 text-amber-900">{book.title}</td>
+                <td className="px-5 py-3 text-amber-700">{book.author}</td>
+                <td className="px-5 py-3">
+                  <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
+                    {book.category}
+                  </span>
+                </td>
+                <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                  {book.regNo}
+                </td>
+                <td className="px-5 py-3">
+                  <span
+                    className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[book.status]}`}>
+                    {book.status}
+                  </span>
+                </td>
+                <td className="px-5 py-3">
+                  <button
+                    type="button"
+                    aria-label="수정"
+                    className="text-amber-600 hover:text-amber-900">
+                    <SquarePen className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
