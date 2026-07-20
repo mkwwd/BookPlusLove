@@ -31,8 +31,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Already-logged-in users shouldn't see the login form again.
-  if (user && request.nextUrl.pathname === '/login') {
+  // Already-logged-in users shouldn't see the login/signup/find-account
+  // forms again. /reset-password is excluded: it's where the password
+  // recovery email links to, and must stay reachable even if this browser
+  // still has an older session cookie — that page gates itself on the
+  // PASSWORD_RECOVERY auth event instead.
+  const AUTH_ONLY_PATHS = ['/login', '/register', '/find'];
+  if (user && AUTH_ONLY_PATHS.includes(request.nextUrl.pathname)) {
     const redirectResponse = NextResponse.redirect(new URL('/', request.url));
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie);
