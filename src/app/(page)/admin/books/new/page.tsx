@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+import { generateAuthorCode } from '@/lib/authorCode';
 import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
@@ -31,6 +32,8 @@ interface ScannedBook {
   price?: string;
   category: string;
   categoryMain: string;
+  authorCode: string;
+  donorName: string;
 }
 
 interface BookCategory {
@@ -40,32 +43,44 @@ interface BookCategory {
   main_label: string;
 }
 
-const MOCK_EXCEL_ROWS: ScannedBook[] = [
+const MOCK_EXCEL_SOURCE: Omit<
+  ScannedBook,
+  'category' | 'categoryMain' | 'authorCode' | 'donorName'
+>[] = [
   {
     isbn: '9791190090018',
     title: '고백록',
     author: '아우구스티노',
     publisher: '분도출판사',
-    category: '',
-    categoryMain: '',
   },
   {
     isbn: '9788934940042',
     title: '사랑의 기술',
     author: '에리히 프롬',
     publisher: '문예출판사',
-    category: '',
-    categoryMain: '',
   },
   {
     isbn: '9788937460081',
     title: '작은 것들의 신',
     author: '아룬다티 로이',
     publisher: '문학동네',
-    category: '',
-    categoryMain: '',
   },
 ];
+
+function toScannedBook(
+  book: Omit<
+    ScannedBook,
+    'category' | 'categoryMain' | 'authorCode' | 'donorName'
+  >,
+): ScannedBook {
+  return {
+    ...book,
+    category: '',
+    categoryMain: '',
+    authorCode: generateAuthorCode(book.author, book.title) ?? '',
+    donorName: '',
+  };
+}
 
 function ScannedBookTable({
   books,
@@ -73,6 +88,8 @@ function ScannedBookTable({
   onRemove,
   onCategoryMainChange,
   onCategoryChange,
+  onAuthorCodeChange,
+  onDonorNameChange,
   emptyText,
 }: {
   books: ScannedBook[];
@@ -80,6 +97,8 @@ function ScannedBookTable({
   onRemove: (isbn: string) => void;
   onCategoryMainChange: (isbn: string, mainCode: string) => void;
   onCategoryChange: (isbn: string, category: string) => void;
+  onAuthorCodeChange: (isbn: string, authorCode: string) => void;
+  onDonorNameChange: (isbn: string, donorName: string) => void;
   emptyText: string;
 }) {
   const mainOptions = Array.from(
@@ -99,6 +118,8 @@ function ScannedBookTable({
             <th className="px-5 py-3 font-medium">페이지</th>
             <th className="px-5 py-3 font-medium">정가</th>
             <th className="px-5 py-3 font-medium">분류코드</th>
+            <th className="px-5 py-3 font-medium">저자기호</th>
+            <th className="px-5 py-3 font-medium">기증자명</th>
             <th className="px-5 py-3 font-medium">삭제</th>
           </tr>
         </thead>
@@ -106,7 +127,7 @@ function ScannedBookTable({
           {books.length === 0 ? (
             <tr>
               <td
-                colSpan={9}
+                colSpan={11}
                 className="px-5 py-8 text-center text-amber-900/50">
                 {emptyText}
               </td>
@@ -168,6 +189,28 @@ function ScannedBookTable({
                         ))}
                     </select>
                   </div>
+                </td>
+                <td className="px-5 py-3">
+                  <input
+                    type="text"
+                    value={book.authorCode}
+                    onChange={(e) =>
+                      onAuthorCodeChange(book.isbn, e.target.value)
+                    }
+                    placeholder="예: 게68ㄴ"
+                    className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  />
+                </td>
+                <td className="px-5 py-3">
+                  <input
+                    type="text"
+                    value={book.donorName}
+                    onChange={(e) =>
+                      onDonorNameChange(book.isbn, e.target.value)
+                    }
+                    placeholder="선택"
+                    className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  />
                 </td>
                 <td className="px-5 py-3">
                   <button
@@ -238,7 +281,7 @@ function BookRegisterContent() {
       setRecognized((prev) =>
         prev.some((b) => b.isbn === book.isbn)
           ? prev
-          : [...prev, { ...book, category: '', categoryMain: '' }],
+          : [...prev, toScannedBook(book)],
       );
       setJustSubmitted(false);
     },
@@ -266,6 +309,26 @@ function BookRegisterContent() {
     );
   };
 
+  const updateAuthorCode = (
+    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
+    isbn: string,
+    authorCode: string,
+  ) => {
+    setter((prev) =>
+      prev.map((b) => (b.isbn === isbn ? { ...b, authorCode } : b)),
+    );
+  };
+
+  const updateDonorName = (
+    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
+    isbn: string,
+    donorName: string,
+  ) => {
+    setter((prev) =>
+      prev.map((b) => (b.isbn === isbn ? { ...b, donorName } : b)),
+    );
+  };
+
   const handleRecognize = (scannedIsbn?: string) => {
     const isbn = (scannedIsbn ?? isbnInput).trim();
     if (!isbn || isLookingUp) return;
@@ -280,7 +343,7 @@ function BookRegisterContent() {
     setFileName(file.name);
     // TODO: parse the actual file once bulk upload is wired to Supabase;
     // this is a placeholder preview so the flow can be reviewed as UI.
-    setExcelRows(MOCK_EXCEL_ROWS);
+    setExcelRows(MOCK_EXCEL_SOURCE.map(toScannedBook));
     setJustSubmitted(false);
   };
 
@@ -408,6 +471,12 @@ function BookRegisterContent() {
             onCategoryChange={(isbn, category) =>
               updateCategory(setRecognized, isbn, category)
             }
+            onAuthorCodeChange={(isbn, authorCode) =>
+              updateAuthorCode(setRecognized, isbn, authorCode)
+            }
+            onDonorNameChange={(isbn, donorName) =>
+              updateDonorName(setRecognized, isbn, donorName)
+            }
             emptyText="인식된 도서가 없습니다"
           />
 
@@ -454,6 +523,12 @@ function BookRegisterContent() {
             }
             onCategoryChange={(isbn, category) =>
               updateCategory(setExcelRows, isbn, category)
+            }
+            onAuthorCodeChange={(isbn, authorCode) =>
+              updateAuthorCode(setExcelRows, isbn, authorCode)
+            }
+            onDonorNameChange={(isbn, donorName) =>
+              updateDonorName(setExcelRows, isbn, donorName)
             }
             emptyText="업로드할 파일을 선택해주세요"
           />
