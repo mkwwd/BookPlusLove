@@ -24,6 +24,7 @@ interface ScannedBook {
   author: string;
   publisher: string;
   coverUrl?: string;
+  description?: string;
   page?: string;
   price?: string;
 }
