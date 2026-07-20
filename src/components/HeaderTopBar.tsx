@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { supabase } from '@/utils/supabase/client';
 
@@ -18,6 +19,9 @@ export default function HeaderTopBar({
   isLoggedIn: boolean;
   isAdmin: boolean;
 }) {
+  const pathname = usePathname();
+  const inAdminSection = pathname.startsWith('/admin');
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
@@ -27,14 +31,19 @@ export default function HeaderTopBar({
     <div className="flex gap-2">
       {isLoggedIn ? (
         <>
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className={bookmarkClass}
-              style={bookmarkClipPath}>
-              관리자
-            </Link>
-          )}
+          {isAdmin &&
+            (inAdminSection ? (
+              <Link href="/" className={bookmarkClass} style={bookmarkClipPath}>
+                홈
+              </Link>
+            ) : (
+              <Link
+                href="/admin"
+                className={bookmarkClass}
+                style={bookmarkClipPath}>
+                관리자
+              </Link>
+            ))}
           <button
             type="button"
             onClick={handleLogout}
