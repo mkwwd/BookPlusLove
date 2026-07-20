@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Barcode,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+
+import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
 
@@ -28,6 +30,14 @@ interface ScannedBook {
   page?: string;
   price?: string;
   category: string;
+  categoryMain: string;
+}
+
+interface BookCategory {
+  code: string;
+  label: string;
+  main_code: string;
+  main_label: string;
 }
 
 const MOCK_EXCEL_ROWS: ScannedBook[] = [
@@ -37,6 +47,7 @@ const MOCK_EXCEL_ROWS: ScannedBook[] = [
     author: '아우구스티노',
     publisher: '분도출판사',
     category: '',
+    categoryMain: '',
   },
   {
     isbn: '9788934940042',
@@ -44,6 +55,7 @@ const MOCK_EXCEL_ROWS: ScannedBook[] = [
     author: '에리히 프롬',
     publisher: '문예출판사',
     category: '',
+    categoryMain: '',
   },
   {
     isbn: '9788937460081',
@@ -51,20 +63,29 @@ const MOCK_EXCEL_ROWS: ScannedBook[] = [
     author: '아룬다티 로이',
     publisher: '문학동네',
     category: '',
+    categoryMain: '',
   },
 ];
 
 function ScannedBookTable({
   books,
+  categories,
   onRemove,
+  onCategoryMainChange,
   onCategoryChange,
   emptyText,
 }: {
   books: ScannedBook[];
+  categories: BookCategory[];
   onRemove: (isbn: string) => void;
+  onCategoryMainChange: (isbn: string, mainCode: string) => void;
   onCategoryChange: (isbn: string, category: string) => void;
   emptyText: string;
 }) {
+  const mainOptions = Array.from(
+    new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
+  );
+
   return (
     <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
       <table className="w-full text-left text-base">
@@ -116,15 +137,37 @@ function ScannedBookTable({
                   {book.price ?? '-'}
                 </td>
                 <td className="px-5 py-3">
-                  <input
-                    type="text"
-                    value={book.category}
-                    onChange={(e) =>
-                      onCategoryChange(book.isbn, e.target.value)
-                    }
-                    placeholder="예: 310"
-                    className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-base placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                  />
+                  <div className="flex gap-1">
+                    <select
+                      value={book.categoryMain}
+                      onChange={(e) =>
+                        onCategoryMainChange(book.isbn, e.target.value)
+                      }
+                      className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                      <option value="">대분류</option>
+                      {mainOptions.map(([code, label]) => (
+                        <option key={code} value={code}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={book.category}
+                      disabled={!book.categoryMain}
+                      onChange={(e) =>
+                        onCategoryChange(book.isbn, e.target.value)
+                      }
+                      className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                      <option value="">세부분류</option>
+                      {categories
+                        .filter((c) => c.main_code === book.categoryMain)
+                        .map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.label}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </td>
                 <td className="px-5 py-3">
                   <button
@@ -158,6 +201,18 @@ function BookRegisterContent() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [excelRows, setExcelRows] = useState<ScannedBook[]>([]);
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ['book-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('book_categories')
+        .select('code, label, main_code, main_label')
+        .order('code');
+      if (error) throw error;
+      return data as BookCategory[];
+    },
+  });
+
   const switchMethod = (next: Method) => {
     setMethod(next);
     setJustSubmitted(false);
@@ -183,7 +238,7 @@ function BookRegisterContent() {
       setRecognized((prev) =>
         prev.some((b) => b.isbn === book.isbn)
           ? prev
-          : [...prev, { ...book, category: '' }],
+          : [...prev, { ...book, category: '', categoryMain: '' }],
       );
       setJustSubmitted(false);
     },
@@ -196,6 +251,18 @@ function BookRegisterContent() {
   ) => {
     setter((prev) =>
       prev.map((b) => (b.isbn === isbn ? { ...b, category } : b)),
+    );
+  };
+
+  const updateCategoryMain = (
+    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
+    isbn: string,
+    categoryMain: string,
+  ) => {
+    setter((prev) =>
+      prev.map((b) =>
+        b.isbn === isbn ? { ...b, categoryMain, category: '' } : b,
+      ),
     );
   };
 
@@ -331,8 +398,12 @@ function BookRegisterContent() {
 
           <ScannedBookTable
             books={recognized}
+            categories={categories}
             onRemove={(isbn) =>
               setRecognized((prev) => prev.filter((b) => b.isbn !== isbn))
+            }
+            onCategoryMainChange={(isbn, mainCode) =>
+              updateCategoryMain(setRecognized, isbn, mainCode)
             }
             onCategoryChange={(isbn, category) =>
               updateCategory(setRecognized, isbn, category)
@@ -374,8 +445,12 @@ function BookRegisterContent() {
 
           <ScannedBookTable
             books={excelRows}
+            categories={categories}
             onRemove={(isbn) =>
               setExcelRows((prev) => prev.filter((b) => b.isbn !== isbn))
+            }
+            onCategoryMainChange={(isbn, mainCode) =>
+              updateCategoryMain(setExcelRows, isbn, mainCode)
             }
             onCategoryChange={(isbn, category) =>
               updateCategory(setExcelRows, isbn, category)
