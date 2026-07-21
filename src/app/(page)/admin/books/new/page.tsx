@@ -279,10 +279,14 @@ function BookRegisterContent() {
   const [manualIsbn, setManualIsbn] = useState('');
   const [manualPage, setManualPage] = useState('');
   const [manualPrice, setManualPrice] = useState('');
-  const [manualCoverUrl, setManualCoverUrl] = useState<string | undefined>();
+  const [manualCoverUrl, setManualCoverUrl] = useState('');
   const [manualDescription, setManualDescription] = useState<
     string | undefined
   >();
+  const [manualCategoryMain, setManualCategoryMain] = useState('');
+  const [manualCategory, setManualCategory] = useState('');
+  const [manualRegNo, setManualRegNo] = useState('');
+  const [manualDonorName, setManualDonorName] = useState('');
   const [manualFormError, setManualFormError] = useState<string | null>(null);
   const [manualIsbnError, setManualIsbnError] = useState<string | null>(null);
 
@@ -297,6 +301,10 @@ function BookRegisterContent() {
       return data as BookCategory[];
     },
   });
+
+  const manualMainOptions = Array.from(
+    new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
+  );
 
   const switchMethod = (next: Method) => {
     setMethod(next);
@@ -332,7 +340,7 @@ function BookRegisterContent() {
       setManualPublisher(book.publisher);
       setManualPage(book.page ?? '');
       setManualPrice(book.price ?? '');
-      setManualCoverUrl(book.coverUrl);
+      setManualCoverUrl(book.coverUrl ?? '');
       setManualDescription(book.description);
     },
   });
@@ -424,18 +432,26 @@ function BookRegisterContent() {
       return;
     }
     setManualFormError(null);
+    const title = manualTitle.trim();
+    const author = manualAuthor.trim();
     setManualEntries((prev) => [
       ...prev,
-      toScannedBook({
+      {
+        id: crypto.randomUUID(),
         isbn: manualIsbn.trim(),
-        title: manualTitle.trim(),
-        author: manualAuthor.trim(),
+        title,
+        author,
         publisher: manualPublisher.trim(),
         page: manualPage.trim() || undefined,
         price: manualPrice.trim() || undefined,
-        coverUrl: manualCoverUrl,
+        coverUrl: manualCoverUrl.trim() || undefined,
         description: manualDescription,
-      }),
+        category: manualCategory,
+        categoryMain: manualCategoryMain,
+        authorCode: generateAuthorCode(author, title) ?? '',
+        donorName: manualDonorName.trim(),
+        regNo: manualRegNo.trim(),
+      },
     ]);
     setManualTitle('');
     setManualAuthor('');
@@ -443,8 +459,12 @@ function BookRegisterContent() {
     setManualIsbn('');
     setManualPage('');
     setManualPrice('');
-    setManualCoverUrl(undefined);
+    setManualCoverUrl('');
     setManualDescription(undefined);
+    setManualCategoryMain('');
+    setManualCategory('');
+    setManualRegNo('');
+    setManualDonorName('');
     setManualIsbnError(null);
     setJustSubmitted(false);
   };
@@ -782,6 +802,87 @@ function BookRegisterContent() {
                   placeholder="예: 15000"
                   className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  등록번호
+                </label>
+                <input
+                  type="text"
+                  value={manualRegNo}
+                  onChange={(e) => setManualRegNo(e.target.value)}
+                  placeholder="예: MB0000021622"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  기증자명
+                </label>
+                <input
+                  type="text"
+                  value={manualDonorName}
+                  onChange={(e) => setManualDonorName(e.target.value)}
+                  placeholder="선택"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  분류코드
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={manualCategoryMain}
+                    onChange={(e) => {
+                      setManualCategoryMain(e.target.value);
+                      setManualCategory('');
+                    }}
+                    className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                    <option value="">대분류</option>
+                    {manualMainOptions.map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={manualCategory}
+                    disabled={!manualCategoryMain}
+                    onChange={(e) => setManualCategory(e.target.value)}
+                    className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                    <option value="">세부분류</option>
+                    {categories
+                      .filter((c) => c.main_code === manualCategoryMain)
+                      .map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  표지 이미지 URL
+                </label>
+                <div className="flex items-center gap-3">
+                  {manualCoverUrl.trim() && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={manualCoverUrl.trim()}
+                      alt=""
+                      className="h-14 w-10 shrink-0 rounded-sm object-cover"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    value={manualCoverUrl}
+                    onChange={(e) => setManualCoverUrl(e.target.value)}
+                    placeholder="표지 이미지 URL이 있으면 붙여넣어주세요"
+                    className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
             {manualFormError && (
