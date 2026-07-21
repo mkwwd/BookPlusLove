@@ -21,7 +21,7 @@ import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
 
-type Method = 'barcode' | 'excel' | 'manual';
+type Method = 'manual' | 'barcode' | 'excel';
 
 interface ScannedBook {
   id: string;
@@ -258,21 +258,25 @@ function ScannedBookTable({
 function BookRegisterContent() {
   const searchParams = useSearchParams();
   const initialMethod: Method =
-    searchParams.get('method') === 'excel' ? 'excel' : 'barcode';
+    searchParams.get('method') === 'excel'
+      ? 'excel'
+      : searchParams.get('method') === 'manual'
+        ? 'manual'
+        : 'barcode';
   const [method, setMethod] = useState<Method>(initialMethod);
   const [justSubmitted, setJustSubmitted] = useState(false);
+
+  // 방법(바코드/엑셀/직접입력)과 무관하게 등록 대상 목록은 하나로 공유한다.
+  const [entries, setEntries] = useState<ScannedBook[]>([]);
 
   const [isbnInput, setIsbnInput] = useState('');
   const [isbnValidationError, setIsbnValidationError] = useState<string | null>(
     null,
   );
-  const [recognized, setRecognized] = useState<ScannedBook[]>([]);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const [fileName, setFileName] = useState<string | null>(null);
-  const [excelRows, setExcelRows] = useState<ScannedBook[]>([]);
 
-  const [manualEntries, setManualEntries] = useState<ScannedBook[]>([]);
   const [manualTitle, setManualTitle] = useState('');
   const [manualAuthor, setManualAuthor] = useState('');
   const [manualPublisher, setManualPublisher] = useState('');
@@ -308,7 +312,6 @@ function BookRegisterContent() {
 
   const switchMethod = (next: Method) => {
     setMethod(next);
-    setJustSubmitted(false);
     setIsCameraOpen(false);
   };
 
@@ -319,7 +322,7 @@ function BookRegisterContent() {
   } = useMutation({
     mutationFn: fetchIsbnLookup,
     onSuccess: (book) => {
-      setRecognized((prev) =>
+      setEntries((prev) =>
         prev.some((b) => b.isbn === book.isbn)
           ? prev
           : [...prev, toScannedBook(book)],
@@ -345,46 +348,10 @@ function BookRegisterContent() {
     },
   });
 
-  const updateCategory = (
-    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    id: string,
-    category: string,
-  ) => {
-    setter((prev) => prev.map((b) => (b.id === id ? { ...b, category } : b)));
-  };
-
-  const updateCategoryMain = (
-    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    id: string,
-    categoryMain: string,
-  ) => {
-    setter((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, categoryMain, category: '' } : b)),
+  const updateEntry = (id: string, patch: Partial<ScannedBook>) => {
+    setEntries((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
     );
-  };
-
-  const updateAuthorCode = (
-    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    id: string,
-    authorCode: string,
-  ) => {
-    setter((prev) => prev.map((b) => (b.id === id ? { ...b, authorCode } : b)));
-  };
-
-  const updateDonorName = (
-    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    id: string,
-    donorName: string,
-  ) => {
-    setter((prev) => prev.map((b) => (b.id === id ? { ...b, donorName } : b)));
-  };
-
-  const updateRegNo = (
-    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    id: string,
-    regNo: string,
-  ) => {
-    setter((prev) => prev.map((b) => (b.id === id ? { ...b, regNo } : b)));
   };
 
   const handleRecognize = (scannedIsbn?: string) => {
@@ -400,7 +367,7 @@ function BookRegisterContent() {
     }
     setIsbnValidationError(null);
 
-    if (recognized.some((book) => book.isbn === isbn)) return;
+    if (entries.some((book) => book.isbn === isbn)) return;
     lookupIsbn(isbn);
   };
 
@@ -410,7 +377,7 @@ function BookRegisterContent() {
     setFileName(file.name);
     // TODO: parse the actual file once bulk upload is wired to Supabase;
     // this is a placeholder preview so the flow can be reviewed as UI.
-    setExcelRows(MOCK_EXCEL_SOURCE.map(toScannedBook));
+    setEntries((prev) => [...prev, ...MOCK_EXCEL_SOURCE.map(toScannedBook)]);
     setJustSubmitted(false);
   };
 
@@ -434,7 +401,7 @@ function BookRegisterContent() {
     setManualFormError(null);
     const title = manualTitle.trim();
     const author = manualAuthor.trim();
-    setManualEntries((prev) => [
+    setEntries((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
@@ -471,14 +438,8 @@ function BookRegisterContent() {
 
   const handleSubmit = () => {
     setJustSubmitted(true);
-    if (method === 'barcode') {
-      setRecognized([]);
-    } else if (method === 'excel') {
-      setExcelRows([]);
-      setFileName(null);
-    } else {
-      setManualEntries([]);
-    }
+    setEntries([]);
+    setFileName(null);
   };
 
   return (
@@ -494,6 +455,17 @@ function BookRegisterContent() {
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
+        <button
+          type="button"
+          onClick={() => switchMethod('manual')}
+          className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
+            method === 'manual'
+              ? 'border-red-900 text-red-900'
+              : 'border-transparent text-amber-700 hover:text-amber-900'
+          }`}>
+          <PencilLine className="h-4 w-4" />
+          직접 등록
+        </button>
         <button
           type="button"
           onClick={() => switchMethod('barcode')}
@@ -516,17 +488,6 @@ function BookRegisterContent() {
           <FileSpreadsheet className="h-4 w-4" />
           엑셀 업로드
         </button>
-        <button
-          type="button"
-          onClick={() => switchMethod('manual')}
-          className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
-            method === 'manual'
-              ? 'border-red-900 text-red-900'
-              : 'border-transparent text-amber-700 hover:text-amber-900'
-          }`}>
-          <PencilLine className="h-4 w-4" />
-          직접 등록
-        </button>
       </div>
 
       {justSubmitted && (
@@ -536,401 +497,321 @@ function BookRegisterContent() {
         </div>
       )}
 
-      {method === 'barcode' && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              ISBN 바코드
+      {method === 'manual' && (
+        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+          <p className="mb-4 text-sm text-amber-700">
+            바코드가 없거나 인식되지 않는 책은 여기서 정보를 직접 입력해 목록에
+            추가해주세요.
+          </p>
+          <div className="mb-4">
+            <label className="mb-1.5 block text-base font-medium text-amber-900">
+              ISBN (있는 경우)
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={isbnInput}
-                disabled={isLookingUp}
+                value={manualIsbn}
+                disabled={isManualLookingUp}
                 onChange={(e) => {
-                  setIsbnInput(e.target.value);
-                  setIsbnValidationError(null);
+                  setManualIsbn(e.target.value);
+                  setManualIsbnError(null);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    handleRecognize();
+                    handleManualLookup();
                   }
                 }}
-                placeholder="바코드를 스캔하거나 ISBN을 직접 입력해주세요"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
+                placeholder="ISBN이 있으면 입력 후 조회, 없으면 비워두세요"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="button"
-                disabled={isLookingUp}
-                onClick={() => handleRecognize()}
-                className="shrink-0 rounded bg-red-900 px-5 py-3 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
-                {isLookingUp ? '조회 중...' : '인식'}
+                disabled={isManualLookingUp}
+                onClick={handleManualLookup}
+                className="shrink-0 rounded bg-amber-900/90 px-5 py-2.5 text-base font-medium text-white transition hover:bg-amber-900 disabled:opacity-50">
+                {isManualLookingUp ? '조회 중...' : '조회'}
               </button>
             </div>
-            <p className="mt-2 text-sm text-amber-700">
-              스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
-              인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
-              바코드가 없거나 인식이 안 되면 &ldquo;직접 등록&rdquo; 탭을
-              이용해주세요.
+            <p className="mt-1.5 text-sm text-amber-700">
+              조회하면 아래 제목/저자/출판사/페이지/정가가 자동으로 채워집니다.
+              채워진 내용은 계속 수정할 수 있어요.
             </p>
-            {isbnValidationError && (
-              <p className="mt-2 text-sm text-red-600">{isbnValidationError}</p>
+            {manualIsbnError && (
+              <p className="mt-1.5 text-sm text-red-600">{manualIsbnError}</p>
             )}
-            {lookupError && (
-              <p className="mt-2 text-sm text-red-600">{lookupError.message}</p>
-            )}
-
-            {!isCameraOpen && (
-              <button
-                type="button"
-                onClick={() => setIsCameraOpen(true)}
-                className="mt-4 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
-                <ScanLine className="h-4 w-4" />
-                카메라로 스캔
-              </button>
+            {manualLookupError && (
+              <p className="mt-1.5 text-sm text-red-600">
+                {manualLookupError.message}
+              </p>
             )}
           </div>
-
-          {isCameraOpen && (
-            <CameraScanner
-              onDetected={(isbn) => {
-                handleRecognize(isbn);
-                setIsCameraOpen(false);
-              }}
-              onClose={() => setIsCameraOpen(false)}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                제목 <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                value={manualTitle}
+                onChange={(e) => setManualTitle(e.target.value)}
+                placeholder="도서 제목을 입력해주세요"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                저자
+              </label>
+              <input
+                type="text"
+                value={manualAuthor}
+                onChange={(e) => setManualAuthor(e.target.value)}
+                placeholder="저자명을 입력해주세요"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                출판사
+              </label>
+              <input
+                type="text"
+                value={manualPublisher}
+                onChange={(e) => setManualPublisher(e.target.value)}
+                placeholder="출판사를 입력해주세요"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                페이지
+              </label>
+              <input
+                type="text"
+                value={manualPage}
+                onChange={(e) => setManualPage(e.target.value)}
+                placeholder="예: 307 p."
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                정가
+              </label>
+              <input
+                type="text"
+                value={manualPrice}
+                onChange={(e) => setManualPrice(e.target.value)}
+                placeholder="예: 15000"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                등록번호
+              </label>
+              <input
+                type="text"
+                value={manualRegNo}
+                onChange={(e) => setManualRegNo(e.target.value)}
+                placeholder="예: MB0000021622"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                기증자명
+              </label>
+              <input
+                type="text"
+                value={manualDonorName}
+                onChange={(e) => setManualDonorName(e.target.value)}
+                placeholder="선택"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                분류코드
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={manualCategoryMain}
+                  onChange={(e) => {
+                    setManualCategoryMain(e.target.value);
+                    setManualCategory('');
+                  }}
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                  <option value="">대분류</option>
+                  {manualMainOptions.map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={manualCategory}
+                  disabled={!manualCategoryMain}
+                  onChange={(e) => setManualCategory(e.target.value)}
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                  <option value="">세부분류</option>
+                  {categories
+                    .filter((c) => c.main_code === manualCategoryMain)
+                    .map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                표지 이미지 URL
+              </label>
+              <div className="flex items-center gap-3">
+                {manualCoverUrl.trim() && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={manualCoverUrl.trim()}
+                    alt=""
+                    className="h-14 w-10 shrink-0 rounded-sm object-cover"
+                  />
+                )}
+                <input
+                  type="text"
+                  value={manualCoverUrl}
+                  onChange={(e) => setManualCoverUrl(e.target.value)}
+                  placeholder="표지 이미지 URL이 있으면 붙여넣어주세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+          {manualFormError && (
+            <p className="mt-3 text-sm text-red-600">{manualFormError}</p>
           )}
-
-          <ScannedBookTable
-            books={recognized}
-            categories={categories}
-            onRemove={(id) =>
-              setRecognized((prev) => prev.filter((b) => b.id !== id))
-            }
-            onCategoryMainChange={(id, mainCode) =>
-              updateCategoryMain(setRecognized, id, mainCode)
-            }
-            onCategoryChange={(id, category) =>
-              updateCategory(setRecognized, id, category)
-            }
-            onAuthorCodeChange={(id, authorCode) =>
-              updateAuthorCode(setRecognized, id, authorCode)
-            }
-            onDonorNameChange={(id, donorName) =>
-              updateDonorName(setRecognized, id, donorName)
-            }
-            onRegNoChange={(id, regNo) => updateRegNo(setRecognized, id, regNo)}
-            emptyText="인식된 도서가 없습니다"
-          />
-
           <button
             type="button"
-            disabled={recognized.length === 0}
-            onClick={handleSubmit}
-            className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-            {recognized.length > 0
-              ? `${recognized.length}권 등록하기`
-              : '등록하기'}
+            onClick={handleAddManualEntry}
+            className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            목록에 추가
           </button>
+        </div>
+      )}
+
+      {method === 'barcode' && (
+        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+          <label className="mb-2 block text-base font-medium text-amber-900">
+            ISBN 바코드
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={isbnInput}
+              disabled={isLookingUp}
+              onChange={(e) => {
+                setIsbnInput(e.target.value);
+                setIsbnValidationError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleRecognize();
+                }
+              }}
+              placeholder="바코드를 스캔하거나 ISBN을 직접 입력해주세요"
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              type="button"
+              disabled={isLookingUp}
+              onClick={() => handleRecognize()}
+              className="shrink-0 rounded bg-red-900 px-5 py-3 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              {isLookingUp ? '조회 중...' : '인식'}
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-amber-700">
+            스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
+            인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
+            바코드가 없거나 인식이 안 되면 &ldquo;직접 등록&rdquo; 탭을
+            이용해주세요.
+          </p>
+          {isbnValidationError && (
+            <p className="mt-2 text-sm text-red-600">{isbnValidationError}</p>
+          )}
+          {lookupError && (
+            <p className="mt-2 text-sm text-red-600">{lookupError.message}</p>
+          )}
+
+          {!isCameraOpen && (
+            <button
+              type="button"
+              onClick={() => setIsCameraOpen(true)}
+              className="mt-4 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+              <ScanLine className="h-4 w-4" />
+              카메라로 스캔
+            </button>
+          )}
+
+          {isCameraOpen && (
+            <div className="mt-4">
+              <CameraScanner
+                onDetected={(isbn) => {
+                  handleRecognize(isbn);
+                  setIsCameraOpen(false);
+                }}
+                onClose={() => setIsCameraOpen(false)}
+              />
+            </div>
+          )}
         </div>
       )}
 
       {method === 'excel' && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-            <label className="mb-2 block text-base font-medium text-amber-900">
-              엑셀 파일
-            </label>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileChange}
-              className="block w-full text-base text-amber-900 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
-            />
-            <p className="mt-2 text-sm text-amber-700">
-              열 순서: 제목, 저자, 출판사, ISBN, 카테고리, 수량
-            </p>
-            {fileName && (
-              <p className="mt-2 text-sm text-amber-900">
-                선택된 파일: {fileName}
-              </p>
-            )}
-          </div>
-
-          <ScannedBookTable
-            books={excelRows}
-            categories={categories}
-            onRemove={(id) =>
-              setExcelRows((prev) => prev.filter((b) => b.id !== id))
-            }
-            onCategoryMainChange={(id, mainCode) =>
-              updateCategoryMain(setExcelRows, id, mainCode)
-            }
-            onCategoryChange={(id, category) =>
-              updateCategory(setExcelRows, id, category)
-            }
-            onAuthorCodeChange={(id, authorCode) =>
-              updateAuthorCode(setExcelRows, id, authorCode)
-            }
-            onDonorNameChange={(id, donorName) =>
-              updateDonorName(setExcelRows, id, donorName)
-            }
-            onRegNoChange={(id, regNo) => updateRegNo(setExcelRows, id, regNo)}
-            emptyText="업로드할 파일을 선택해주세요"
+        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+          <label className="mb-2 block text-base font-medium text-amber-900">
+            엑셀 파일
+          </label>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            className="block w-full text-base text-amber-900 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
           />
-
-          <button
-            type="button"
-            disabled={excelRows.length === 0}
-            onClick={handleSubmit}
-            className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-            {excelRows.length > 0
-              ? `${excelRows.length}권 업로드하기`
-              : '업로드하기'}
-          </button>
+          <p className="mt-2 text-sm text-amber-700">
+            열 순서: 제목, 저자, 출판사, ISBN, 카테고리, 수량
+          </p>
+          {fileName && (
+            <p className="mt-2 text-sm text-amber-900">
+              선택된 파일: {fileName}
+            </p>
+          )}
         </div>
       )}
 
-      {method === 'manual' && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-            <p className="mb-4 text-sm text-amber-700">
-              바코드가 없거나 인식되지 않는 책은 여기서 정보를 직접 입력해
-              목록에 추가해주세요.
-            </p>
-            <div className="mb-4">
-              <label className="mb-1.5 block text-base font-medium text-amber-900">
-                ISBN (있는 경우)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={manualIsbn}
-                  disabled={isManualLookingUp}
-                  onChange={(e) => {
-                    setManualIsbn(e.target.value);
-                    setManualIsbnError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleManualLookup();
-                    }
-                  }}
-                  placeholder="ISBN이 있으면 입력 후 조회, 없으면 비워두세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  disabled={isManualLookingUp}
-                  onClick={handleManualLookup}
-                  className="shrink-0 rounded bg-amber-900/90 px-5 py-2.5 text-base font-medium text-white transition hover:bg-amber-900 disabled:opacity-50">
-                  {isManualLookingUp ? '조회 중...' : '조회'}
-                </button>
-              </div>
-              <p className="mt-1.5 text-sm text-amber-700">
-                조회하면 아래 제목/저자/출판사/페이지/정가가 자동으로
-                채워집니다. 채워진 내용은 계속 수정할 수 있어요.
-              </p>
-              {manualIsbnError && (
-                <p className="mt-1.5 text-sm text-red-600">{manualIsbnError}</p>
-              )}
-              {manualLookupError && (
-                <p className="mt-1.5 text-sm text-red-600">
-                  {manualLookupError.message}
-                </p>
-              )}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  제목 <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={manualTitle}
-                  onChange={(e) => setManualTitle(e.target.value)}
-                  placeholder="도서 제목을 입력해주세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  저자
-                </label>
-                <input
-                  type="text"
-                  value={manualAuthor}
-                  onChange={(e) => setManualAuthor(e.target.value)}
-                  placeholder="저자명을 입력해주세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  출판사
-                </label>
-                <input
-                  type="text"
-                  value={manualPublisher}
-                  onChange={(e) => setManualPublisher(e.target.value)}
-                  placeholder="출판사를 입력해주세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  페이지
-                </label>
-                <input
-                  type="text"
-                  value={manualPage}
-                  onChange={(e) => setManualPage(e.target.value)}
-                  placeholder="예: 307 p."
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  정가
-                </label>
-                <input
-                  type="text"
-                  value={manualPrice}
-                  onChange={(e) => setManualPrice(e.target.value)}
-                  placeholder="예: 15000"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  등록번호
-                </label>
-                <input
-                  type="text"
-                  value={manualRegNo}
-                  onChange={(e) => setManualRegNo(e.target.value)}
-                  placeholder="예: MB0000021622"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  기증자명
-                </label>
-                <input
-                  type="text"
-                  value={manualDonorName}
-                  onChange={(e) => setManualDonorName(e.target.value)}
-                  placeholder="선택"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  분류코드
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={manualCategoryMain}
-                    onChange={(e) => {
-                      setManualCategoryMain(e.target.value);
-                      setManualCategory('');
-                    }}
-                    className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
-                    <option value="">대분류</option>
-                    {manualMainOptions.map(([code, label]) => (
-                      <option key={code} value={code}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={manualCategory}
-                    disabled={!manualCategoryMain}
-                    onChange={(e) => setManualCategory(e.target.value)}
-                    className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
-                    <option value="">세부분류</option>
-                    {categories
-                      .filter((c) => c.main_code === manualCategoryMain)
-                      .map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.label}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  표지 이미지 URL
-                </label>
-                <div className="flex items-center gap-3">
-                  {manualCoverUrl.trim() && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={manualCoverUrl.trim()}
-                      alt=""
-                      className="h-14 w-10 shrink-0 rounded-sm object-cover"
-                    />
-                  )}
-                  <input
-                    type="text"
-                    value={manualCoverUrl}
-                    onChange={(e) => setManualCoverUrl(e.target.value)}
-                    placeholder="표지 이미지 URL이 있으면 붙여넣어주세요"
-                    className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-            {manualFormError && (
-              <p className="mt-3 text-sm text-red-600">{manualFormError}</p>
-            )}
-            <button
-              type="button"
-              onClick={handleAddManualEntry}
-              className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-              목록에 추가
-            </button>
-          </div>
+      <ScannedBookTable
+        books={entries}
+        categories={categories}
+        onRemove={(id) => setEntries((prev) => prev.filter((b) => b.id !== id))}
+        onCategoryMainChange={(id, mainCode) =>
+          updateEntry(id, { categoryMain: mainCode, category: '' })
+        }
+        onCategoryChange={(id, category) => updateEntry(id, { category })}
+        onAuthorCodeChange={(id, authorCode) => updateEntry(id, { authorCode })}
+        onDonorNameChange={(id, donorName) => updateEntry(id, { donorName })}
+        onRegNoChange={(id, regNo) => updateEntry(id, { regNo })}
+        emptyText="등록할 도서가 없습니다. 위에서 바코드 인식, 직접 입력, 엑셀 업로드 중 하나로 추가해주세요."
+      />
 
-          <ScannedBookTable
-            books={manualEntries}
-            categories={categories}
-            onRemove={(id) =>
-              setManualEntries((prev) => prev.filter((b) => b.id !== id))
-            }
-            onCategoryMainChange={(id, mainCode) =>
-              updateCategoryMain(setManualEntries, id, mainCode)
-            }
-            onCategoryChange={(id, category) =>
-              updateCategory(setManualEntries, id, category)
-            }
-            onAuthorCodeChange={(id, authorCode) =>
-              updateAuthorCode(setManualEntries, id, authorCode)
-            }
-            onDonorNameChange={(id, donorName) =>
-              updateDonorName(setManualEntries, id, donorName)
-            }
-            onRegNoChange={(id, regNo) =>
-              updateRegNo(setManualEntries, id, regNo)
-            }
-            emptyText="추가된 도서가 없습니다"
-          />
-
-          <button
-            type="button"
-            disabled={manualEntries.length === 0}
-            onClick={handleSubmit}
-            className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-            {manualEntries.length > 0
-              ? `${manualEntries.length}권 등록하기`
-              : '등록하기'}
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        disabled={entries.length === 0}
+        onClick={handleSubmit}
+        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
+        {entries.length > 0 ? `${entries.length}권 등록하기` : '등록하기'}
+      </button>
     </div>
   );
 }
