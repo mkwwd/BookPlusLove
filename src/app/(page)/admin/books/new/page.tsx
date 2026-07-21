@@ -17,6 +17,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { generateAuthorCode } from '@/lib/authorCode';
 import { isValidIsbn13 } from '@/lib/isbn';
+import { isValidRegNo } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
@@ -151,103 +152,129 @@ function ScannedBookTable({
               </td>
             </tr>
           ) : (
-            books.map((book) => (
-              <tr key={book.id}>
-                <td className="px-5 py-3">
-                  {book.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={book.coverUrl}
-                      alt=""
-                      className="h-14 w-10 rounded-sm object-cover"
+            books.map((book) => {
+              const trimmedRegNo = book.regNo.trim();
+              const isRegNoInvalid =
+                trimmedRegNo !== '' && !isValidRegNo(trimmedRegNo);
+              const isRegNoDuplicate =
+                trimmedRegNo !== '' &&
+                books.filter((b) => b.regNo.trim() === trimmedRegNo).length > 1;
+
+              return (
+                <tr key={book.id}>
+                  <td className="px-5 py-3">
+                    {book.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={book.coverUrl}
+                        alt=""
+                        className="h-14 w-10 rounded-sm object-cover"
+                      />
+                    ) : (
+                      <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-amber-900">{book.title}</td>
+                  <td className="px-5 py-3 text-amber-700">{book.author}</td>
+                  <td className="px-5 py-3 text-amber-700">{book.publisher}</td>
+                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                    {book.isbn || '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.page ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.price ?? '-'}
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={book.regNo}
+                      onChange={(e) => onRegNoChange(book.id, e.target.value)}
+                      placeholder="예: MB123456"
+                      className={`w-32 rounded border bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:outline-none ${
+                        isRegNoInvalid || isRegNoDuplicate
+                          ? 'border-red-400 focus:ring-red-300'
+                          : 'border-amber-900/20 focus:ring-amber-900/30'
+                      }`}
                     />
-                  ) : (
-                    <div className="h-14 w-10 rounded-sm bg-amber-100" />
-                  )}
-                </td>
-                <td className="px-5 py-3 text-amber-900">{book.title}</td>
-                <td className="px-5 py-3 text-amber-700">{book.author}</td>
-                <td className="px-5 py-3 text-amber-700">{book.publisher}</td>
-                <td className="px-5 py-3 font-mono text-sm text-amber-700">
-                  {book.isbn || '-'}
-                </td>
-                <td className="px-5 py-3 text-amber-700">{book.page ?? '-'}</td>
-                <td className="px-5 py-3 text-amber-700">
-                  {book.price ?? '-'}
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="text"
-                    value={book.regNo}
-                    onChange={(e) => onRegNoChange(book.id, e.target.value)}
-                    placeholder="예: MB0000021622"
-                    className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <div className="flex gap-1">
-                    <select
-                      value={book.categoryMain}
-                      onChange={(e) =>
-                        onCategoryMainChange(book.id, e.target.value)
-                      }
-                      className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
-                      <option value="">대분류</option>
-                      {mainOptions.map(([code, label]) => (
-                        <option key={code} value={code}>
-                          {code} {label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={book.category}
-                      disabled={!book.categoryMain}
-                      onChange={(e) =>
-                        onCategoryChange(book.id, e.target.value)
-                      }
-                      className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
-                      <option value="">세부분류</option>
-                      {categories
-                        .filter((c) => c.main_code === book.categoryMain)
-                        .map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.code} {c.label}
+                    {isRegNoDuplicate ? (
+                      <p className="mt-1 text-xs text-red-600">중복된 번호</p>
+                    ) : (
+                      isRegNoInvalid && (
+                        <p className="mt-1 text-xs text-red-600">
+                          MB+숫자 6자리
+                        </p>
+                      )
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex gap-1">
+                      <select
+                        value={book.categoryMain}
+                        onChange={(e) =>
+                          onCategoryMainChange(book.id, e.target.value)
+                        }
+                        className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                        <option value="">대분류</option>
+                        {mainOptions.map(([code, label]) => (
+                          <option key={code} value={code}>
+                            {code} {label}
                           </option>
                         ))}
-                    </select>
-                  </div>
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="text"
-                    value={book.authorCode}
-                    onChange={(e) =>
-                      onAuthorCodeChange(book.id, e.target.value)
-                    }
-                    placeholder="예: 게68ㄴ"
-                    className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="text"
-                    value={book.donorName}
-                    onChange={(e) => onDonorNameChange(book.id, e.target.value)}
-                    placeholder="선택"
-                    className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <button
-                    type="button"
-                    aria-label="목록에서 삭제"
-                    onClick={() => onRemove(book.id)}
-                    className="text-amber-600 hover:text-red-800">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))
+                      </select>
+                      <select
+                        value={book.category}
+                        disabled={!book.categoryMain}
+                        onChange={(e) =>
+                          onCategoryChange(book.id, e.target.value)
+                        }
+                        className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                        <option value="">세부분류</option>
+                        {categories
+                          .filter((c) => c.main_code === book.categoryMain)
+                          .map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code} {c.label}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={book.authorCode}
+                      onChange={(e) =>
+                        onAuthorCodeChange(book.id, e.target.value)
+                      }
+                      placeholder="예: 게68ㄴ"
+                      className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <input
+                      type="text"
+                      value={book.donorName}
+                      onChange={(e) =>
+                        onDonorNameChange(book.id, e.target.value)
+                      }
+                      placeholder="선택"
+                      className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <button
+                      type="button"
+                      aria-label="목록에서 삭제"
+                      onClick={() => onRemove(book.id)}
+                      className="text-amber-600 hover:text-red-800">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
@@ -301,6 +328,15 @@ function BookRegisterContent() {
   const manualMainOptions = Array.from(
     new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
   );
+
+  const trimmedManualRegNo = manualRegNo.trim();
+  const manualRegNoError = !trimmedManualRegNo
+    ? null
+    : !isValidRegNo(trimmedManualRegNo)
+      ? 'MB+숫자 6자리 형식이어야 합니다 (예: MB123456).'
+      : entries.some((e) => e.regNo.trim() === trimmedManualRegNo)
+        ? '이미 목록에 있는 등록번호입니다.'
+        : null;
 
   const switchMethod = (next: Method) => {
     setMethod(next);
@@ -359,6 +395,10 @@ function BookRegisterContent() {
       setManualFormError('제목은 필수입니다.');
       return;
     }
+    if (manualRegNoError) {
+      setManualFormError(manualRegNoError);
+      return;
+    }
     setManualFormError(null);
     const title = manualTitle.trim();
     const author = manualAuthor.trim();
@@ -411,6 +451,14 @@ function BookRegisterContent() {
     setEntries([]);
     setFileName(null);
   };
+
+  const hasInvalidRegNo = entries.some((book) => {
+    const trimmed = book.regNo.trim();
+    if (!trimmed) return false;
+    const isDuplicate =
+      entries.filter((b) => b.regNo.trim() === trimmed).length > 1;
+    return !isValidRegNo(trimmed) || isDuplicate;
+  });
 
   return (
     <div className="space-y-6">
@@ -597,9 +645,18 @@ function BookRegisterContent() {
                 type="text"
                 value={manualRegNo}
                 onChange={(e) => setManualRegNo(e.target.value)}
-                placeholder="예: MB0000021622"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                placeholder="예: MB123456"
+                className={`w-full rounded border bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:outline-none ${
+                  manualRegNoError
+                    ? 'border-red-400 focus:ring-red-300'
+                    : 'border-amber-900/20 focus:ring-amber-900/30'
+                }`}
               />
+              {manualRegNoError && (
+                <p className="mt-1.5 text-sm text-red-600">
+                  {manualRegNoError}
+                </p>
+              )}
             </div>
             <div>
               <label className="mb-1.5 block text-base font-medium text-amber-900">
@@ -739,9 +796,16 @@ function BookRegisterContent() {
         emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
       />
 
+      {hasInvalidRegNo && (
+        <p className="text-sm text-red-600">
+          등록번호 형식이 잘못되었거나 중복된 항목이 있습니다. 표에서 빨간색으로
+          표시된 등록번호를 확인해주세요.
+        </p>
+      )}
+
       <button
         type="button"
-        disabled={entries.length === 0}
+        disabled={entries.length === 0 || hasInvalidRegNo}
         onClick={handleSubmit}
         className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {entries.length > 0 ? `${entries.length}권 등록하기` : '등록하기'}
