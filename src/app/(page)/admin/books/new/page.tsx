@@ -71,6 +71,15 @@ const MOCK_EXCEL_SOURCE: Omit<
   },
 ];
 
+async function fetchIsbnLookup(isbn: string): Promise<ScannedBook> {
+  const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(isbn)}`);
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
+  }
+  return body as ScannedBook;
+}
+
 function toScannedBook(
   book: Omit<
     ScannedBook,
@@ -270,7 +279,12 @@ function BookRegisterContent() {
   const [manualIsbn, setManualIsbn] = useState('');
   const [manualPage, setManualPage] = useState('');
   const [manualPrice, setManualPrice] = useState('');
+  const [manualCoverUrl, setManualCoverUrl] = useState<string | undefined>();
+  const [manualDescription, setManualDescription] = useState<
+    string | undefined
+  >();
   const [manualFormError, setManualFormError] = useState<string | null>(null);
+  const [manualIsbnError, setManualIsbnError] = useState<string | null>(null);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['book-categories'],
@@ -295,16 +309,7 @@ function BookRegisterContent() {
     isPending: isLookingUp,
     error: lookupError,
   } = useMutation({
-    mutationFn: async (isbn: string) => {
-      const res = await fetch(
-        `/api/books/isbn?isbn=${encodeURIComponent(isbn)}`,
-      );
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
-      }
-      return body as ScannedBook;
-    },
+    mutationFn: fetchIsbnLookup,
     onSuccess: (book) => {
       setRecognized((prev) =>
         prev.some((b) => b.isbn === book.isbn)
@@ -312,6 +317,23 @@ function BookRegisterContent() {
           : [...prev, toScannedBook(book)],
       );
       setJustSubmitted(false);
+    },
+  });
+
+  const {
+    mutate: lookupManualIsbn,
+    isPending: isManualLookingUp,
+    error: manualLookupError,
+  } = useMutation({
+    mutationFn: fetchIsbnLookup,
+    onSuccess: (book) => {
+      setManualTitle(book.title);
+      setManualAuthor(book.author);
+      setManualPublisher(book.publisher);
+      setManualPage(book.page ?? '');
+      setManualPrice(book.price ?? '');
+      setManualCoverUrl(book.coverUrl);
+      setManualDescription(book.description);
     },
   });
 
@@ -384,6 +406,18 @@ function BookRegisterContent() {
     setJustSubmitted(false);
   };
 
+  const handleManualLookup = () => {
+    const isbn = manualIsbn.trim();
+    if (!isbn || isManualLookingUp) return;
+
+    if (!isValidIsbn13(isbn)) {
+      setManualIsbnError(`"${isbn}"은(는) ISBN 형식이 아닙니다.`);
+      return;
+    }
+    setManualIsbnError(null);
+    lookupManualIsbn(isbn);
+  };
+
   const handleAddManualEntry = () => {
     if (!manualTitle.trim()) {
       setManualFormError('제목은 필수입니다.');
@@ -399,6 +433,8 @@ function BookRegisterContent() {
         publisher: manualPublisher.trim(),
         page: manualPage.trim() || undefined,
         price: manualPrice.trim() || undefined,
+        coverUrl: manualCoverUrl,
+        description: manualDescription,
       }),
     ]);
     setManualTitle('');
@@ -407,6 +443,9 @@ function BookRegisterContent() {
     setManualIsbn('');
     setManualPage('');
     setManualPrice('');
+    setManualCoverUrl(undefined);
+    setManualDescription(undefined);
+    setManualIsbnError(null);
     setJustSubmitted(false);
   };
 
@@ -640,6 +679,49 @@ function BookRegisterContent() {
               바코드가 없거나 인식되지 않는 책은 여기서 정보를 직접 입력해
               목록에 추가해주세요.
             </p>
+            <div className="mb-4">
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                ISBN (있는 경우)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualIsbn}
+                  disabled={isManualLookingUp}
+                  onChange={(e) => {
+                    setManualIsbn(e.target.value);
+                    setManualIsbnError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleManualLookup();
+                    }
+                  }}
+                  placeholder="ISBN이 있으면 입력 후 조회, 없으면 비워두세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  disabled={isManualLookingUp}
+                  onClick={handleManualLookup}
+                  className="shrink-0 rounded bg-amber-900/90 px-5 py-2.5 text-base font-medium text-white transition hover:bg-amber-900 disabled:opacity-50">
+                  {isManualLookingUp ? '조회 중...' : '조회'}
+                </button>
+              </div>
+              <p className="mt-1.5 text-sm text-amber-700">
+                조회하면 아래 제목/저자/출판사/페이지/정가가 자동으로
+                채워집니다. 채워진 내용은 계속 수정할 수 있어요.
+              </p>
+              {manualIsbnError && (
+                <p className="mt-1.5 text-sm text-red-600">{manualIsbnError}</p>
+              )}
+              {manualLookupError && (
+                <p className="mt-1.5 text-sm text-red-600">
+                  {manualLookupError.message}
+                </p>
+              )}
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-base font-medium text-amber-900">
@@ -674,18 +756,6 @@ function BookRegisterContent() {
                   value={manualPublisher}
                   onChange={(e) => setManualPublisher(e.target.value)}
                   placeholder="출판사를 입력해주세요"
-                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-base font-medium text-amber-900">
-                  ISBN (있는 경우)
-                </label>
-                <input
-                  type="text"
-                  value={manualIsbn}
-                  onChange={(e) => setManualIsbn(e.target.value)}
-                  placeholder="없으면 비워두세요"
                   className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
               </div>
