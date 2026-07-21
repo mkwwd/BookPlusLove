@@ -195,7 +195,7 @@ function ScannedBookTable({
                       <option value="">대분류</option>
                       {mainOptions.map(([code, label]) => (
                         <option key={code} value={code}>
-                          {label}
+                          {code} {label}
                         </option>
                       ))}
                     </select>
@@ -211,7 +211,7 @@ function ScannedBookTable({
                         .filter((c) => c.main_code === book.categoryMain)
                         .map((c) => (
                           <option key={c.code} value={c.code}>
-                            {c.label}
+                            {c.code} {c.label}
                           </option>
                         ))}
                     </select>
@@ -648,7 +648,7 @@ function BookRegisterContent() {
                   <option value="">대분류</option>
                   {manualMainOptions.map(([code, label]) => (
                     <option key={code} value={code}>
-                      {label}
+                      {code} {label}
                     </option>
                   ))}
                 </select>
@@ -662,7 +662,7 @@ function BookRegisterContent() {
                     .filter((c) => c.main_code === manualCategoryMain)
                     .map((c) => (
                       <option key={c.code} value={c.code}>
-                        {c.label}
+                        {c.code} {c.label}
                       </option>
                     ))}
                 </select>
