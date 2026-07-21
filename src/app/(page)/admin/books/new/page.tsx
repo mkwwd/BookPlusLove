@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { generateAuthorCode } from '@/lib/authorCode';
+import { isValidIsbn13 } from '@/lib/isbn';
 import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
@@ -238,6 +239,9 @@ function BookRegisterContent() {
   const [justSubmitted, setJustSubmitted] = useState(false);
 
   const [isbnInput, setIsbnInput] = useState('');
+  const [isbnValidationError, setIsbnValidationError] = useState<string | null>(
+    null,
+  );
   const [recognized, setRecognized] = useState<ScannedBook[]>([]);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
@@ -333,6 +337,15 @@ function BookRegisterContent() {
     const isbn = (scannedIsbn ?? isbnInput).trim();
     if (!isbn || isLookingUp) return;
     if (!scannedIsbn) setIsbnInput('');
+
+    if (!isValidIsbn13(isbn)) {
+      setIsbnValidationError(
+        `"${isbn}"은(는) ISBN 형식이 아닙니다. 책 뒷면의 ISBN 바코드(978 또는 979로 시작)를 스캔해주세요.`,
+      );
+      return;
+    }
+    setIsbnValidationError(null);
+
     if (recognized.some((book) => book.isbn === isbn)) return;
     lookupIsbn(isbn);
   };
@@ -412,7 +425,10 @@ function BookRegisterContent() {
                 type="text"
                 value={isbnInput}
                 disabled={isLookingUp}
-                onChange={(e) => setIsbnInput(e.target.value)}
+                onChange={(e) => {
+                  setIsbnInput(e.target.value);
+                  setIsbnValidationError(null);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -434,6 +450,9 @@ function BookRegisterContent() {
               스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
               인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
             </p>
+            {isbnValidationError && (
+              <p className="mt-2 text-sm text-red-600">{isbnValidationError}</p>
+            )}
             {lookupError && (
               <p className="mt-2 text-sm text-red-600">{lookupError.message}</p>
             )}

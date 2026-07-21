@@ -6,6 +6,8 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import { X } from 'lucide-react';
 
+import { isValidIsbn13 } from '@/lib/isbn';
+
 export default function CameraScanner({
   onDetected,
   onClose,
@@ -15,6 +17,7 @@ export default function CameraScanner({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejectedCode, setRejectedCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -29,11 +32,19 @@ export default function CameraScanner({
         videoRef.current,
         (result, err, activeControls) => {
           controls = activeControls;
-          if (result && !cancelled) {
-            cancelled = true;
-            onDetected(result.getText());
-            activeControls.stop();
+          if (!result || cancelled) return;
+
+          const text = result.getText();
+          // 책 뒷면엔 ISBN 바코드 말고 부가기호/가격 바코드도 같이 있어서,
+          // ISBN 형식이 아니면 무시하고 계속 스캔한다.
+          if (!isValidIsbn13(text)) {
+            setRejectedCode(text);
+            return;
           }
+
+          cancelled = true;
+          onDetected(text);
+          activeControls.stop();
         },
       )
       .catch(() => {
@@ -64,12 +75,20 @@ export default function CameraScanner({
       {error ? (
         <p className="px-5 py-8 text-center text-base text-white">{error}</p>
       ) : (
-        <video
-          ref={videoRef}
-          className="aspect-video w-full object-cover"
-          muted
-          playsInline
-        />
+        <div className="relative">
+          <video
+            ref={videoRef}
+            className="aspect-video w-full object-cover"
+            muted
+            playsInline
+          />
+          {rejectedCode && (
+            <p className="absolute right-0 bottom-0 left-0 bg-black/70 px-4 py-2 text-center text-sm text-white">
+              ISBN 바코드가 아닙니다 ({rejectedCode}). 위쪽의 ISBN 바코드를
+              비춰주세요.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
