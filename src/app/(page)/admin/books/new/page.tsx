@@ -8,6 +8,7 @@ import {
   Barcode,
   CheckCircle2,
   FileSpreadsheet,
+  PencilLine,
   ScanLine,
   Trash2,
 } from 'lucide-react';
@@ -20,9 +21,10 @@ import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
 
-type Method = 'barcode' | 'excel';
+type Method = 'barcode' | 'excel' | 'manual';
 
 interface ScannedBook {
+  id: string;
   isbn: string;
   title: string;
   author: string;
@@ -47,7 +49,7 @@ interface BookCategory {
 
 const MOCK_EXCEL_SOURCE: Omit<
   ScannedBook,
-  'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
+  'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
 >[] = [
   {
     isbn: '9791190090018',
@@ -72,11 +74,12 @@ const MOCK_EXCEL_SOURCE: Omit<
 function toScannedBook(
   book: Omit<
     ScannedBook,
-    'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
+    'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
   >,
 ): ScannedBook {
   return {
     ...book,
+    id: crypto.randomUUID(),
     category: '',
     categoryMain: '',
     authorCode: generateAuthorCode(book.author, book.title) ?? '',
@@ -98,12 +101,12 @@ function ScannedBookTable({
 }: {
   books: ScannedBook[];
   categories: BookCategory[];
-  onRemove: (isbn: string) => void;
-  onCategoryMainChange: (isbn: string, mainCode: string) => void;
-  onCategoryChange: (isbn: string, category: string) => void;
-  onAuthorCodeChange: (isbn: string, authorCode: string) => void;
-  onDonorNameChange: (isbn: string, donorName: string) => void;
-  onRegNoChange: (isbn: string, regNo: string) => void;
+  onRemove: (id: string) => void;
+  onCategoryMainChange: (id: string, mainCode: string) => void;
+  onCategoryChange: (id: string, category: string) => void;
+  onAuthorCodeChange: (id: string, authorCode: string) => void;
+  onDonorNameChange: (id: string, donorName: string) => void;
+  onRegNoChange: (id: string, regNo: string) => void;
   emptyText: string;
 }) {
   const mainOptions = Array.from(
@@ -140,7 +143,7 @@ function ScannedBookTable({
             </tr>
           ) : (
             books.map((book) => (
-              <tr key={book.isbn}>
+              <tr key={book.id}>
                 <td className="px-5 py-3">
                   {book.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -157,7 +160,7 @@ function ScannedBookTable({
                 <td className="px-5 py-3 text-amber-700">{book.author}</td>
                 <td className="px-5 py-3 text-amber-700">{book.publisher}</td>
                 <td className="px-5 py-3 font-mono text-sm text-amber-700">
-                  {book.isbn}
+                  {book.isbn || '-'}
                 </td>
                 <td className="px-5 py-3 text-amber-700">{book.page ?? '-'}</td>
                 <td className="px-5 py-3 text-amber-700">
@@ -167,7 +170,7 @@ function ScannedBookTable({
                   <input
                     type="text"
                     value={book.regNo}
-                    onChange={(e) => onRegNoChange(book.isbn, e.target.value)}
+                    onChange={(e) => onRegNoChange(book.id, e.target.value)}
                     placeholder="예: MB0000021622"
                     className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                   />
@@ -177,7 +180,7 @@ function ScannedBookTable({
                     <select
                       value={book.categoryMain}
                       onChange={(e) =>
-                        onCategoryMainChange(book.isbn, e.target.value)
+                        onCategoryMainChange(book.id, e.target.value)
                       }
                       className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                       <option value="">대분류</option>
@@ -191,7 +194,7 @@ function ScannedBookTable({
                       value={book.category}
                       disabled={!book.categoryMain}
                       onChange={(e) =>
-                        onCategoryChange(book.isbn, e.target.value)
+                        onCategoryChange(book.id, e.target.value)
                       }
                       className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
                       <option value="">세부분류</option>
@@ -210,7 +213,7 @@ function ScannedBookTable({
                     type="text"
                     value={book.authorCode}
                     onChange={(e) =>
-                      onAuthorCodeChange(book.isbn, e.target.value)
+                      onAuthorCodeChange(book.id, e.target.value)
                     }
                     placeholder="예: 게68ㄴ"
                     className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
@@ -220,9 +223,7 @@ function ScannedBookTable({
                   <input
                     type="text"
                     value={book.donorName}
-                    onChange={(e) =>
-                      onDonorNameChange(book.isbn, e.target.value)
-                    }
+                    onChange={(e) => onDonorNameChange(book.id, e.target.value)}
                     placeholder="선택"
                     className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                   />
@@ -231,7 +232,7 @@ function ScannedBookTable({
                   <button
                     type="button"
                     aria-label="목록에서 삭제"
-                    onClick={() => onRemove(book.isbn)}
+                    onClick={() => onRemove(book.id)}
                     className="text-amber-600 hover:text-red-800">
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -261,6 +262,15 @@ function BookRegisterContent() {
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [excelRows, setExcelRows] = useState<ScannedBook[]>([]);
+
+  const [manualEntries, setManualEntries] = useState<ScannedBook[]>([]);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualAuthor, setManualAuthor] = useState('');
+  const [manualPublisher, setManualPublisher] = useState('');
+  const [manualIsbn, setManualIsbn] = useState('');
+  const [manualPage, setManualPage] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [manualFormError, setManualFormError] = useState<string | null>(null);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['book-categories'],
@@ -307,52 +317,44 @@ function BookRegisterContent() {
 
   const updateCategory = (
     setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    isbn: string,
+    id: string,
     category: string,
   ) => {
-    setter((prev) =>
-      prev.map((b) => (b.isbn === isbn ? { ...b, category } : b)),
-    );
+    setter((prev) => prev.map((b) => (b.id === id ? { ...b, category } : b)));
   };
 
   const updateCategoryMain = (
     setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    isbn: string,
+    id: string,
     categoryMain: string,
   ) => {
     setter((prev) =>
-      prev.map((b) =>
-        b.isbn === isbn ? { ...b, categoryMain, category: '' } : b,
-      ),
+      prev.map((b) => (b.id === id ? { ...b, categoryMain, category: '' } : b)),
     );
   };
 
   const updateAuthorCode = (
     setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    isbn: string,
+    id: string,
     authorCode: string,
   ) => {
-    setter((prev) =>
-      prev.map((b) => (b.isbn === isbn ? { ...b, authorCode } : b)),
-    );
+    setter((prev) => prev.map((b) => (b.id === id ? { ...b, authorCode } : b)));
   };
 
   const updateDonorName = (
     setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    isbn: string,
+    id: string,
     donorName: string,
   ) => {
-    setter((prev) =>
-      prev.map((b) => (b.isbn === isbn ? { ...b, donorName } : b)),
-    );
+    setter((prev) => prev.map((b) => (b.id === id ? { ...b, donorName } : b)));
   };
 
   const updateRegNo = (
     setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
-    isbn: string,
+    id: string,
     regNo: string,
   ) => {
-    setter((prev) => prev.map((b) => (b.isbn === isbn ? { ...b, regNo } : b)));
+    setter((prev) => prev.map((b) => (b.id === id ? { ...b, regNo } : b)));
   };
 
   const handleRecognize = (scannedIsbn?: string) => {
@@ -382,13 +384,41 @@ function BookRegisterContent() {
     setJustSubmitted(false);
   };
 
+  const handleAddManualEntry = () => {
+    if (!manualTitle.trim()) {
+      setManualFormError('제목은 필수입니다.');
+      return;
+    }
+    setManualFormError(null);
+    setManualEntries((prev) => [
+      ...prev,
+      toScannedBook({
+        isbn: manualIsbn.trim(),
+        title: manualTitle.trim(),
+        author: manualAuthor.trim(),
+        publisher: manualPublisher.trim(),
+        page: manualPage.trim() || undefined,
+        price: manualPrice.trim() || undefined,
+      }),
+    ]);
+    setManualTitle('');
+    setManualAuthor('');
+    setManualPublisher('');
+    setManualIsbn('');
+    setManualPage('');
+    setManualPrice('');
+    setJustSubmitted(false);
+  };
+
   const handleSubmit = () => {
     setJustSubmitted(true);
     if (method === 'barcode') {
       setRecognized([]);
-    } else {
+    } else if (method === 'excel') {
       setExcelRows([]);
       setFileName(null);
+    } else {
+      setManualEntries([]);
     }
   };
 
@@ -404,7 +434,7 @@ function BookRegisterContent() {
         <h2 className="font-serif text-3xl text-amber-900">도서 등록</h2>
       </div>
 
-      <div className="flex gap-2 border-b border-amber-900/20">
+      <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
         <button
           type="button"
           onClick={() => switchMethod('barcode')}
@@ -427,6 +457,17 @@ function BookRegisterContent() {
           <FileSpreadsheet className="h-4 w-4" />
           엑셀 업로드
         </button>
+        <button
+          type="button"
+          onClick={() => switchMethod('manual')}
+          className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
+            method === 'manual'
+              ? 'border-red-900 text-red-900'
+              : 'border-transparent text-amber-700 hover:text-amber-900'
+          }`}>
+          <PencilLine className="h-4 w-4" />
+          직접 등록
+        </button>
       </div>
 
       {justSubmitted && (
@@ -436,7 +477,7 @@ function BookRegisterContent() {
         </div>
       )}
 
-      {method === 'barcode' ? (
+      {method === 'barcode' && (
         <div className="space-y-6">
           <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
             <label className="mb-2 block text-base font-medium text-amber-900">
@@ -471,6 +512,8 @@ function BookRegisterContent() {
             <p className="mt-2 text-sm text-amber-700">
               스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
               인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
+              바코드가 없거나 인식이 안 되면 &ldquo;직접 등록&rdquo; 탭을
+              이용해주세요.
             </p>
             {isbnValidationError && (
               <p className="mt-2 text-sm text-red-600">{isbnValidationError}</p>
@@ -503,24 +546,22 @@ function BookRegisterContent() {
           <ScannedBookTable
             books={recognized}
             categories={categories}
-            onRemove={(isbn) =>
-              setRecognized((prev) => prev.filter((b) => b.isbn !== isbn))
+            onRemove={(id) =>
+              setRecognized((prev) => prev.filter((b) => b.id !== id))
             }
-            onCategoryMainChange={(isbn, mainCode) =>
-              updateCategoryMain(setRecognized, isbn, mainCode)
+            onCategoryMainChange={(id, mainCode) =>
+              updateCategoryMain(setRecognized, id, mainCode)
             }
-            onCategoryChange={(isbn, category) =>
-              updateCategory(setRecognized, isbn, category)
+            onCategoryChange={(id, category) =>
+              updateCategory(setRecognized, id, category)
             }
-            onAuthorCodeChange={(isbn, authorCode) =>
-              updateAuthorCode(setRecognized, isbn, authorCode)
+            onAuthorCodeChange={(id, authorCode) =>
+              updateAuthorCode(setRecognized, id, authorCode)
             }
-            onDonorNameChange={(isbn, donorName) =>
-              updateDonorName(setRecognized, isbn, donorName)
+            onDonorNameChange={(id, donorName) =>
+              updateDonorName(setRecognized, id, donorName)
             }
-            onRegNoChange={(isbn, regNo) =>
-              updateRegNo(setRecognized, isbn, regNo)
-            }
+            onRegNoChange={(id, regNo) => updateRegNo(setRecognized, id, regNo)}
             emptyText="인식된 도서가 없습니다"
           />
 
@@ -534,7 +575,9 @@ function BookRegisterContent() {
               : '등록하기'}
           </button>
         </div>
-      ) : (
+      )}
+
+      {method === 'excel' && (
         <div className="space-y-6">
           <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
             <label className="mb-2 block text-base font-medium text-amber-900">
@@ -559,24 +602,22 @@ function BookRegisterContent() {
           <ScannedBookTable
             books={excelRows}
             categories={categories}
-            onRemove={(isbn) =>
-              setExcelRows((prev) => prev.filter((b) => b.isbn !== isbn))
+            onRemove={(id) =>
+              setExcelRows((prev) => prev.filter((b) => b.id !== id))
             }
-            onCategoryMainChange={(isbn, mainCode) =>
-              updateCategoryMain(setExcelRows, isbn, mainCode)
+            onCategoryMainChange={(id, mainCode) =>
+              updateCategoryMain(setExcelRows, id, mainCode)
             }
-            onCategoryChange={(isbn, category) =>
-              updateCategory(setExcelRows, isbn, category)
+            onCategoryChange={(id, category) =>
+              updateCategory(setExcelRows, id, category)
             }
-            onAuthorCodeChange={(isbn, authorCode) =>
-              updateAuthorCode(setExcelRows, isbn, authorCode)
+            onAuthorCodeChange={(id, authorCode) =>
+              updateAuthorCode(setExcelRows, id, authorCode)
             }
-            onDonorNameChange={(isbn, donorName) =>
-              updateDonorName(setExcelRows, isbn, donorName)
+            onDonorNameChange={(id, donorName) =>
+              updateDonorName(setExcelRows, id, donorName)
             }
-            onRegNoChange={(isbn, regNo) =>
-              updateRegNo(setExcelRows, isbn, regNo)
-            }
+            onRegNoChange={(id, regNo) => updateRegNo(setExcelRows, id, regNo)}
             emptyText="업로드할 파일을 선택해주세요"
           />
 
@@ -588,6 +629,134 @@ function BookRegisterContent() {
             {excelRows.length > 0
               ? `${excelRows.length}권 업로드하기`
               : '업로드하기'}
+          </button>
+        </div>
+      )}
+
+      {method === 'manual' && (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+            <p className="mb-4 text-sm text-amber-700">
+              바코드가 없거나 인식되지 않는 책은 여기서 정보를 직접 입력해
+              목록에 추가해주세요.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  제목 <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualTitle}
+                  onChange={(e) => setManualTitle(e.target.value)}
+                  placeholder="도서 제목을 입력해주세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  저자
+                </label>
+                <input
+                  type="text"
+                  value={manualAuthor}
+                  onChange={(e) => setManualAuthor(e.target.value)}
+                  placeholder="저자명을 입력해주세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  출판사
+                </label>
+                <input
+                  type="text"
+                  value={manualPublisher}
+                  onChange={(e) => setManualPublisher(e.target.value)}
+                  placeholder="출판사를 입력해주세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  ISBN (있는 경우)
+                </label>
+                <input
+                  type="text"
+                  value={manualIsbn}
+                  onChange={(e) => setManualIsbn(e.target.value)}
+                  placeholder="없으면 비워두세요"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  페이지
+                </label>
+                <input
+                  type="text"
+                  value={manualPage}
+                  onChange={(e) => setManualPage(e.target.value)}
+                  placeholder="예: 307 p."
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-base font-medium text-amber-900">
+                  정가
+                </label>
+                <input
+                  type="text"
+                  value={manualPrice}
+                  onChange={(e) => setManualPrice(e.target.value)}
+                  placeholder="예: 15000"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+              </div>
+            </div>
+            {manualFormError && (
+              <p className="mt-3 text-sm text-red-600">{manualFormError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleAddManualEntry}
+              className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+              목록에 추가
+            </button>
+          </div>
+
+          <ScannedBookTable
+            books={manualEntries}
+            categories={categories}
+            onRemove={(id) =>
+              setManualEntries((prev) => prev.filter((b) => b.id !== id))
+            }
+            onCategoryMainChange={(id, mainCode) =>
+              updateCategoryMain(setManualEntries, id, mainCode)
+            }
+            onCategoryChange={(id, category) =>
+              updateCategory(setManualEntries, id, category)
+            }
+            onAuthorCodeChange={(id, authorCode) =>
+              updateAuthorCode(setManualEntries, id, authorCode)
+            }
+            onDonorNameChange={(id, donorName) =>
+              updateDonorName(setManualEntries, id, donorName)
+            }
+            onRegNoChange={(id, regNo) =>
+              updateRegNo(setManualEntries, id, regNo)
+            }
+            emptyText="추가된 도서가 없습니다"
+          />
+
+          <button
+            type="button"
+            disabled={manualEntries.length === 0}
+            onClick={handleSubmit}
+            className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
+            {manualEntries.length > 0
+              ? `${manualEntries.length}권 등록하기`
+              : '등록하기'}
           </button>
         </div>
       )}
