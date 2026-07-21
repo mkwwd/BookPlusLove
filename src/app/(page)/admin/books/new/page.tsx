@@ -21,7 +21,7 @@ import { supabase } from '@/utils/supabase/client';
 
 import CameraScanner from './CameraScanner';
 
-type Method = 'manual' | 'barcode' | 'excel';
+type Method = 'manual' | 'excel';
 
 interface ScannedBook {
   id: string;
@@ -258,23 +258,14 @@ function ScannedBookTable({
 function BookRegisterContent() {
   const searchParams = useSearchParams();
   const initialMethod: Method =
-    searchParams.get('method') === 'excel'
-      ? 'excel'
-      : searchParams.get('method') === 'manual'
-        ? 'manual'
-        : 'barcode';
+    searchParams.get('method') === 'excel' ? 'excel' : 'manual';
   const [method, setMethod] = useState<Method>(initialMethod);
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  // 방법(바코드/엑셀/직접입력)과 무관하게 등록 대상 목록은 하나로 공유한다.
+  // 방법(직접입력/엑셀)과 무관하게 등록 대상 목록은 하나로 공유한다.
   const [entries, setEntries] = useState<ScannedBook[]>([]);
 
-  const [isbnInput, setIsbnInput] = useState('');
-  const [isbnValidationError, setIsbnValidationError] = useState<string | null>(
-    null,
-  );
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-
   const [fileName, setFileName] = useState<string | null>(null);
 
   const [manualTitle, setManualTitle] = useState('');
@@ -316,22 +307,6 @@ function BookRegisterContent() {
   };
 
   const {
-    mutate: lookupIsbn,
-    isPending: isLookingUp,
-    error: lookupError,
-  } = useMutation({
-    mutationFn: fetchIsbnLookup,
-    onSuccess: (book) => {
-      setEntries((prev) =>
-        prev.some((b) => b.isbn === book.isbn)
-          ? prev
-          : [...prev, toScannedBook(book)],
-      );
-      setJustSubmitted(false);
-    },
-  });
-
-  const {
     mutate: lookupManualIsbn,
     isPending: isManualLookingUp,
     error: manualLookupError,
@@ -354,23 +329,6 @@ function BookRegisterContent() {
     );
   };
 
-  const handleRecognize = (scannedIsbn?: string) => {
-    const isbn = (scannedIsbn ?? isbnInput).trim();
-    if (!isbn || isLookingUp) return;
-    if (!scannedIsbn) setIsbnInput('');
-
-    if (!isValidIsbn13(isbn)) {
-      setIsbnValidationError(
-        `"${isbn}"은(는) ISBN 형식이 아닙니다. 책 뒷면의 ISBN 바코드(978 또는 979로 시작)를 스캔해주세요.`,
-      );
-      return;
-    }
-    setIsbnValidationError(null);
-
-    if (entries.some((book) => book.isbn === isbn)) return;
-    lookupIsbn(isbn);
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -381,9 +339,10 @@ function BookRegisterContent() {
     setJustSubmitted(false);
   };
 
-  const handleManualLookup = () => {
-    const isbn = manualIsbn.trim();
+  const handleManualLookup = (scannedIsbn?: string) => {
+    const isbn = (scannedIsbn ?? manualIsbn).trim();
     if (!isbn || isManualLookingUp) return;
+    if (scannedIsbn) setManualIsbn(scannedIsbn);
 
     if (!isValidIsbn13(isbn)) {
       setManualIsbnError(`"${isbn}"은(는) ISBN 형식이 아닙니다.`);
@@ -433,6 +392,7 @@ function BookRegisterContent() {
     setManualRegNo('');
     setManualDonorName('');
     setManualIsbnError(null);
+    setIsCameraOpen(false);
     setJustSubmitted(false);
   };
 
@@ -464,18 +424,7 @@ function BookRegisterContent() {
               : 'border-transparent text-amber-700 hover:text-amber-900'
           }`}>
           <PencilLine className="h-4 w-4" />
-          직접 등록
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMethod('barcode')}
-          className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
-            method === 'barcode'
-              ? 'border-red-900 text-red-900'
-              : 'border-transparent text-amber-700 hover:text-amber-900'
-          }`}>
-          <Barcode className="h-4 w-4" />
-          바코드 인식
+          도서 등록
         </button>
         <button
           type="button"
@@ -500,11 +449,12 @@ function BookRegisterContent() {
       {method === 'manual' && (
         <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
           <p className="mb-4 text-sm text-amber-700">
-            바코드가 없거나 인식되지 않는 책은 여기서 정보를 직접 입력해 목록에
-            추가해주세요.
+            ISBN이 있으면 스캔하거나 입력해서 조회하고, 없는 책은 아래 항목을
+            직접 입력해주세요.
           </p>
           <div className="mb-4">
-            <label className="mb-1.5 block text-base font-medium text-amber-900">
+            <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-amber-900">
+              <Barcode className="h-4 w-4" />
               ISBN (있는 경우)
             </label>
             <div className="flex gap-2">
@@ -522,13 +472,13 @@ function BookRegisterContent() {
                     handleManualLookup();
                   }
                 }}
-                placeholder="ISBN이 있으면 입력 후 조회, 없으면 비워두세요"
+                placeholder="바코드를 스캔하거나 ISBN을 입력 후 조회, 없으면 비워두세요"
                 className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="button"
                 disabled={isManualLookingUp}
-                onClick={handleManualLookup}
+                onClick={() => handleManualLookup()}
                 className="shrink-0 rounded bg-amber-900/90 px-5 py-2.5 text-base font-medium text-white transition hover:bg-amber-900 disabled:opacity-50">
                 {isManualLookingUp ? '조회 중...' : '조회'}
               </button>
@@ -544,6 +494,28 @@ function BookRegisterContent() {
               <p className="mt-1.5 text-sm text-red-600">
                 {manualLookupError.message}
               </p>
+            )}
+
+            {!isCameraOpen && (
+              <button
+                type="button"
+                onClick={() => setIsCameraOpen(true)}
+                className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+                <ScanLine className="h-4 w-4" />
+                카메라로 스캔
+              </button>
+            )}
+
+            {isCameraOpen && (
+              <div className="mt-3">
+                <CameraScanner
+                  onDetected={(isbn) => {
+                    handleManualLookup(isbn);
+                    setIsCameraOpen(false);
+                  }}
+                  onClose={() => setIsCameraOpen(false)}
+                />
+              </div>
             )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -701,74 +673,6 @@ function BookRegisterContent() {
         </div>
       )}
 
-      {method === 'barcode' && (
-        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-          <label className="mb-2 block text-base font-medium text-amber-900">
-            ISBN 바코드
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={isbnInput}
-              disabled={isLookingUp}
-              onChange={(e) => {
-                setIsbnInput(e.target.value);
-                setIsbnValidationError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleRecognize();
-                }
-              }}
-              placeholder="바코드를 스캔하거나 ISBN을 직접 입력해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
-            />
-            <button
-              type="button"
-              disabled={isLookingUp}
-              onClick={() => handleRecognize()}
-              className="shrink-0 rounded bg-red-900 px-5 py-3 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
-              {isLookingUp ? '조회 중...' : '인식'}
-            </button>
-          </div>
-          <p className="mt-2 text-sm text-amber-700">
-            스캐너를 이 입력창에 포커스한 상태로 바코드를 읽히면 Enter로 자동
-            인식됩니다. 국립중앙도서관 서지정보를 실시간으로 조회합니다.
-            바코드가 없거나 인식이 안 되면 &ldquo;직접 등록&rdquo; 탭을
-            이용해주세요.
-          </p>
-          {isbnValidationError && (
-            <p className="mt-2 text-sm text-red-600">{isbnValidationError}</p>
-          )}
-          {lookupError && (
-            <p className="mt-2 text-sm text-red-600">{lookupError.message}</p>
-          )}
-
-          {!isCameraOpen && (
-            <button
-              type="button"
-              onClick={() => setIsCameraOpen(true)}
-              className="mt-4 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
-              <ScanLine className="h-4 w-4" />
-              카메라로 스캔
-            </button>
-          )}
-
-          {isCameraOpen && (
-            <div className="mt-4">
-              <CameraScanner
-                onDetected={(isbn) => {
-                  handleRecognize(isbn);
-                  setIsCameraOpen(false);
-                }}
-                onClose={() => setIsCameraOpen(false)}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
       {method === 'excel' && (
         <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
           <label className="mb-2 block text-base font-medium text-amber-900">
@@ -802,7 +706,7 @@ function BookRegisterContent() {
         onAuthorCodeChange={(id, authorCode) => updateEntry(id, { authorCode })}
         onDonorNameChange={(id, donorName) => updateEntry(id, { donorName })}
         onRegNoChange={(id, regNo) => updateEntry(id, { regNo })}
-        emptyText="등록할 도서가 없습니다. 위에서 바코드 인식, 직접 입력, 엑셀 업로드 중 하나로 추가해주세요."
+        emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
       />
 
       <button

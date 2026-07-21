@@ -1,4 +1,4 @@
-import { Barcode, Plus, Search, SquarePen } from 'lucide-react';
+import { Plus, Search, SquarePen } from 'lucide-react';
 import Link from 'next/link';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -52,12 +52,6 @@ export default function AdminBooksPage() {
               className="w-64 rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
             />
           </div>
-          <Link
-            href="/admin/books/new?method=barcode"
-            className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/70 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
-            <Barcode className="h-4 w-4" />
-            바코드
-          </Link>
           <Link
             href="/admin/books/new"
             className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
