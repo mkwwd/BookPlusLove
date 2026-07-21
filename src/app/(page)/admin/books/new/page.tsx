@@ -112,7 +112,7 @@ function ScannedBookTable({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
-      <table className="w-full text-left text-base">
+      <table className="w-full min-w-max text-left text-base whitespace-nowrap">
         <thead className="border-b border-amber-900/20 text-amber-700">
           <tr>
             <th className="px-5 py-3 font-medium">표지</th>
@@ -168,7 +168,7 @@ function ScannedBookTable({
                     type="text"
                     value={book.regNo}
                     onChange={(e) => onRegNoChange(book.isbn, e.target.value)}
-                    placeholder="예: EM0000021622"
+                    placeholder="예: MB0000021622"
                     className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                   />
                 </td>
