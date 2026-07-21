@@ -280,6 +280,7 @@ function BookRegisterContent() {
   >();
   const [manualCategoryMain, setManualCategoryMain] = useState('');
   const [manualCategory, setManualCategory] = useState('');
+  const [manualAuthorCode, setManualAuthorCode] = useState('');
   const [manualRegNo, setManualRegNo] = useState('');
   const [manualDonorName, setManualDonorName] = useState('');
   const [manualFormError, setManualFormError] = useState<string | null>(null);
@@ -320,6 +321,7 @@ function BookRegisterContent() {
       setManualPrice(book.price ?? '');
       setManualCoverUrl(book.coverUrl ?? '');
       setManualDescription(book.description);
+      setManualAuthorCode(generateAuthorCode(book.author, book.title) ?? '');
     },
   });
 
@@ -374,7 +376,8 @@ function BookRegisterContent() {
         description: manualDescription,
         category: manualCategory,
         categoryMain: manualCategoryMain,
-        authorCode: generateAuthorCode(author, title) ?? '',
+        authorCode:
+          manualAuthorCode.trim() || generateAuthorCode(author, title) || '',
         donorName: manualDonorName.trim(),
         regNo: manualRegNo.trim(),
       },
@@ -389,11 +392,18 @@ function BookRegisterContent() {
     setManualDescription(undefined);
     setManualCategoryMain('');
     setManualCategory('');
+    setManualAuthorCode('');
     setManualRegNo('');
     setManualDonorName('');
     setManualIsbnError(null);
     setIsCameraOpen(false);
     setJustSubmitted(false);
+  };
+
+  const handleAutoGenerateAuthorCode = () => {
+    setManualAuthorCode(
+      generateAuthorCode(manualAuthor.trim(), manualTitle.trim()) ?? '',
+    );
   };
 
   const handleSubmit = () => {
@@ -590,6 +600,26 @@ function BookRegisterContent() {
                 placeholder="예: MB0000021622"
                 className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                저자기호
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualAuthorCode}
+                  onChange={(e) => setManualAuthorCode(e.target.value)}
+                  placeholder="예: 게68ㄴ"
+                  className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAutoGenerateAuthorCode}
+                  className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+                  자동생성
+                </button>
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block text-base font-medium text-amber-900">
