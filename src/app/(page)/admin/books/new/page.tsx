@@ -35,6 +35,7 @@ interface ScannedBook {
   categoryMain: string;
   authorCode: string;
   donorName: string;
+  regNo: string;
 }
 
 interface BookCategory {
@@ -46,7 +47,7 @@ interface BookCategory {
 
 const MOCK_EXCEL_SOURCE: Omit<
   ScannedBook,
-  'category' | 'categoryMain' | 'authorCode' | 'donorName'
+  'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
 >[] = [
   {
     isbn: '9791190090018',
@@ -71,7 +72,7 @@ const MOCK_EXCEL_SOURCE: Omit<
 function toScannedBook(
   book: Omit<
     ScannedBook,
-    'category' | 'categoryMain' | 'authorCode' | 'donorName'
+    'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
   >,
 ): ScannedBook {
   return {
@@ -80,6 +81,7 @@ function toScannedBook(
     categoryMain: '',
     authorCode: generateAuthorCode(book.author, book.title) ?? '',
     donorName: '',
+    regNo: '',
   };
 }
 
@@ -91,6 +93,7 @@ function ScannedBookTable({
   onCategoryChange,
   onAuthorCodeChange,
   onDonorNameChange,
+  onRegNoChange,
   emptyText,
 }: {
   books: ScannedBook[];
@@ -100,6 +103,7 @@ function ScannedBookTable({
   onCategoryChange: (isbn: string, category: string) => void;
   onAuthorCodeChange: (isbn: string, authorCode: string) => void;
   onDonorNameChange: (isbn: string, donorName: string) => void;
+  onRegNoChange: (isbn: string, regNo: string) => void;
   emptyText: string;
 }) {
   const mainOptions = Array.from(
@@ -118,6 +122,7 @@ function ScannedBookTable({
             <th className="px-5 py-3 font-medium">ISBN</th>
             <th className="px-5 py-3 font-medium">페이지</th>
             <th className="px-5 py-3 font-medium">정가</th>
+            <th className="px-5 py-3 font-medium">등록번호</th>
             <th className="px-5 py-3 font-medium">분류코드</th>
             <th className="px-5 py-3 font-medium">저자기호</th>
             <th className="px-5 py-3 font-medium">기증자명</th>
@@ -128,7 +133,7 @@ function ScannedBookTable({
           {books.length === 0 ? (
             <tr>
               <td
-                colSpan={11}
+                colSpan={12}
                 className="px-5 py-8 text-center text-amber-900/50">
                 {emptyText}
               </td>
@@ -157,6 +162,15 @@ function ScannedBookTable({
                 <td className="px-5 py-3 text-amber-700">{book.page ?? '-'}</td>
                 <td className="px-5 py-3 text-amber-700">
                   {book.price ?? '-'}
+                </td>
+                <td className="px-5 py-3">
+                  <input
+                    type="text"
+                    value={book.regNo}
+                    onChange={(e) => onRegNoChange(book.isbn, e.target.value)}
+                    placeholder="예: EM0000021622"
+                    className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                  />
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex gap-1">
@@ -333,6 +347,14 @@ function BookRegisterContent() {
     );
   };
 
+  const updateRegNo = (
+    setter: React.Dispatch<React.SetStateAction<ScannedBook[]>>,
+    isbn: string,
+    regNo: string,
+  ) => {
+    setter((prev) => prev.map((b) => (b.isbn === isbn ? { ...b, regNo } : b)));
+  };
+
   const handleRecognize = (scannedIsbn?: string) => {
     const isbn = (scannedIsbn ?? isbnInput).trim();
     if (!isbn || isLookingUp) return;
@@ -496,6 +518,9 @@ function BookRegisterContent() {
             onDonorNameChange={(isbn, donorName) =>
               updateDonorName(setRecognized, isbn, donorName)
             }
+            onRegNoChange={(isbn, regNo) =>
+              updateRegNo(setRecognized, isbn, regNo)
+            }
             emptyText="인식된 도서가 없습니다"
           />
 
@@ -548,6 +573,9 @@ function BookRegisterContent() {
             }
             onDonorNameChange={(isbn, donorName) =>
               updateDonorName(setExcelRows, isbn, donorName)
+            }
+            onRegNoChange={(isbn, regNo) =>
+              updateRegNo(setExcelRows, isbn, regNo)
             }
             emptyText="업로드할 파일을 선택해주세요"
           />
