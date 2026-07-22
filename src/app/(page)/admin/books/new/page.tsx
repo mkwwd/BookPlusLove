@@ -31,6 +31,7 @@ interface ScannedBook {
   author: string;
   publisher: string;
   coverUrl?: string;
+  coverFile?: File;
   description?: string;
   page?: string;
   price?: string;
@@ -388,36 +389,11 @@ function BookRegisterContent() {
     },
   });
 
-  const {
-    mutate: uploadCover,
-    isPending: isUploadingCover,
-    error: coverUploadError,
-  } = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/admin/books/cover', {
-        method: 'POST',
-        body: formData,
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error ?? '업로드에 실패했습니다.');
-      }
-      return body as { url: string };
-    },
-    // 파일은 "목록에 추가"를 누르는 시점에야 업로드한다(아래 handleAddManualEntry).
-    // 선택하자마자 올리면, 등록을 끝까지 안 하고 나가도 스토리지에 안 쓰는
-    // 파일이 남기 때문.
-    onSuccess: ({ url }) => {
-      setEntries((prev) => [...prev, buildManualEntry(url)]);
-      resetManualForm();
-    },
-  });
-
   const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // 실제 업로드는 "등록하기"(진짜 DB 저장) 시점에만 한다. 여기서는
+    // 미리보기용 blob URL만 만들고 파일은 항목에 들고만 있는다.
     if (manualCoverPreview) URL.revokeObjectURL(manualCoverPreview);
     setManualCoverFile(file);
     setManualCoverUrl('');
@@ -453,7 +429,7 @@ function BookRegisterContent() {
     lookupManualIsbn(isbn);
   };
 
-  const buildManualEntry = (coverUrl?: string): ScannedBook => {
+  const buildManualEntry = (): ScannedBook => {
     const title = manualTitle.trim();
     const author = manualAuthor.trim();
     return {
@@ -464,7 +440,10 @@ function BookRegisterContent() {
       publisher: manualPublisher.trim(),
       page: manualPage.trim() || undefined,
       price: manualPrice.trim() || undefined,
-      coverUrl: coverUrl ?? (manualCoverUrl.trim() || undefined),
+      // 실제 업로드 전이라 blob 미리보기 URL을 임시로 들고 있다가,
+      // "등록하기" 시점에 실제 URL로 교체한다 (아래 handleSubmit).
+      coverUrl: manualCoverPreview || manualCoverUrl.trim() || undefined,
+      coverFile: manualCoverFile ?? undefined,
       description: manualDescription,
       category: manualCategory,
       categoryMain: manualCategoryMain,
@@ -476,7 +455,6 @@ function BookRegisterContent() {
   };
 
   const resetManualForm = () => {
-    if (manualCoverPreview) URL.revokeObjectURL(manualCoverPreview);
     setManualTitle('');
     setManualAuthor('');
     setManualPublisher('');
@@ -484,6 +462,8 @@ function BookRegisterContent() {
     setManualPage('');
     setManualPrice('');
     setManualCoverUrl('');
+    // blob 미리보기는 revoke하지 않는다 — 방금 만든 항목이 그 URL을
+    // 계속 표시용으로 쓰고 있어서, 여기서 지우면 표에서 깨져 보인다.
     setManualCoverFile(null);
     setManualCoverPreview('');
     setManualDescription(undefined);
@@ -507,13 +487,6 @@ function BookRegisterContent() {
       return;
     }
     setManualFormError(null);
-
-    // 표지 파일을 골라뒀으면 이 시점(실제로 목록에 넣을 때)에만 업로드한다.
-    if (manualCoverFile) {
-      uploadCover(manualCoverFile);
-      return;
-    }
-
     setEntries((prev) => [...prev, buildManualEntry()]);
     resetManualForm();
   };
@@ -527,6 +500,7 @@ function BookRegisterContent() {
   const [submitResult, setSubmitResult] = useState<{
     registered: number;
     failed: { title: string; regNo: string; error: string }[];
+    coverWarnings: string[];
   } | null>(null);
 
   const {
@@ -535,33 +509,74 @@ function BookRegisterContent() {
     error: submitError,
   } = useMutation({
     mutationFn: async (books: ScannedBook[]) => {
+      // 표지 파일을 골라둔 항목은 여기, 실제 등록 시점에만 업로드한다.
+      const prepared: ScannedBook[] = [];
+      const coverWarnings: string[] = [];
+
+      for (const book of books) {
+        if (!book.coverFile) {
+          prepared.push(book);
+          continue;
+        }
+        try {
+          const formData = new FormData();
+          formData.append('file', book.coverFile);
+          const coverRes = await fetch('/api/admin/books/cover', {
+            method: 'POST',
+            body: formData,
+          });
+          const coverBody = await coverRes.json();
+          if (!coverRes.ok) {
+            throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
+          }
+          if (book.coverUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(book.coverUrl);
+          }
+          prepared.push({
+            ...book,
+            coverUrl: coverBody.url,
+            coverFile: undefined,
+          });
+        } catch {
+          coverWarnings.push(
+            `"${book.title}" 표지 업로드에 실패해 표지 없이 등록을 시도합니다.`,
+          );
+          prepared.push({ ...book, coverUrl: undefined, coverFile: undefined });
+        }
+      }
+
       const res = await fetch('/api/admin/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ books }),
+        body: JSON.stringify({ books: prepared }),
       });
       const body = await res.json();
       if (!res.ok) {
         throw new Error(body.error ?? '등록에 실패했습니다.');
       }
-      return body as {
-        registered: number;
-        failed: { title: string; regNo: string; error: string }[];
+      return {
+        registered: body.registered as number,
+        failed: body.failed as {
+          title: string;
+          regNo: string;
+          error: string;
+        }[],
+        coverWarnings,
+        prepared,
       };
     },
-    onSuccess: ({ registered, failed }) => {
+    onSuccess: ({ registered, failed, coverWarnings, prepared }) => {
       if (failed.length === 0) {
         setEntries([]);
         setFileName(null);
       } else {
-        // 실패한 항목만 남겨서 고치고 다시 등록할 수 있게 한다.
+        // 실패한 항목만 남겨서 고치고 다시 등록할 수 있게 한다. 표지가 이미
+        // 실제로 업로드된 경우 그 URL을 유지해서 재시도할 때 다시 안 올린다.
         const failedRegNos = new Set(failed.map((f) => f.regNo));
-        setEntries((prev) =>
-          prev.filter((b) => failedRegNos.has(b.regNo.trim())),
-        );
+        setEntries(prepared.filter((b) => failedRegNos.has(b.regNo.trim())));
       }
       setJustSubmitted(true);
-      setSubmitResult({ registered, failed });
+      setSubmitResult({ registered, failed, coverWarnings });
     },
   });
 
@@ -637,6 +652,13 @@ function BookRegisterContent() {
               <p className="mt-1 text-sm">
                 실패한 항목은 아래 목록에 남겨뒀어요. 고친 뒤 다시 등록해주세요.
               </p>
+            </div>
+          )}
+          {submitResult.coverWarnings.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-5 py-3 text-base text-amber-800">
+              {submitResult.coverWarnings.map((w) => (
+                <p key={w}>{w}</p>
+              ))}
             </div>
           )}
         </div>
@@ -910,13 +932,8 @@ function BookRegisterContent() {
               </div>
               {manualCoverFile && (
                 <p className="mt-1.5 text-sm text-amber-700">
-                  선택된 파일: {manualCoverFile.name} (목록에 추가할 때
+                  선택된 파일: {manualCoverFile.name} (실제 등록할 때
                   업로드됩니다)
-                </p>
-              )}
-              {coverUploadError && (
-                <p className="mt-1.5 text-sm text-red-600">
-                  {coverUploadError.message}
                 </p>
               )}
             </div>
@@ -926,10 +943,9 @@ function BookRegisterContent() {
           )}
           <button
             type="button"
-            disabled={isUploadingCover}
             onClick={handleAddManualEntry}
-            className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
-            {isUploadingCover ? '표지 업로드 중...' : '목록에 추가'}
+            className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            목록에 추가
           </button>
         </div>
       )}
@@ -959,7 +975,15 @@ function BookRegisterContent() {
       <ScannedBookTable
         books={entries}
         categories={categories}
-        onRemove={(id) => setEntries((prev) => prev.filter((b) => b.id !== id))}
+        onRemove={(id) =>
+          setEntries((prev) => {
+            const removed = prev.find((b) => b.id === id);
+            if (removed?.coverUrl?.startsWith('blob:')) {
+              URL.revokeObjectURL(removed.coverUrl);
+            }
+            return prev.filter((b) => b.id !== id);
+          })
+        }
         onCategoryMainChange={(id, mainCode) =>
           updateEntry(id, { categoryMain: mainCode, category: '' })
         }
