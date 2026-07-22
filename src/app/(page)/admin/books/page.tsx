@@ -475,6 +475,7 @@ export default function AdminBooksPage() {
               <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">제목</th>
               <th className="px-5 py-3 font-medium">저자</th>
+              <th className="px-5 py-3 font-medium">출판사</th>
               <th className="px-5 py-3 font-medium">카테고리</th>
               <th className="px-5 py-3 font-medium">상태</th>
               <th className="px-5 py-3 font-medium">관리</th>
@@ -484,7 +485,7 @@ export default function AdminBooksPage() {
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-5 py-8 text-center text-amber-900/50">
                   불러오는 중...
                 </td>
@@ -492,7 +493,7 @@ export default function AdminBooksPage() {
             ) : visibleBooks.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-5 py-8 text-center text-amber-900/50">
                   등록된 도서가 없습니다.
                 </td>
@@ -506,6 +507,9 @@ export default function AdminBooksPage() {
                   <td className="px-5 py-3 text-amber-900">{book.title}</td>
                   <td className="px-5 py-3 text-amber-700">
                     {book.author ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.publisher ?? '-'}
                   </td>
                   <td className="px-5 py-3">
                     <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
