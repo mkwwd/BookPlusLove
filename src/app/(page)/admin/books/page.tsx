@@ -37,6 +37,7 @@ interface BookRow {
   title: string;
   author: string | null;
   publisher: string | null;
+  coverUrl: string | null;
   page: string | null;
   price: string | null;
   pubDate: string | null;
@@ -58,6 +59,9 @@ function EditBookForm({
   const [title, setTitle] = useState(book.title);
   const [author, setAuthor] = useState(book.author ?? '');
   const [publisher, setPublisher] = useState(book.publisher ?? '');
+  const [coverUrl, setCoverUrl] = useState(book.coverUrl ?? '');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState('');
   const [page, setPage] = useState(book.page ?? '');
   const [price, setPrice] = useState(book.price ?? '');
   const [pubDate, setPubDate] = useState(book.pubDate ?? '');
@@ -79,6 +83,21 @@ function EditBookForm({
     error: saveError,
   } = useMutation({
     mutationFn: async () => {
+      let finalCoverUrl = coverUrl;
+      if (coverFile) {
+        const formData = new FormData();
+        formData.append('file', coverFile);
+        const coverRes = await fetch('/api/admin/books/cover', {
+          method: 'POST',
+          body: formData,
+        });
+        const coverBody = await coverRes.json();
+        if (!coverRes.ok) {
+          throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
+        }
+        finalCoverUrl = coverBody.url;
+      }
+
       const res = await fetch(`/api/admin/books/${book.copyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -86,6 +105,7 @@ function EditBookForm({
           title,
           author,
           publisher,
+          coverUrl: finalCoverUrl,
           page,
           price,
           pubDate,
@@ -103,6 +123,15 @@ function EditBookForm({
     },
     onSuccess: onSaved,
   });
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    setCoverFile(file);
+    setCoverUrl('');
+    setCoverPreview(URL.createObjectURL(file));
+  };
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -290,6 +319,51 @@ function EditBookForm({
                 ))}
             </select>
           </div>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
+            표지 이미지
+          </label>
+          <div className="flex items-center gap-3">
+            {coverPreview || coverUrl.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={coverPreview || coverUrl.trim()}
+                alt=""
+                className="h-14 w-10 shrink-0 rounded-sm object-cover"
+              />
+            ) : (
+              <div className="h-14 w-10 shrink-0 rounded-sm bg-amber-100" />
+            )}
+            <input
+              type="text"
+              value={coverUrl}
+              onChange={(e) => {
+                setCoverUrl(e.target.value);
+                if (coverFile) {
+                  if (coverPreview) URL.revokeObjectURL(coverPreview);
+                  setCoverFile(null);
+                  setCoverPreview('');
+                }
+              }}
+              placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+            />
+            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+              파일 선택
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverFileChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+          {coverFile && (
+            <p className="mt-1.5 text-sm text-amber-700">
+              선택된 파일: {coverFile.name} (저장할 때 업로드됩니다)
+            </p>
+          )}
         </div>
       </div>
 

@@ -36,6 +36,7 @@ interface BookRow {
   title: string;
   author: string | null;
   publisher: string | null;
+  cover_url: string | null;
   page: string | null;
   price: string | null;
   pub_date: string | null;
@@ -91,7 +92,7 @@ export async function GET() {
     .from('book_copies')
     .select(
       `id, reg_no, status, donor_name, donor_user_id,
-      books(id, title, author, publisher, page, price, pub_date, author_code, category_code,
+      books(id, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code,
         book_categories(label, main_code, main_label))`,
     )
     .order('id', { ascending: false })
@@ -119,6 +120,7 @@ export async function GET() {
       title: book?.title ?? '(제목 없음)',
       author: book?.author ?? null,
       publisher: book?.publisher ?? null,
+      coverUrl: book?.cover_url ?? null,
       page: book?.page ?? null,
       price: book?.price ?? null,
       pubDate: book?.pub_date ?? null,

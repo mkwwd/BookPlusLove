@@ -80,6 +80,10 @@ export async function PATCH(
         typeof body?.publisher === 'string'
           ? body.publisher.trim() || null
           : null,
+      cover_url:
+        typeof body?.coverUrl === 'string'
+          ? body.coverUrl.trim() || null
+          : null,
       page: typeof body?.page === 'string' ? body.page.trim() || null : null,
       price: typeof body?.price === 'string' ? body.price.trim() || null : null,
       pub_date:
