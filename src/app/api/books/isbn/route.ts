@@ -1,3 +1,5 @@
+import { extractAuthorName } from '@/lib/author';
+
 const ALADIN_URL = 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx';
 const NL_SEOJI_URL = 'https://www.nl.go.kr/seoji/SearchApi.do';
 
@@ -10,6 +12,7 @@ interface BookResult {
   description?: string;
   page?: string;
   price?: string;
+  pubDate?: string;
 }
 
 interface AladinItem {
@@ -20,6 +23,7 @@ interface AladinItem {
   cover?: string;
   description?: string;
   priceStandard?: number;
+  pubDate?: string;
 }
 
 interface SeojiDoc {
@@ -30,6 +34,19 @@ interface SeojiDoc {
   TITLE_URL?: string;
   PAGE?: string;
   PRE_PRICE?: string;
+  PUBLISH_PREDATE?: string;
+  REAL_PUBLISH_DATE?: string;
+}
+
+// 알라딘은 "2017-03-31", 국립중앙도서관은 "20170331" 형태로 준다.
+// 둘 다 "2017년 3월 31일" 형식으로 통일한다.
+function formatPubDate(raw?: string): string | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  const match = trimmed.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+  if (!match) return trimmed;
+  const [, year, month, day] = match;
+  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 }
 
 async function lookupFromAladin(isbn: string): Promise<BookResult | null> {
@@ -59,11 +76,12 @@ async function lookupFromAladin(isbn: string): Promise<BookResult | null> {
     return {
       isbn: item.isbn13?.trim() || isbn,
       title: item.title?.trim() || '',
-      author: item.author?.trim() || '',
+      author: item.author?.trim() ? extractAuthorName(item.author.trim()) : '',
       publisher: item.publisher?.trim() || '',
       coverUrl: item.cover?.trim() || undefined,
       description: item.description?.trim() || undefined,
       price: item.priceStandard ? String(item.priceStandard) : undefined,
+      pubDate: formatPubDate(item.pubDate),
     };
   } catch {
     return null;
@@ -94,11 +112,14 @@ async function lookupFromNationalLibrary(
     return {
       isbn: doc.EA_ISBN?.trim() || isbn,
       title: doc.TITLE?.trim() || '',
-      author: doc.AUTHOR?.trim() || '',
+      author: doc.AUTHOR?.trim() ? extractAuthorName(doc.AUTHOR.trim()) : '',
       publisher: doc.PUBLISHER?.trim() || '',
       coverUrl: doc.TITLE_URL?.trim() || undefined,
       page: doc.PAGE?.trim() || undefined,
       price: doc.PRE_PRICE?.trim() || undefined,
+      pubDate:
+        formatPubDate(doc.PUBLISH_PREDATE) ??
+        formatPubDate(doc.REAL_PUBLISH_DATE),
     };
   } catch {
     return null;

@@ -11,9 +11,11 @@ interface IncomingBook {
   description?: string;
   page?: string;
   price?: string;
+  pubDate?: string;
   category: string;
   authorCode: string;
   donorName: string;
+  donorUserId?: number | null;
   regNo: string;
 }
 
@@ -108,6 +110,7 @@ export async function POST(request: Request) {
           description: book.description || null,
           page: book.page || null,
           price: book.price || null,
+          pub_date: book.pubDate || null,
           category_code: book.category || null,
           author_code: book.authorCode?.trim() || null,
         })
@@ -131,6 +134,7 @@ export async function POST(request: Request) {
         book_id: bookId,
         reg_no: book.regNo.trim(),
         donor_name: book.donorName?.trim() || null,
+        donor_user_id: book.donorUserId ?? null,
       });
 
     if (insertCopyError) {
