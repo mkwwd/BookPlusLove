@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Modal from '@/components/Modal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
+import { isValidIsbn13 } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -35,6 +36,7 @@ interface BookRow {
   status: string;
   donorName: string | null;
   donorUserId: number | null;
+  isbn: string | null;
   title: string;
   author: string | null;
   publisher: string | null;
@@ -58,6 +60,7 @@ function EditBookForm({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(book.title);
+  const [isbn, setIsbn] = useState(book.isbn ?? '');
   const [author, setAuthor] = useState(book.author ?? '');
   const [publisher, setPublisher] = useState(book.publisher ?? '');
   const [coverUrl, setCoverUrl] = useState(book.coverUrl ?? '');
@@ -105,6 +108,7 @@ function EditBookForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
+          isbn,
           author,
           publisher,
           coverUrl: finalCoverUrl,
@@ -142,6 +146,10 @@ function EditBookForm({
   const handleSave = () => {
     if (!title.trim()) {
       setFormError('제목은 필수입니다.');
+      return;
+    }
+    if (isbn.trim() && !isValidIsbn13(isbn.trim())) {
+      setFormError('ISBN 형식이 올바르지 않습니다.');
       return;
     }
     if (!isValidRegNo(regNo.trim())) {
@@ -186,6 +194,17 @@ function EditBookForm({
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
+            ISBN
+          </label>
+          <input
+            type="text"
+            value={isbn}
+            onChange={(e) => setIsbn(e.target.value)}
+            className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 font-mono text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
         </div>
         <div>
@@ -476,6 +495,7 @@ export default function AdminBooksPage() {
               <th className="px-5 py-3 font-medium">제목</th>
               <th className="px-5 py-3 font-medium">저자</th>
               <th className="px-5 py-3 font-medium">출판사</th>
+              <th className="px-5 py-3 font-medium">ISBN</th>
               <th className="px-5 py-3 font-medium">카테고리</th>
               <th className="px-5 py-3 font-medium">상태</th>
               <th className="px-5 py-3 font-medium">관리</th>
@@ -485,7 +505,7 @@ export default function AdminBooksPage() {
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-5 py-8 text-center text-amber-900/50">
                   불러오는 중...
                 </td>
@@ -493,7 +513,7 @@ export default function AdminBooksPage() {
             ) : visibleBooks.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-5 py-8 text-center text-amber-900/50">
                   등록된 도서가 없습니다.
                 </td>
@@ -510,6 +530,9 @@ export default function AdminBooksPage() {
                   </td>
                   <td className="px-5 py-3 text-amber-700">
                     {book.publisher ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                    {book.isbn ?? '-'}
                   </td>
                   <td className="px-5 py-3">
                     <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">

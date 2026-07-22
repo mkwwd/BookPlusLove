@@ -1,3 +1,4 @@
+import { isValidIsbn13 } from '@/lib/isbn';
 import { isValidRegNo } from '@/lib/regNo';
 import { createRouteClient } from '@/utils/supabase/route';
 import { supabaseServer } from '@/utils/supabase/server';
@@ -51,11 +52,18 @@ export async function PATCH(
 
   const body = await request.json().catch(() => null);
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
+  const isbn = typeof body?.isbn === 'string' ? body.isbn.trim() : '';
   const regNo = typeof body?.regNo === 'string' ? body.regNo.trim() : '';
   const status = typeof body?.status === 'string' ? body.status : '';
 
   if (!title) {
     return Response.json({ error: '제목은 필수입니다.' }, { status: 400 });
+  }
+  if (isbn && !isValidIsbn13(isbn)) {
+    return Response.json(
+      { error: 'ISBN 형식이 올바르지 않습니다.' },
+      { status: 400 },
+    );
   }
   if (!isValidRegNo(regNo)) {
     return Response.json(
@@ -74,6 +82,7 @@ export async function PATCH(
     .from('books')
     .update({
       title,
+      isbn: isbn || null,
       author:
         typeof body?.author === 'string' ? body.author.trim() || null : null,
       publisher:
@@ -98,7 +107,15 @@ export async function PATCH(
     .eq('id', existingCopy.book_id);
 
   if (updateBookError) {
-    return Response.json({ error: updateBookError.message }, { status: 500 });
+    return Response.json(
+      {
+        error:
+          updateBookError.code === '23505'
+            ? '이미 등록된 ISBN입니다.'
+            : updateBookError.message,
+      },
+      { status: 500 },
+    );
   }
 
   const { error: updateCopyError } = await supabaseServer
