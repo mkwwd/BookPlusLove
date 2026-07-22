@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Barcode, ScanLine } from 'lucide-react';
 
+import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { isValidIsbn13 } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
@@ -69,6 +70,7 @@ export default function ManualBookEntryForm({
   onReset?: () => void;
 }) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [manualTitle, setManualTitle] = useState('');
   const [manualAuthor, setManualAuthor] = useState('');
   const [manualPublisher, setManualPublisher] = useState('');
@@ -155,15 +157,19 @@ export default function ManualBookEntryForm({
     },
   });
 
-  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const applyCoverFile = (file: File) => {
     // 실제 업로드는 "등록하기"(진짜 DB 저장) 시점에만 한다. 여기서는
     // 미리보기용 blob URL만 만들고 파일은 항목에 들고만 있는다.
     if (manualCoverPreview) URL.revokeObjectURL(manualCoverPreview);
     setManualCoverFile(file);
     setManualCoverUrl('');
     setManualCoverPreview(URL.createObjectURL(file));
+  };
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    applyCoverFile(file);
   };
 
   const handleManualLookup = (scannedIsbn?: string) => {
@@ -229,6 +235,7 @@ export default function ManualBookEntryForm({
     setIsDonorDropdownOpen(false);
     setManualIsbnError(null);
     setIsCameraOpen(false);
+    setIsCoverCameraOpen(false);
     onReset?.();
   };
 
@@ -574,11 +581,29 @@ export default function ManualBookEntryForm({
                 className="hidden"
               />
             </label>
+            <button
+              type="button"
+              onClick={() => setIsCoverCameraOpen(true)}
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+              사진으로 촬영
+            </button>
           </div>
           {manualCoverFile && (
             <p className="mt-1.5 text-sm text-amber-700">
               선택된 파일: {manualCoverFile.name} (실제 등록할 때 업로드됩니다)
             </p>
+          )}
+          {isCoverCameraOpen && (
+            <div className="mt-3">
+              <PhotoCapture
+                title="표지 사진 촬영"
+                onCapture={(file) => {
+                  applyCoverFile(file);
+                  setIsCoverCameraOpen(false);
+                }}
+                onClose={() => setIsCoverCameraOpen(false)}
+              />
+            </div>
           )}
         </div>
       </div>

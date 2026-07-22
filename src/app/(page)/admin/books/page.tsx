@@ -7,6 +7,7 @@ import { Plus, Search, SquarePen } from 'lucide-react';
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
+import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
@@ -62,6 +63,7 @@ function EditBookForm({
   const [coverUrl, setCoverUrl] = useState(book.coverUrl ?? '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState('');
+  const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [page, setPage] = useState(book.page ?? '');
   const [price, setPrice] = useState(book.price ?? '');
   const [pubDate, setPubDate] = useState(book.pubDate ?? '');
@@ -124,13 +126,17 @@ function EditBookForm({
     onSuccess: onSaved,
   });
 
-  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const applyCoverFile = (file: File) => {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(file);
     setCoverUrl('');
     setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    applyCoverFile(file);
   };
 
   const handleSave = () => {
@@ -358,11 +364,29 @@ function EditBookForm({
                 className="hidden"
               />
             </label>
+            <button
+              type="button"
+              onClick={() => setIsCoverCameraOpen(true)}
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+              사진으로 촬영
+            </button>
           </div>
           {coverFile && (
             <p className="mt-1.5 text-sm text-amber-700">
               선택된 파일: {coverFile.name} (저장할 때 업로드됩니다)
             </p>
+          )}
+          {isCoverCameraOpen && (
+            <div className="mt-3">
+              <PhotoCapture
+                title="표지 사진 촬영"
+                onCapture={(file) => {
+                  applyCoverFile(file);
+                  setIsCoverCameraOpen(false);
+                }}
+                onClose={() => setIsCoverCameraOpen(false)}
+              />
+            </div>
           )}
         </div>
       </div>
