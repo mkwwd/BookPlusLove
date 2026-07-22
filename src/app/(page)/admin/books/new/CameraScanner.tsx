@@ -6,14 +6,16 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import { X } from 'lucide-react';
 
-import { isValidIsbn13 } from '@/lib/isbn';
-
 export default function CameraScanner({
   onDetected,
   onClose,
+  validate,
+  invalidMessage,
 }: {
   onDetected: (text: string) => void;
   onClose: () => void;
+  validate: (text: string) => boolean;
+  invalidMessage: (code: string) => string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +37,9 @@ export default function CameraScanner({
           if (!result || cancelled) return;
 
           const text = result.getText();
-          // 책 뒷면엔 ISBN 바코드 말고 부가기호/가격 바코드도 같이 있어서,
-          // ISBN 형식이 아니면 무시하고 계속 스캔한다.
-          if (!isValidIsbn13(text)) {
+          // 원하는 형식이 아닌 바코드(부가기호/가격 바코드 등)는
+          // 무시하고 계속 스캔한다.
+          if (!validate(text)) {
             setRejectedCode(text);
             return;
           }
@@ -84,8 +86,7 @@ export default function CameraScanner({
           />
           {rejectedCode && (
             <p className="absolute right-0 bottom-0 left-0 bg-black/70 px-4 py-2 text-center text-sm text-white">
-              ISBN 바코드가 아닙니다 ({rejectedCode}). 위쪽의 ISBN 바코드를
-              비춰주세요.
+              {invalidMessage(rejectedCode)}
             </p>
           )}
         </div>

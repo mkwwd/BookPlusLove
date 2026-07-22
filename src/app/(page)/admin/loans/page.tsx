@@ -1,4 +1,22 @@
-import { Search } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Barcode, ScanLine, Search } from 'lucide-react';
+
+import MemberRegisterForm, {
+  type RegisteredMember,
+} from '@/components/MemberRegisterForm';
+import Modal from '@/components/Modal';
+import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
+import { supabase } from '@/utils/supabase/client';
+
+import CameraScanner from '../books/new/CameraScanner';
+import ManualBookEntryForm, {
+  type BookCategory,
+  type ScannedBook,
+} from '../books/new/ManualBookEntryForm';
 
 const STATUS_STYLE: Record<string, string> = {
   대출중: 'bg-amber-100 text-amber-800',
@@ -6,53 +24,484 @@ const STATUS_STYLE: Record<string, string> = {
   반납완료: 'bg-green-100 text-green-800',
 };
 
-const LOANS = [
-  {
-    book: '혼자여도 괜찮은 시간',
-    member: '한소연',
-    loanedAt: '2026-07-14',
-    dueAt: '2026-07-28',
-    status: '대출중',
-  },
-  {
-    book: '침묵의 기도학교',
-    member: '이현민',
-    loanedAt: '2026-06-30',
-    dueAt: '2026-07-14',
-    status: '연체',
-  },
-  {
-    book: '고백록',
-    member: '정요한',
-    loanedAt: '2026-07-01',
-    dueAt: '2026-07-15',
-    status: '반납완료',
-  },
-  {
-    book: '사랑의 기술',
-    member: '배승주',
-    loanedAt: '2026-07-18',
-    dueAt: '2026-08-01',
-    status: '대출중',
-  },
-];
+interface CopyInfo {
+  id: number;
+  regNo: string;
+  status: string;
+  bookId: number;
+}
+
+interface BookInfo {
+  id: number;
+  title: string;
+  author: string | null;
+  cover_url: string | null;
+}
+
+interface LoanInfo {
+  id: number;
+  loanedAt: string;
+  dueAt: string;
+}
+
+interface BorrowerInfo {
+  id: number;
+  name: string;
+  phone: string | null;
+}
+
+type ScanResult =
+  | { status: 'not_found'; regNo: string }
+  | { status: 'available'; copy: CopyInfo; book: BookInfo }
+  | {
+      status: 'on_loan';
+      copy: CopyInfo;
+      book: BookInfo;
+      loan: LoanInfo;
+      borrower: BorrowerInfo;
+    }
+  | { status: 'unavailable'; copy: CopyInfo; book: BookInfo };
+
+interface LoanRow {
+  id: number;
+  title: string;
+  regNo: string;
+  borrowerName: string;
+  loanedAt: string;
+  dueAt: string;
+  returnedAt: string | null;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function AdminLoansPage() {
+  const [regNoInput, setRegNoInput] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [dueAt, setDueAt] = useState('');
+  const [selectedBorrower, setSelectedBorrower] =
+    useState<RegisteredMember | null>(null);
+  const [borrowerName, setBorrowerName] = useState('');
+  const [borrowerSearchTerm, setBorrowerSearchTerm] = useState('');
+  const [isBorrowerDropdownOpen, setIsBorrowerDropdownOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['book-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('book_categories')
+        .select('code, label, main_code, main_label')
+        .order('code');
+      if (error) throw error;
+      return data as BookCategory[];
+    },
+  });
+
+  const {
+    mutate: scanRegNo,
+    data: scanResult,
+    isPending: isScanning,
+    error: scanError,
+    reset: resetScan,
+  } = useMutation({
+    mutationFn: async (regNo: string) => {
+      const res = await fetch(
+        `/api/admin/loans/scan?regNo=${encodeURIComponent(regNo)}`,
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '조회에 실패했습니다.');
+      return body as ScanResult;
+    },
+    onSuccess: (result) => {
+      setSelectedBorrower(null);
+      setBorrowerName('');
+      setBorrowerSearchTerm('');
+      if (result.status === 'available') {
+        setDueAt(addDays(new Date(), 14));
+      }
+      if (result.status === 'not_found') {
+        setIsBookModalOpen(true);
+      }
+    },
+  });
+
+  const handleScan = (rawRegNo?: string) => {
+    const regNo = normalizeRegNoInput(rawRegNo ?? regNoInput).trim();
+    if (!regNo) return;
+    if (!isValidRegNo(regNo)) {
+      setRegNoInput(regNo);
+      return;
+    }
+    setRegNoInput(regNo);
+    scanRegNo(regNo);
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const term = borrowerName.trim();
+      setBorrowerSearchTerm(selectedBorrower ? '' : term);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [borrowerName, selectedBorrower]);
+
+  const { data: borrowerSuggestions = [] } = useQuery({
+    queryKey: ['borrower-search', borrowerSearchTerm],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/admin/users/search?q=${encodeURIComponent(borrowerSearchTerm)}`,
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '검색에 실패했습니다.');
+      return body.users as BorrowerInfo[];
+    },
+    enabled: borrowerSearchTerm.length > 0,
+  });
+
+  const {
+    data: loansData,
+    refetch: refetchLoans,
+    isLoading: isLoansLoading,
+  } = useQuery({
+    queryKey: ['admin-loans'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/loans');
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '목록 조회에 실패했습니다.');
+      return body.loans as LoanRow[];
+    },
+  });
+
+  const {
+    mutate: registerBookAndContinue,
+    isPending: isRegisteringBook,
+    error: registerBookError,
+  } = useMutation({
+    mutationFn: async (book: ScannedBook) => {
+      let coverUrl = book.coverUrl;
+      if (book.coverFile) {
+        const formData = new FormData();
+        formData.append('file', book.coverFile);
+        const coverRes = await fetch('/api/admin/books/cover', {
+          method: 'POST',
+          body: formData,
+        });
+        const coverBody = await coverRes.json();
+        if (!coverRes.ok) {
+          throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
+        }
+        coverUrl = coverBody.url;
+      }
+
+      const res = await fetch('/api/admin/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          books: [{ ...book, coverUrl, coverFile: undefined }],
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '등록에 실패했습니다.');
+      if (body.failed?.length > 0) {
+        throw new Error(body.failed[0].error);
+      }
+      return book.regNo;
+    },
+    onSuccess: (regNo) => {
+      setIsBookModalOpen(false);
+      scanRegNo(regNo);
+    },
+  });
+
+  const {
+    mutate: checkout,
+    isPending: isCheckingOut,
+    error: checkoutError,
+  } = useMutation({
+    mutationFn: async () => {
+      if (scanResult?.status !== 'available' || !selectedBorrower) return;
+      const res = await fetch('/api/admin/loans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookCopyId: scanResult.copy.id,
+          userId: selectedBorrower.id,
+          dueAt,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '대출 처리에 실패했습니다.');
+    },
+    onSuccess: () => {
+      resetScan();
+      setRegNoInput('');
+      void refetchLoans();
+    },
+  });
+
+  const {
+    mutate: processReturn,
+    isPending: isReturning,
+    error: returnError,
+  } = useMutation({
+    mutationFn: async (loanId: number) => {
+      const res = await fetch('/api/admin/loans/return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '반납 처리에 실패했습니다.');
+    },
+    onSuccess: () => {
+      resetScan();
+      setRegNoInput('');
+      void refetchLoans();
+    },
+  });
+
+  const handleSelectBorrower = (borrower: BorrowerInfo) => {
+    setBorrowerName(borrower.name);
+    setSelectedBorrower({ id: borrower.id, name: borrower.name });
+    setBorrowerSearchTerm('');
+    setIsBorrowerDropdownOpen(false);
+  };
+
+  const trimmedSearch = searchText.trim();
+  const visibleLoans = (loansData ?? [])
+    .map((loan) => {
+      const status = loan.returnedAt
+        ? '반납완료'
+        : loan.dueAt < todayString()
+          ? '연체'
+          : '대출중';
+      return { ...loan, computedStatus: status };
+    })
+    .filter(
+      (loan) =>
+        !trimmedSearch ||
+        loan.title.includes(trimmedSearch) ||
+        loan.borrowerName.includes(trimmedSearch),
+    );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-3xl text-amber-900">대출/대여 관리</h2>
-        <button
-          type="button"
-          className="rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-          신규 대출 등록
-        </button>
+      </div>
+
+      <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+        <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-amber-900">
+          <Barcode className="h-4 w-4" />
+          등록번호 스캔
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={regNoInput}
+            onChange={(e) => {
+              if ((e.nativeEvent as InputEvent).isComposing) {
+                setRegNoInput(e.target.value);
+                return;
+              }
+              setRegNoInput(normalizeRegNoInput(e.target.value));
+            }}
+            onCompositionEnd={(e) =>
+              setRegNoInput(normalizeRegNoInput(e.currentTarget.value))
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleScan();
+              }
+            }}
+            placeholder="바코드를 스캔하거나 등록번호를 입력해주세요 (예: MB123456)"
+            className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+          />
+          <button
+            type="button"
+            disabled={isScanning}
+            onClick={() => handleScan()}
+            className="shrink-0 rounded bg-amber-900/90 px-5 py-2.5 text-base font-medium text-white transition hover:bg-amber-900 disabled:opacity-50">
+            {isScanning ? '조회 중...' : '조회'}
+          </button>
+        </div>
+        {scanError && (
+          <p className="mt-1.5 text-sm text-red-600">{scanError.message}</p>
+        )}
+
+        {!isCameraOpen && (
+          <button
+            type="button"
+            onClick={() => setIsCameraOpen(true)}
+            className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+            <ScanLine className="h-4 w-4" />
+            카메라로 스캔
+          </button>
+        )}
+        {isCameraOpen && (
+          <div className="mt-3">
+            <CameraScanner
+              onDetected={(regNo) => {
+                handleScan(regNo);
+                setIsCameraOpen(false);
+              }}
+              onClose={() => setIsCameraOpen(false)}
+              validate={isValidRegNo}
+              invalidMessage={(code) =>
+                `등록번호 바코드가 아닙니다 (${code}). MB로 시작하는 등록번호 바코드를 비춰주세요.`
+              }
+            />
+          </div>
+        )}
+
+        {scanResult?.status === 'not_found' && (
+          <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-5 py-3 text-base text-amber-800">
+            <p>
+              등록번호 &quot;{scanResult.regNo}&quot;는 등록되지 않은 책이에요.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsBookModalOpen(true)}
+              className="mt-2 rounded bg-red-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800">
+              지금 등록하고 대출 진행하기
+            </button>
+          </div>
+        )}
+
+        {scanResult?.status === 'unavailable' && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+            &quot;{scanResult.book.title}&quot; ({scanResult.copy.regNo})은(는)
+            현재 상태가 &quot;{scanResult.copy.status}&quot;라서 대출할 수
+            없어요.
+          </div>
+        )}
+
+        {scanResult?.status === 'on_loan' && (
+          <div className="mt-4 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
+            <p className="text-base text-amber-900">
+              <strong>{scanResult.book.title}</strong> ({scanResult.copy.regNo}
+              )은(는) <strong>{scanResult.borrower.name}</strong>님이 대출
+              중입니다.
+            </p>
+            <p className="mt-1 text-sm text-amber-700">
+              대출일 {scanResult.loan.loanedAt.slice(0, 10)} · 반납예정일{' '}
+              {scanResult.loan.dueAt}
+            </p>
+            {returnError && (
+              <p className="mt-1.5 text-sm text-red-600">
+                {returnError.message}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={isReturning}
+              onClick={() => processReturn(scanResult.loan.id)}
+              className="mt-3 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              {isReturning ? '반납 처리 중...' : '반납 처리'}
+            </button>
+          </div>
+        )}
+
+        {scanResult?.status === 'available' && (
+          <div className="mt-4 space-y-3 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
+            <p className="text-base text-amber-900">
+              <strong>{scanResult.book.title}</strong> ({scanResult.copy.regNo}
+              )은(는) 대출 가능합니다.
+            </p>
+            <div className="relative">
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                대출자
+              </label>
+              <input
+                type="text"
+                value={borrowerName}
+                onChange={(e) => {
+                  setBorrowerName(e.target.value);
+                  setSelectedBorrower(null);
+                  setIsBorrowerDropdownOpen(true);
+                }}
+                onFocus={() => setIsBorrowerDropdownOpen(true)}
+                onBlur={() => setIsBorrowerDropdownOpen(false)}
+                placeholder="이름으로 회원 검색"
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+              />
+              {selectedBorrower ? (
+                <p className="mt-1.5 text-sm text-amber-700">✓ 회원과 연결됨</p>
+              ) : (
+                isBorrowerDropdownOpen &&
+                borrowerSuggestions.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded border border-amber-900/20 bg-white shadow-md">
+                    {borrowerSuggestions.map((borrower) => (
+                      <li key={borrower.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectBorrower(borrower);
+                          }}
+                          className="block w-full px-4 py-2 text-left text-base hover:bg-amber-50">
+                          {borrower.name}
+                          {borrower.phone && (
+                            <span className="ml-2 text-sm text-amber-700/70">
+                              {borrower.phone}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
+              {!selectedBorrower && (
+                <button
+                  type="button"
+                  onClick={() => setIsMemberModalOpen(true)}
+                  className="mt-2 text-sm text-amber-700 underline hover:text-amber-900">
+                  회원이 아닌가요? 지금 회원등록
+                </button>
+              )}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-base font-medium text-amber-900">
+                반납예정일
+              </label>
+              <input
+                type="date"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.target.value)}
+                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none sm:w-auto"
+              />
+            </div>
+            {checkoutError && (
+              <p className="text-sm text-red-600">{checkoutError.message}</p>
+            )}
+            <button
+              type="button"
+              disabled={!selectedBorrower || !dueAt || isCheckingOut}
+              onClick={() => checkout()}
+              className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              {isCheckingOut ? '대출 처리 중...' : '대출 처리'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
         <input
           type="text"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
           placeholder="도서명 또는 회원명 검색"
           className="w-full rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
         />
@@ -71,30 +520,89 @@ export default function AdminLoansPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-amber-900/10">
-            {LOANS.map((loan, i) => (
-              <tr key={i}>
-                <td className="px-5 py-3 text-amber-900">{loan.book}</td>
-                <td className="px-5 py-3 text-amber-900">{loan.member}</td>
-                <td className="px-5 py-3 text-amber-700">{loan.loanedAt}</td>
-                <td className="px-5 py-3 text-amber-700">{loan.dueAt}</td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[loan.status]}`}>
-                    {loan.status}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  <button
-                    type="button"
-                    className="text-sm text-amber-700 hover:text-amber-900 hover:underline">
-                    반납 처리
-                  </button>
+            {isLoansLoading ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-5 py-8 text-center text-amber-900/50">
+                  불러오는 중...
                 </td>
               </tr>
-            ))}
+            ) : visibleLoans.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-5 py-8 text-center text-amber-900/50">
+                  대출 기록이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              visibleLoans.map((loan) => (
+                <tr key={loan.id}>
+                  <td className="px-5 py-3 text-amber-900">{loan.title}</td>
+                  <td className="px-5 py-3 text-amber-900">
+                    {loan.borrowerName}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {loan.loanedAt.slice(0, 10)}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">{loan.dueAt}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[loan.computedStatus]}`}>
+                      {loan.computedStatus}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    {!loan.returnedAt && (
+                      <button
+                        type="button"
+                        disabled={isReturning}
+                        onClick={() => processReturn(loan.id)}
+                        className="text-sm text-amber-700 hover:text-amber-900 hover:underline disabled:opacity-50">
+                        반납 처리
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {isBookModalOpen && (
+        <Modal title="도서 등록" onClose={() => setIsBookModalOpen(false)}>
+          {registerBookError && (
+            <p className="mb-3 text-sm text-red-600">
+              {registerBookError.message}
+            </p>
+          )}
+          <ManualBookEntryForm
+            categories={categories}
+            initialRegNo={
+              scanResult?.status === 'not_found' ? scanResult.regNo : ''
+            }
+            submitLabel={
+              isRegisteringBook ? '등록 중...' : '등록하고 대출 진행'
+            }
+            onSubmit={(book) => registerBookAndContinue(book)}
+          />
+        </Modal>
+      )}
+
+      {isMemberModalOpen && (
+        <Modal title="회원 등록" onClose={() => setIsMemberModalOpen(false)}>
+          <MemberRegisterForm
+            submitLabel="등록하고 대출자로 선택"
+            onSuccess={(member) => {
+              setSelectedBorrower(member);
+              setBorrowerName(member.name);
+              setIsMemberModalOpen(false);
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
