@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, SquarePen } from 'lucide-react';
+import { Check, Minus, Plus, Search, SquarePen } from 'lucide-react';
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
@@ -560,14 +560,17 @@ export default function AdminBooksPage() {
                 <tr key={book.copyId}>
                   <td className="px-5 py-3">
                     {book.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={book.coverUrl}
-                        alt=""
-                        className="h-14 w-10 rounded-sm object-cover"
-                      />
+                      <span
+                        title="표지 있음"
+                        className="inline-flex items-center justify-center rounded-full bg-green-100 p-1 text-green-700">
+                        <Check className="h-4 w-4" />
+                      </span>
                     ) : (
-                      <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                      <span
+                        title="표지 없음"
+                        className="inline-flex items-center justify-center rounded-full bg-gray-100 p-1 text-gray-400">
+                        <Minus className="h-4 w-4" />
+                      </span>
                     )}
                   </td>
                   <td className="px-5 py-3 font-mono text-sm text-amber-700">
