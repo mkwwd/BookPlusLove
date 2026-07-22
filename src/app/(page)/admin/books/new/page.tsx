@@ -145,7 +145,7 @@ function ScannedBookTable({
       <div
         ref={scrollRef}
         onWheel={handleWheel}
-        className="scrollbar-visible overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-amber-700">
             <tr>
