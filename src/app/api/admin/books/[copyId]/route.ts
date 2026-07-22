@@ -5,17 +5,16 @@ import { supabaseServer } from '@/utils/supabase/server';
 
 const VALID_STATUSES = ['대여가능', '대여중', '분실', '폐기'];
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ copyId: string }> },
-) {
+async function requireAdmin() {
   const supabase = await createRouteClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
-    return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    return {
+      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
+    };
   }
 
   const { data: profile } = await supabaseServer
@@ -25,11 +24,23 @@ export async function PATCH(
     .maybeSingle();
 
   if (profile?.role !== 'ADMIN') {
-    return Response.json(
-      { error: '관리자만 도서를 수정할 수 있습니다.' },
-      { status: 403 },
-    );
+    return {
+      error: Response.json(
+        { error: '관리자만 이용할 수 있습니다.' },
+        { status: 403 },
+      ),
+    };
   }
+
+  return { error: null };
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ copyId: string }> },
+) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
   const { copyId } = await params;
   const copyIdNum = Number(copyId);
@@ -141,6 +152,39 @@ export async function PATCH(
             : updateCopyError.message,
       },
       { status: 500 },
+    );
+  }
+
+  return Response.json({ ok: true });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ copyId: string }> },
+) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
+  const { copyId } = await params;
+  const copyIdNum = Number(copyId);
+  if (!Number.isFinite(copyIdNum) || copyIdNum <= 0) {
+    return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
+  }
+
+  const { error: deleteError } = await supabaseServer
+    .from('book_copies')
+    .delete()
+    .eq('id', copyIdNum);
+
+  if (deleteError) {
+    return Response.json(
+      {
+        error:
+          deleteError.code === '23503'
+            ? '대출 기록이 있는 책은 삭제할 수 없습니다.'
+            : deleteError.message,
+      },
+      { status: deleteError.code === '23503' ? 409 : 500 },
     );
   }
 

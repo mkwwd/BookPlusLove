@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Minus, Plus, Search, SquarePen } from 'lucide-react';
+import { Check, Minus, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
@@ -455,6 +455,34 @@ export default function AdminBooksPage() {
     },
   });
 
+  const {
+    mutate: deleteBook,
+    isPending: isDeleting,
+    error: deleteError,
+    variables: deletingCopyId,
+  } = useMutation({
+    mutationFn: async (copyId: number) => {
+      const res = await fetch(`/api/admin/books/${copyId}`, {
+        method: 'DELETE',
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '삭제에 실패했습니다.');
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-books'] });
+    },
+  });
+
+  const handleDelete = (book: BookRow) => {
+    if (
+      window.confirm(
+        `"${book.title}" (${book.regNo})을(를) 삭제할까요? 되돌릴 수 없습니다.`,
+      )
+    ) {
+      deleteBook(book.copyId);
+    }
+  };
+
   const { data: categories = [] } = useQuery({
     queryKey: ['book-categories'],
     queryFn: async () => {
@@ -484,6 +512,12 @@ export default function AdminBooksPage() {
 
   return (
     <div className="space-y-6">
+      {deleteError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+          {deleteError.message}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="font-serif text-3xl text-amber-900">도서 목록 관리</h2>
 
@@ -613,13 +647,23 @@ export default function AdminBooksPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <button
-                      type="button"
-                      aria-label="수정"
-                      onClick={() => setEditingBook(book)}
-                      className="text-amber-600 hover:text-amber-900">
-                      <SquarePen className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        aria-label="수정"
+                        onClick={() => setEditingBook(book)}
+                        className="text-amber-600 hover:text-amber-900">
+                        <SquarePen className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="삭제"
+                        disabled={isDeleting && deletingCopyId === book.copyId}
+                        onClick={() => handleDelete(book)}
+                        className="text-amber-600 hover:text-red-800 disabled:opacity-40">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
