@@ -269,6 +269,33 @@ export default function AdminLoansPage() {
     },
   });
 
+  const {
+    mutate: updateDueDate,
+    isPending: isUpdatingDueDate,
+    variables: updatingLoan,
+    error: updateDueDateError,
+  } = useMutation({
+    mutationFn: async ({
+      loanId,
+      dueAt: nextDueAt,
+    }: {
+      loanId: number;
+      dueAt: string;
+    }) => {
+      const res = await fetch(`/api/admin/loans/${loanId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueAt: nextDueAt }),
+      });
+      const body = await res.json();
+      if (!res.ok)
+        throw new Error(body.error ?? '반납예정일 수정에 실패했습니다.');
+    },
+    onSuccess: () => {
+      void refetchLoans();
+    },
+  });
+
   const handleSelectBorrower = (borrower: BorrowerInfo) => {
     setBorrowerName(borrower.name);
     setSelectedBorrower({ id: borrower.id, name: borrower.name });
@@ -496,6 +523,10 @@ export default function AdminLoansPage() {
         )}
       </div>
 
+      {updateDueDateError && (
+        <p className="text-sm text-red-600">{updateDueDateError.message}</p>
+      )}
+
       <div className="relative max-w-sm">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
         <input
@@ -546,7 +577,26 @@ export default function AdminLoansPage() {
                   <td className="px-5 py-3 text-amber-700">
                     {loan.loanedAt.slice(0, 10)}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">{loan.dueAt}</td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {loan.returnedAt ? (
+                      loan.dueAt
+                    ) : (
+                      <input
+                        type="date"
+                        value={loan.dueAt}
+                        disabled={
+                          isUpdatingDueDate && updatingLoan?.loanId === loan.id
+                        }
+                        onChange={(e) =>
+                          updateDueDate({
+                            loanId: loan.id,
+                            dueAt: e.target.value,
+                          })
+                        }
+                        className="rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
+                      />
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <span
                       className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[loan.computedStatus]}`}>
@@ -559,7 +609,7 @@ export default function AdminLoansPage() {
                         type="button"
                         disabled={isReturning}
                         onClick={() => processReturn(loan.id)}
-                        className="text-sm text-amber-700 hover:text-amber-900 hover:underline disabled:opacity-50">
+                        className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 transition hover:bg-amber-50 disabled:opacity-50">
                         반납 처리
                       </button>
                     )}
