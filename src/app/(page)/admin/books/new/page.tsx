@@ -327,6 +327,8 @@ function BookRegisterContent() {
   const [manualPage, setManualPage] = useState('');
   const [manualPrice, setManualPrice] = useState('');
   const [manualCoverUrl, setManualCoverUrl] = useState('');
+  const [manualCoverFile, setManualCoverFile] = useState<File | null>(null);
+  const [manualCoverPreview, setManualCoverPreview] = useState('');
   const [manualDescription, setManualDescription] = useState<
     string | undefined
   >();
@@ -404,14 +406,22 @@ function BookRegisterContent() {
       }
       return body as { url: string };
     },
+    // 파일은 "목록에 추가"를 누르는 시점에야 업로드한다(아래 handleAddManualEntry).
+    // 선택하자마자 올리면, 등록을 끝까지 안 하고 나가도 스토리지에 안 쓰는
+    // 파일이 남기 때문.
     onSuccess: ({ url }) => {
-      setManualCoverUrl(url);
+      setEntries((prev) => [...prev, buildManualEntry(url)]);
+      resetManualForm();
     },
   });
 
   const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadCover(file);
+    if (!file) return;
+    if (manualCoverPreview) URL.revokeObjectURL(manualCoverPreview);
+    setManualCoverFile(file);
+    setManualCoverUrl('');
+    setManualCoverPreview(URL.createObjectURL(file));
   };
 
   const updateEntry = (id: string, patch: Partial<ScannedBook>) => {
@@ -443,6 +453,50 @@ function BookRegisterContent() {
     lookupManualIsbn(isbn);
   };
 
+  const buildManualEntry = (coverUrl?: string): ScannedBook => {
+    const title = manualTitle.trim();
+    const author = manualAuthor.trim();
+    return {
+      id: crypto.randomUUID(),
+      isbn: manualIsbn.trim(),
+      title,
+      author,
+      publisher: manualPublisher.trim(),
+      page: manualPage.trim() || undefined,
+      price: manualPrice.trim() || undefined,
+      coverUrl: coverUrl ?? (manualCoverUrl.trim() || undefined),
+      description: manualDescription,
+      category: manualCategory,
+      categoryMain: manualCategoryMain,
+      authorCode:
+        manualAuthorCode.trim() || generateAuthorCode(author, title) || '',
+      donorName: manualDonorName.trim(),
+      regNo: manualRegNo.trim(),
+    };
+  };
+
+  const resetManualForm = () => {
+    if (manualCoverPreview) URL.revokeObjectURL(manualCoverPreview);
+    setManualTitle('');
+    setManualAuthor('');
+    setManualPublisher('');
+    setManualIsbn('');
+    setManualPage('');
+    setManualPrice('');
+    setManualCoverUrl('');
+    setManualCoverFile(null);
+    setManualCoverPreview('');
+    setManualDescription(undefined);
+    setManualCategoryMain('');
+    setManualCategory('');
+    setManualAuthorCode('');
+    setManualRegNo('');
+    setManualDonorName('');
+    setManualIsbnError(null);
+    setIsCameraOpen(false);
+    setJustSubmitted(false);
+  };
+
   const handleAddManualEntry = () => {
     if (!manualTitle.trim()) {
       setManualFormError('제목은 필수입니다.');
@@ -453,44 +507,15 @@ function BookRegisterContent() {
       return;
     }
     setManualFormError(null);
-    const title = manualTitle.trim();
-    const author = manualAuthor.trim();
-    setEntries((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        isbn: manualIsbn.trim(),
-        title,
-        author,
-        publisher: manualPublisher.trim(),
-        page: manualPage.trim() || undefined,
-        price: manualPrice.trim() || undefined,
-        coverUrl: manualCoverUrl.trim() || undefined,
-        description: manualDescription,
-        category: manualCategory,
-        categoryMain: manualCategoryMain,
-        authorCode:
-          manualAuthorCode.trim() || generateAuthorCode(author, title) || '',
-        donorName: manualDonorName.trim(),
-        regNo: manualRegNo.trim(),
-      },
-    ]);
-    setManualTitle('');
-    setManualAuthor('');
-    setManualPublisher('');
-    setManualIsbn('');
-    setManualPage('');
-    setManualPrice('');
-    setManualCoverUrl('');
-    setManualDescription(undefined);
-    setManualCategoryMain('');
-    setManualCategory('');
-    setManualAuthorCode('');
-    setManualRegNo('');
-    setManualDonorName('');
-    setManualIsbnError(null);
-    setIsCameraOpen(false);
-    setJustSubmitted(false);
+
+    // 표지 파일을 골라뒀으면 이 시점(실제로 목록에 넣을 때)에만 업로드한다.
+    if (manualCoverFile) {
+      uploadCover(manualCoverFile);
+      return;
+    }
+
+    setEntries((prev) => [...prev, buildManualEntry()]);
+    resetManualForm();
   };
 
   const handleAutoGenerateAuthorCode = () => {
@@ -848,10 +873,10 @@ function BookRegisterContent() {
                 표지 이미지
               </label>
               <div className="flex items-center gap-3">
-                {manualCoverUrl.trim() ? (
+                {manualCoverPreview || manualCoverUrl.trim() ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={manualCoverUrl.trim()}
+                    src={manualCoverPreview || manualCoverUrl.trim()}
                     alt=""
                     className="h-14 w-10 shrink-0 rounded-sm object-cover"
                   />
@@ -861,21 +886,34 @@ function BookRegisterContent() {
                 <input
                   type="text"
                   value={manualCoverUrl}
-                  onChange={(e) => setManualCoverUrl(e.target.value)}
+                  onChange={(e) => {
+                    setManualCoverUrl(e.target.value);
+                    if (manualCoverFile) {
+                      if (manualCoverPreview)
+                        URL.revokeObjectURL(manualCoverPreview);
+                      setManualCoverFile(null);
+                      setManualCoverPreview('');
+                    }
+                  }}
                   placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
                   className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
                 <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
-                  {isUploadingCover ? '업로드 중...' : '파일 선택'}
+                  파일 선택
                   <input
                     type="file"
                     accept="image/*"
-                    disabled={isUploadingCover}
                     onChange={handleCoverFileChange}
                     className="hidden"
                   />
                 </label>
               </div>
+              {manualCoverFile && (
+                <p className="mt-1.5 text-sm text-amber-700">
+                  선택된 파일: {manualCoverFile.name} (목록에 추가할 때
+                  업로드됩니다)
+                </p>
+              )}
               {coverUploadError && (
                 <p className="mt-1.5 text-sm text-red-600">
                   {coverUploadError.message}
@@ -888,9 +926,10 @@ function BookRegisterContent() {
           )}
           <button
             type="button"
+            disabled={isUploadingCover}
             onClick={handleAddManualEntry}
-            className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-            목록에 추가
+            className="mt-4 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+            {isUploadingCover ? '표지 업로드 중...' : '목록에 추가'}
           </button>
         </div>
       )}
