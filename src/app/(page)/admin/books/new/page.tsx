@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -123,6 +123,18 @@ function ScannedBookTable({
     new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
   );
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게)
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  };
+
   return (
     <div>
       {books.length > 0 && (
@@ -130,7 +142,10 @@ function ScannedBookTable({
           → 표를 옆으로 스크롤하면 삭제 버튼 등 나머지 항목을 볼 수 있어요.
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+      <div
+        ref={scrollRef}
+        onWheel={handleWheel}
+        className="scrollbar-visible overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-amber-700">
             <tr>
