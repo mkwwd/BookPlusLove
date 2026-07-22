@@ -386,6 +386,34 @@ function BookRegisterContent() {
     },
   });
 
+  const {
+    mutate: uploadCover,
+    isPending: isUploadingCover,
+    error: coverUploadError,
+  } = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/books/cover', {
+        method: 'POST',
+        body: formData,
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error ?? '업로드에 실패했습니다.');
+      }
+      return body as { url: string };
+    },
+    onSuccess: ({ url }) => {
+      setManualCoverUrl(url);
+    },
+  });
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadCover(file);
+  };
+
   const updateEntry = (id: string, patch: Partial<ScannedBook>) => {
     setEntries((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
@@ -817,25 +845,42 @@ function BookRegisterContent() {
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-base font-medium text-amber-900">
-                표지 이미지 URL
+                표지 이미지
               </label>
               <div className="flex items-center gap-3">
-                {manualCoverUrl.trim() && (
+                {manualCoverUrl.trim() ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={manualCoverUrl.trim()}
                     alt=""
                     className="h-14 w-10 shrink-0 rounded-sm object-cover"
                   />
+                ) : (
+                  <div className="h-14 w-10 shrink-0 rounded-sm bg-amber-100" />
                 )}
                 <input
                   type="text"
                   value={manualCoverUrl}
                   onChange={(e) => setManualCoverUrl(e.target.value)}
-                  placeholder="표지 이미지 URL이 있으면 붙여넣어주세요"
+                  placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
                   className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                 />
+                <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+                  {isUploadingCover ? '업로드 중...' : '파일 선택'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingCover}
+                    onChange={handleCoverFileChange}
+                    className="hidden"
+                  />
+                </label>
               </div>
+              {coverUploadError && (
+                <p className="mt-1.5 text-sm text-red-600">
+                  {coverUploadError.message}
+                </p>
+              )}
             </div>
           </div>
           {manualFormError && (
