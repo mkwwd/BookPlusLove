@@ -19,8 +19,8 @@ import ManualBookEntryForm, {
 } from '../books/new/ManualBookEntryForm';
 
 const STATUS_STYLE: Record<string, string> = {
-  대출중: 'bg-amber-100 text-amber-800',
-  연체: 'bg-red-100 text-red-800',
+  대여중: 'bg-yellow-100 text-yellow-800',
+  연체중: 'bg-red-100 text-red-800',
   반납완료: 'bg-green-100 text-green-800',
 };
 
@@ -309,8 +309,8 @@ export default function AdminLoansPage() {
       const status = loan.returnedAt
         ? '반납완료'
         : loan.dueAt < todayString()
-          ? '연체'
-          : '대출중';
+          ? '연체중'
+          : '대여중';
       return { ...loan, computedStatus: status };
     })
     .filter(
