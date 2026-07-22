@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, SquarePen } from 'lucide-react';
@@ -21,6 +21,7 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 const STATUS_OPTIONS = ['대여가능', '대여중', '분실', '폐기'];
+const PAGE_SIZE = 50;
 
 interface BookCategory {
   code: string;
@@ -431,6 +432,18 @@ export default function AdminBooksPage() {
   const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState('');
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게)
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  };
 
   const { data: books = [], isLoading } = useQuery({
     queryKey: ['admin-books'],
@@ -462,6 +475,13 @@ export default function AdminBooksPage() {
       (book.author ?? '').includes(trimmedSearch),
   );
 
+  const totalPages = Math.max(1, Math.ceil(visibleBooks.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedBooks = visibleBooks.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -473,7 +493,10 @@ export default function AdminBooksPage() {
             <input
               type="text"
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="제목 또는 저자 검색"
               className="w-64 rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
             />
@@ -487,15 +510,29 @@ export default function AdminBooksPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
-        <table className="w-full text-left text-base">
+      {pagedBooks.length > 0 && (
+        <p className="text-sm text-amber-700">
+          → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
+        </p>
+      )}
+      <div
+        ref={scrollRef}
+        onWheel={handleWheel}
+        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+        <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-amber-700">
             <tr>
+              <th className="px-5 py-3 font-medium">표지</th>
               <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">제목</th>
               <th className="px-5 py-3 font-medium">저자</th>
               <th className="px-5 py-3 font-medium">출판사</th>
               <th className="px-5 py-3 font-medium">ISBN</th>
+              <th className="px-5 py-3 font-medium">출판일</th>
+              <th className="px-5 py-3 font-medium">페이지</th>
+              <th className="px-5 py-3 font-medium">정가</th>
+              <th className="px-5 py-3 font-medium">저자기호</th>
+              <th className="px-5 py-3 font-medium">기증자명</th>
               <th className="px-5 py-3 font-medium">카테고리</th>
               <th className="px-5 py-3 font-medium">상태</th>
               <th className="px-5 py-3 font-medium">관리</th>
@@ -505,22 +542,34 @@ export default function AdminBooksPage() {
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={14}
                   className="px-5 py-8 text-center text-amber-900/50">
                   불러오는 중...
                 </td>
               </tr>
-            ) : visibleBooks.length === 0 ? (
+            ) : pagedBooks.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={14}
                   className="px-5 py-8 text-center text-amber-900/50">
                   등록된 도서가 없습니다.
                 </td>
               </tr>
             ) : (
-              visibleBooks.map((book) => (
+              pagedBooks.map((book) => (
                 <tr key={book.copyId}>
+                  <td className="px-5 py-3">
+                    {book.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={book.coverUrl}
+                        alt=""
+                        className="h-14 w-10 rounded-sm object-cover"
+                      />
+                    ) : (
+                      <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                    )}
+                  </td>
                   <td className="px-5 py-3 font-mono text-sm text-amber-700">
                     {book.regNo}
                   </td>
@@ -533,6 +582,21 @@ export default function AdminBooksPage() {
                   </td>
                   <td className="px-5 py-3 font-mono text-sm text-amber-700">
                     {book.isbn ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.pubDate ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.page ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.price ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.authorCode ?? '-'}
+                  </td>
+                  <td className="px-5 py-3 text-amber-700">
+                    {book.donorName ?? '-'}
                   </td>
                   <td className="px-5 py-3">
                     <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
@@ -560,6 +624,28 @@ export default function AdminBooksPage() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={safePage <= 1}
+            onClick={() => setCurrentPage(safePage - 1)}
+            className="rounded border border-amber-900/30 bg-white/70 px-4 py-2 text-base text-amber-900 transition hover:bg-amber-50 disabled:opacity-40">
+            이전
+          </button>
+          <span className="text-base text-amber-700">
+            {safePage} / {totalPages}페이지
+          </span>
+          <button
+            type="button"
+            disabled={safePage >= totalPages}
+            onClick={() => setCurrentPage(safePage + 1)}
+            className="rounded border border-amber-900/30 bg-white/70 px-4 py-2 text-base text-amber-900 transition hover:bg-amber-50 disabled:opacity-40">
+            다음
+          </button>
+        </div>
+      )}
 
       {editingBook && (
         <Modal title="도서 정보 수정" onClose={() => setEditingBook(null)}>

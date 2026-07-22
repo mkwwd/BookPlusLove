@@ -85,25 +85,36 @@ async function requireAdmin() {
   return { error: null };
 }
 
+const FETCH_BATCH_SIZE = 1000;
+
 export async function GET() {
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const { data, error: listError } = await supabaseServer
-    .from('book_copies')
-    .select(
-      `id, reg_no, status, donor_name, donor_user_id,
-      books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code,
-        book_categories(label, main_code, main_label))`,
-    )
-    .order('id', { ascending: false })
-    .returns<BookCopyRow[]>();
+  // 클라이언트에서 검색/페이지네이션을 다 처리하므로 전체를 받아온다.
+  // PostgREST의 기본 max-rows(보통 1000)에 걸리지 않도록 range로 나눠서 반복 조회한다.
+  const rows: BookCopyRow[] = [];
+  for (let offset = 0; ; offset += FETCH_BATCH_SIZE) {
+    const { data, error: listError } = await supabaseServer
+      .from('book_copies')
+      .select(
+        `id, reg_no, status, donor_name, donor_user_id,
+        books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code,
+          book_categories(label, main_code, main_label))`,
+      )
+      .order('id', { ascending: false })
+      .range(offset, offset + FETCH_BATCH_SIZE - 1)
+      .returns<BookCopyRow[]>();
 
-  if (listError) {
-    return Response.json({ error: listError.message }, { status: 500 });
+    if (listError) {
+      return Response.json({ error: listError.message }, { status: 500 });
+    }
+
+    rows.push(...(data ?? []));
+    if (!data || data.length < FETCH_BATCH_SIZE) break;
   }
 
-  const books = (data ?? []).map((row) => {
+  const books = rows.map((row) => {
     const book = Array.isArray(row.books) ? row.books[0] : row.books;
     const category = book?.book_categories
       ? Array.isArray(book.book_categories)
