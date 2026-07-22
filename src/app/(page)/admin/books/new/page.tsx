@@ -160,9 +160,7 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">분류코드</th>
               <th className="px-5 py-3 font-medium">저자기호</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
-              <th className="sticky right-0 bg-amber-50/95 px-5 py-3 font-medium shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.15)]">
-                삭제
-              </th>
+              <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-amber-900/10">
@@ -178,7 +176,7 @@ function ScannedBookTable({
               books.map((book) => {
                 const trimmedRegNo = book.regNo.trim();
                 const isRegNoInvalid =
-                  trimmedRegNo !== '' && !isValidRegNo(trimmedRegNo);
+                  trimmedRegNo === '' || !isValidRegNo(trimmedRegNo);
                 const isRegNoDuplicate =
                   trimmedRegNo !== '' &&
                   books.filter((b) => b.regNo.trim() === trimmedRegNo).length >
@@ -229,7 +227,7 @@ function ScannedBookTable({
                       ) : (
                         isRegNoInvalid && (
                           <p className="mt-1 text-xs text-red-600">
-                            MB+숫자 6자리
+                            필수, MB+숫자 6자리
                           </p>
                         )
                       )}
@@ -289,7 +287,7 @@ function ScannedBookTable({
                         className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
                     </td>
-                    <td className="sticky right-0 bg-amber-50/95 px-5 py-3 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.15)]">
+                    <td className="px-5 py-3">
                       <button
                         type="button"
                         aria-label="목록에서 삭제"
@@ -473,15 +471,56 @@ function BookRegisterContent() {
     );
   };
 
+  const [submitResult, setSubmitResult] = useState<{
+    registered: number;
+    failed: { title: string; regNo: string; error: string }[];
+  } | null>(null);
+
+  const {
+    mutate: submitEntries,
+    isPending: isSubmitting,
+    error: submitError,
+  } = useMutation({
+    mutationFn: async (books: ScannedBook[]) => {
+      const res = await fetch('/api/admin/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ books }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error ?? '등록에 실패했습니다.');
+      }
+      return body as {
+        registered: number;
+        failed: { title: string; regNo: string; error: string }[];
+      };
+    },
+    onSuccess: ({ registered, failed }) => {
+      if (failed.length === 0) {
+        setEntries([]);
+        setFileName(null);
+      } else {
+        // 실패한 항목만 남겨서 고치고 다시 등록할 수 있게 한다.
+        const failedRegNos = new Set(failed.map((f) => f.regNo));
+        setEntries((prev) =>
+          prev.filter((b) => failedRegNos.has(b.regNo.trim())),
+        );
+      }
+      setJustSubmitted(true);
+      setSubmitResult({ registered, failed });
+    },
+  });
+
   const handleSubmit = () => {
-    setJustSubmitted(true);
-    setEntries([]);
-    setFileName(null);
+    setJustSubmitted(false);
+    setSubmitResult(null);
+    submitEntries(entries);
   };
 
   const hasInvalidRegNo = entries.some((book) => {
     const trimmed = book.regNo.trim();
-    if (!trimmed) return false;
+    if (!trimmed) return true;
     const isDuplicate =
       entries.filter((b) => b.regNo.trim() === trimmed).length > 1;
     return !isValidRegNo(trimmed) || isDuplicate;
@@ -524,10 +563,34 @@ function BookRegisterContent() {
         </button>
       </div>
 
-      {justSubmitted && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-5 py-3 text-base text-green-800">
-          <CheckCircle2 className="h-5 w-5" />
-          도서가 등록되었습니다.
+      {justSubmitted && submitResult && (
+        <div className="space-y-2">
+          {submitResult.registered > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-5 py-3 text-base text-green-800">
+              <CheckCircle2 className="h-5 w-5" />
+              {submitResult.registered}권이 등록되었습니다.
+            </div>
+          )}
+          {submitResult.failed.length > 0 && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+              <p>{submitResult.failed.length}권은 등록에 실패했습니다:</p>
+              <ul className="mt-1 list-disc pl-5 text-sm">
+                {submitResult.failed.map((f) => (
+                  <li key={f.regNo}>
+                    {f.title} ({f.regNo}) — {f.error}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-sm">
+                실패한 항목은 아래 목록에 남겨뒀어요. 고친 뒤 다시 등록해주세요.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      {submitError && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+          {submitError.message}
         </div>
       )}
 
@@ -832,10 +895,14 @@ function BookRegisterContent() {
 
       <button
         type="button"
-        disabled={entries.length === 0 || hasInvalidRegNo}
+        disabled={entries.length === 0 || hasInvalidRegNo || isSubmitting}
         onClick={handleSubmit}
         className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-        {entries.length > 0 ? `${entries.length}권 등록하기` : '등록하기'}
+        {isSubmitting
+          ? '등록 중...'
+          : entries.length > 0
+            ? `${entries.length}권 등록하기`
+            : '등록하기'}
       </button>
     </div>
   );
