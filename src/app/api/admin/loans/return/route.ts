@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const loanId = Number(body?.loanId);
 
-  if (!Number.isFinite(loanId) || loanId <= 0) {
+  if (!Number.isInteger(loanId) || loanId < 0) {
     return Response.json(
       { error: '대출 정보가 올바르지 않습니다.' },
       { status: 400 },

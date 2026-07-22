@@ -44,7 +44,7 @@ export async function PATCH(
 
   const { copyId } = await params;
   const copyIdNum = Number(copyId);
-  if (!Number.isFinite(copyIdNum) || copyIdNum <= 0) {
+  if (!Number.isInteger(copyIdNum) || copyIdNum < 0) {
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 
@@ -167,7 +167,7 @@ export async function DELETE(
 
   const { copyId } = await params;
   const copyIdNum = Number(copyId);
-  if (!Number.isFinite(copyIdNum) || copyIdNum <= 0) {
+  if (!Number.isInteger(copyIdNum) || copyIdNum < 0) {
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 

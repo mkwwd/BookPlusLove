@@ -83,13 +83,13 @@ export async function POST(request: Request) {
   const userId = Number(body?.userId);
   const dueAt = typeof body?.dueAt === 'string' ? body.dueAt.trim() : '';
 
-  if (!Number.isFinite(bookCopyId) || bookCopyId <= 0) {
+  if (!Number.isInteger(bookCopyId) || bookCopyId < 0) {
     return Response.json(
       { error: '도서 정보가 올바르지 않습니다.' },
       { status: 400 },
     );
   }
-  if (!Number.isFinite(userId) || userId <= 0) {
+  if (body?.userId == null || !Number.isInteger(userId) || userId < 0) {
     return Response.json({ error: '대출자를 선택해주세요.' }, { status: 400 });
   }
   if (!DATE_REGEX.test(dueAt)) {
