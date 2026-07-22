@@ -3,11 +3,9 @@
 import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Barcode, ScanLine, Search } from 'lucide-react';
+import { Barcode, ScanLine, Search, SquarePen } from 'lucide-react';
 
-import MemberRegisterForm, {
-  type RegisteredMember,
-} from '@/components/MemberRegisterForm';
+import MemberRegisterForm from '@/components/MemberRegisterForm';
 import Modal from '@/components/Modal';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
@@ -50,6 +48,8 @@ interface BorrowerInfo {
   phone: string | null;
 }
 
+type SelectedBorrower = { id: number; name: string };
+
 type ScanResult =
   | { status: 'not_found'; regNo: string }
   | { status: 'available'; copy: CopyInfo; book: BookInfo }
@@ -66,6 +66,7 @@ interface LoanRow {
   id: number;
   title: string;
   regNo: string;
+  borrowerId: number | null;
   borrowerName: string;
   loanedAt: string;
   dueAt: string;
@@ -82,18 +83,229 @@ function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function BorrowerPicker({
+  selected,
+  onSelect,
+}: {
+  selected: SelectedBorrower | null;
+  onSelect: (borrower: SelectedBorrower | null) => void;
+}) {
+  const [name, setName] = useState(selected?.name ?? '');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const term = name.trim();
+      setSearchTerm(selected ? '' : term);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [name, selected]);
+
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ['borrower-search', searchTerm],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`,
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '검색에 실패했습니다.');
+      return body.users as BorrowerInfo[];
+    },
+    enabled: searchTerm.length > 0,
+  });
+
+  const handleSelect = (borrower: SelectedBorrower) => {
+    setName(borrower.name);
+    onSelect(borrower);
+    setSearchTerm('');
+    setIsDropdownOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <label className="mb-1.5 block text-base font-medium text-amber-900">
+        대출자
+      </label>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => {
+          setName(e.target.value);
+          onSelect(null);
+          setIsDropdownOpen(true);
+        }}
+        onFocus={() => setIsDropdownOpen(true)}
+        onBlur={() => setIsDropdownOpen(false)}
+        placeholder="이름으로 회원 검색"
+        className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+      />
+      {selected ? (
+        <p className="mt-1.5 text-sm text-amber-700">✓ 회원과 연결됨</p>
+      ) : (
+        isDropdownOpen &&
+        suggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded border border-amber-900/20 bg-white shadow-md">
+            {suggestions.map((borrower) => (
+              <li key={borrower.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelect(borrower);
+                  }}
+                  className="block w-full px-4 py-2 text-left text-base hover:bg-amber-50">
+                  {borrower.name}
+                  {borrower.phone && (
+                    <span className="ml-2 text-sm text-amber-700/70">
+                      {borrower.phone}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+      {!selected && (
+        <button
+          type="button"
+          onClick={() => setIsMemberModalOpen(true)}
+          className="mt-2 text-sm text-amber-700 underline hover:text-amber-900">
+          회원이 아닌가요? 지금 회원등록
+        </button>
+      )}
+
+      {isMemberModalOpen && (
+        <Modal title="회원 등록" onClose={() => setIsMemberModalOpen(false)}>
+          <MemberRegisterForm
+            submitLabel="등록하고 대출자로 선택"
+            onSuccess={(member) => {
+              handleSelect(member);
+              setIsMemberModalOpen(false);
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function LoanManageModal({
+  loan,
+  onClose,
+  onChanged,
+}: {
+  loan: LoanRow;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [dueAt, setDueAt] = useState(loan.dueAt);
+  const [selectedBorrower, setSelectedBorrower] =
+    useState<SelectedBorrower | null>(
+      loan.borrowerId != null
+        ? { id: loan.borrowerId, name: loan.borrowerName }
+        : null,
+    );
+
+  const {
+    mutate: save,
+    isPending: isSaving,
+    error: saveError,
+  } = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/loans/${loan.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueAt, userId: selectedBorrower?.id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '수정에 실패했습니다.');
+    },
+    onSuccess: () => {
+      onChanged();
+      onClose();
+    },
+  });
+
+  const {
+    mutate: processReturn,
+    isPending: isReturning,
+    error: returnError,
+  } = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/admin/loans/return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId: loan.id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '반납 처리에 실패했습니다.');
+    },
+    onSuccess: () => {
+      onChanged();
+      onClose();
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-base text-amber-900">
+        <strong>{loan.title}</strong> ({loan.regNo})
+      </p>
+
+      <div>
+        <label className="mb-1.5 block text-base font-medium text-amber-900">
+          반납예정일
+        </label>
+        <input
+          type="date"
+          value={dueAt}
+          onChange={(e) => setDueAt(e.target.value)}
+          className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+        />
+      </div>
+
+      <BorrowerPicker
+        selected={selectedBorrower}
+        onSelect={setSelectedBorrower}
+      />
+
+      {saveError && <p className="text-sm text-red-600">{saveError.message}</p>}
+      <button
+        type="button"
+        disabled={!selectedBorrower || !dueAt || isSaving}
+        onClick={() => save()}
+        className="w-full rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+        {isSaving ? '수정 중...' : '수정하기'}
+      </button>
+
+      <div className="border-t border-amber-900/10 pt-4">
+        {returnError && (
+          <p className="mb-2 text-sm text-red-600">{returnError.message}</p>
+        )}
+        <button
+          type="button"
+          disabled={isReturning}
+          onClick={() => processReturn()}
+          className="w-full rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-900 transition hover:bg-amber-50 disabled:opacity-50">
+          {isReturning ? '반납 처리 중...' : '반납 처리'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLoansPage() {
   const [regNoInput, setRegNoInput] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
-  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [dueAt, setDueAt] = useState('');
   const [selectedBorrower, setSelectedBorrower] =
-    useState<RegisteredMember | null>(null);
-  const [borrowerName, setBorrowerName] = useState('');
-  const [borrowerSearchTerm, setBorrowerSearchTerm] = useState('');
-  const [isBorrowerDropdownOpen, setIsBorrowerDropdownOpen] = useState(false);
+    useState<SelectedBorrower | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [managingLoan, setManagingLoan] = useState<LoanRow | null>(null);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['book-categories'],
@@ -124,8 +336,6 @@ export default function AdminLoansPage() {
     },
     onSuccess: (result) => {
       setSelectedBorrower(null);
-      setBorrowerName('');
-      setBorrowerSearchTerm('');
       if (result.status === 'available') {
         setDueAt(addDays(new Date(), 14));
       }
@@ -145,27 +355,6 @@ export default function AdminLoansPage() {
     setRegNoInput(regNo);
     scanRegNo(regNo);
   };
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      const term = borrowerName.trim();
-      setBorrowerSearchTerm(selectedBorrower ? '' : term);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [borrowerName, selectedBorrower]);
-
-  const { data: borrowerSuggestions = [] } = useQuery({
-    queryKey: ['borrower-search', borrowerSearchTerm],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/admin/users/search?q=${encodeURIComponent(borrowerSearchTerm)}`,
-      );
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? '검색에 실패했습니다.');
-      return body.users as BorrowerInfo[];
-    },
-    enabled: borrowerSearchTerm.length > 0,
-  });
 
   const {
     data: loansData,
@@ -268,40 +457,6 @@ export default function AdminLoansPage() {
       void refetchLoans();
     },
   });
-
-  const {
-    mutate: updateDueDate,
-    isPending: isUpdatingDueDate,
-    variables: updatingLoan,
-    error: updateDueDateError,
-  } = useMutation({
-    mutationFn: async ({
-      loanId,
-      dueAt: nextDueAt,
-    }: {
-      loanId: number;
-      dueAt: string;
-    }) => {
-      const res = await fetch(`/api/admin/loans/${loanId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dueAt: nextDueAt }),
-      });
-      const body = await res.json();
-      if (!res.ok)
-        throw new Error(body.error ?? '반납예정일 수정에 실패했습니다.');
-    },
-    onSuccess: () => {
-      void refetchLoans();
-    },
-  });
-
-  const handleSelectBorrower = (borrower: BorrowerInfo) => {
-    setBorrowerName(borrower.name);
-    setSelectedBorrower({ id: borrower.id, name: borrower.name });
-    setBorrowerSearchTerm('');
-    setIsBorrowerDropdownOpen(false);
-  };
 
   const trimmedSearch = searchText.trim();
   const visibleLoans = (loansData ?? [])
@@ -440,64 +595,17 @@ export default function AdminLoansPage() {
         )}
 
         {scanResult?.status === 'available' && (
-          <div className="mt-4 space-y-3 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
+          <div
+            key={scanResult.copy.id}
+            className="mt-4 space-y-3 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
             <p className="text-base text-amber-900">
               <strong>{scanResult.book.title}</strong> ({scanResult.copy.regNo}
               )은(는) 대출 가능합니다.
             </p>
-            <div className="relative">
-              <label className="mb-1.5 block text-base font-medium text-amber-900">
-                대출자
-              </label>
-              <input
-                type="text"
-                value={borrowerName}
-                onChange={(e) => {
-                  setBorrowerName(e.target.value);
-                  setSelectedBorrower(null);
-                  setIsBorrowerDropdownOpen(true);
-                }}
-                onFocus={() => setIsBorrowerDropdownOpen(true)}
-                onBlur={() => setIsBorrowerDropdownOpen(false)}
-                placeholder="이름으로 회원 검색"
-                className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-              />
-              {selectedBorrower ? (
-                <p className="mt-1.5 text-sm text-amber-700">✓ 회원과 연결됨</p>
-              ) : (
-                isBorrowerDropdownOpen &&
-                borrowerSuggestions.length > 0 && (
-                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded border border-amber-900/20 bg-white shadow-md">
-                    {borrowerSuggestions.map((borrower) => (
-                      <li key={borrower.id}>
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectBorrower(borrower);
-                          }}
-                          className="block w-full px-4 py-2 text-left text-base hover:bg-amber-50">
-                          {borrower.name}
-                          {borrower.phone && (
-                            <span className="ml-2 text-sm text-amber-700/70">
-                              {borrower.phone}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )
-              )}
-              {!selectedBorrower && (
-                <button
-                  type="button"
-                  onClick={() => setIsMemberModalOpen(true)}
-                  className="mt-2 text-sm text-amber-700 underline hover:text-amber-900">
-                  회원이 아닌가요? 지금 회원등록
-                </button>
-              )}
-            </div>
+            <BorrowerPicker
+              selected={selectedBorrower}
+              onSelect={setSelectedBorrower}
+            />
             <div>
               <label className="mb-1.5 block text-base font-medium text-amber-900">
                 반납예정일
@@ -522,10 +630,6 @@ export default function AdminLoansPage() {
           </div>
         )}
       </div>
-
-      {updateDueDateError && (
-        <p className="text-sm text-red-600">{updateDueDateError.message}</p>
-      )}
 
       <div className="relative max-w-sm">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
@@ -577,26 +681,7 @@ export default function AdminLoansPage() {
                   <td className="px-5 py-3 text-amber-700">
                     {loan.loanedAt.slice(0, 10)}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
-                    {loan.returnedAt ? (
-                      loan.dueAt
-                    ) : (
-                      <input
-                        type="date"
-                        value={loan.dueAt}
-                        disabled={
-                          isUpdatingDueDate && updatingLoan?.loanId === loan.id
-                        }
-                        onChange={(e) =>
-                          updateDueDate({
-                            loanId: loan.id,
-                            dueAt: e.target.value,
-                          })
-                        }
-                        className="rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50"
-                      />
-                    )}
-                  </td>
+                  <td className="px-5 py-3 text-amber-700">{loan.dueAt}</td>
                   <td className="px-5 py-3">
                     <span
                       className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[loan.computedStatus]}`}>
@@ -607,10 +692,10 @@ export default function AdminLoansPage() {
                     {!loan.returnedAt && (
                       <button
                         type="button"
-                        disabled={isReturning}
-                        onClick={() => processReturn(loan.id)}
-                        className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 transition hover:bg-amber-50 disabled:opacity-50">
-                        반납 처리
+                        aria-label="관리"
+                        onClick={() => setManagingLoan(loan)}
+                        className="text-amber-600 hover:text-amber-900">
+                        <SquarePen className="h-4 w-4" />
                       </button>
                     )}
                   </td>
@@ -641,15 +726,12 @@ export default function AdminLoansPage() {
         </Modal>
       )}
 
-      {isMemberModalOpen && (
-        <Modal title="회원 등록" onClose={() => setIsMemberModalOpen(false)}>
-          <MemberRegisterForm
-            submitLabel="등록하고 대출자로 선택"
-            onSuccess={(member) => {
-              setSelectedBorrower(member);
-              setBorrowerName(member.name);
-              setIsMemberModalOpen(false);
-            }}
+      {managingLoan && (
+        <Modal title="대출 관리" onClose={() => setManagingLoan(null)}>
+          <LoanManageModal
+            loan={managingLoan}
+            onClose={() => setManagingLoan(null)}
+            onChanged={() => void refetchLoans()}
           />
         </Modal>
       )}

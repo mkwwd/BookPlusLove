@@ -45,9 +45,22 @@ export async function PATCH(
     );
   }
 
+  const updates: { due_at: string; user_id?: number } = { due_at: dueAt };
+
+  if (body?.userId !== undefined) {
+    const userId = Number(body.userId);
+    if (body.userId === null || !Number.isInteger(userId) || userId < 0) {
+      return Response.json(
+        { error: '대출자를 선택해주세요.' },
+        { status: 400 },
+      );
+    }
+    updates.user_id = userId;
+  }
+
   const { data: updated, error: updateError } = await supabaseServer
     .from('loans')
-    .update({ due_at: dueAt })
+    .update(updates)
     .eq('id', loanIdNum)
     .select('id')
     .maybeSingle();

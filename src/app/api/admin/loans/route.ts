@@ -40,7 +40,7 @@ export async function GET() {
   const { data, error: listError } = await supabaseServer
     .from('loans')
     .select(
-      'id, loaned_at, due_at, returned_at, book_copies(reg_no, books(title)), users(name)',
+      'id, loaned_at, due_at, returned_at, book_copies(reg_no, books(title)), users(id, name)',
     )
     .order('loaned_at', { ascending: false })
     .limit(200);
@@ -64,6 +64,7 @@ export async function GET() {
       id: row.id,
       title: book?.title ?? '(알 수 없음)',
       regNo: copy?.reg_no ?? '-',
+      borrowerId: borrower?.id ?? null,
       borrowerName: borrower?.name ?? '(알 수 없음)',
       loanedAt: row.loaned_at,
       dueAt: row.due_at,
