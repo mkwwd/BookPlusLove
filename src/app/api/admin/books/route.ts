@@ -25,6 +25,115 @@ interface FailedItem {
   error: string;
 }
 
+interface BookCategoryRow {
+  label: string;
+  main_code: string;
+  main_label: string;
+}
+
+interface BookRow {
+  id: number;
+  title: string;
+  author: string | null;
+  publisher: string | null;
+  page: string | null;
+  price: string | null;
+  pub_date: string | null;
+  author_code: string | null;
+  category_code: string | null;
+  book_categories: BookCategoryRow | BookCategoryRow[] | null;
+}
+
+interface BookCopyRow {
+  id: number;
+  reg_no: string;
+  status: string;
+  donor_name: string | null;
+  donor_user_id: number | null;
+  books: BookRow | BookRow[] | null;
+}
+
+async function requireAdmin() {
+  const supabase = await createRouteClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) {
+    return {
+      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
+    };
+  }
+
+  const { data: profile } = await supabaseServer
+    .from('users')
+    .select('role')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if (profile?.role !== 'ADMIN') {
+    return {
+      error: Response.json(
+        { error: '관리자만 이용할 수 있습니다.' },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return { error: null };
+}
+
+export async function GET() {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const { data, error: listError } = await supabaseServer
+    .from('book_copies')
+    .select(
+      `id, reg_no, status, donor_name, donor_user_id,
+      books(id, title, author, publisher, page, price, pub_date, author_code, category_code,
+        book_categories(label, main_code, main_label))`,
+    )
+    .order('id', { ascending: false })
+    .returns<BookCopyRow[]>();
+
+  if (listError) {
+    return Response.json({ error: listError.message }, { status: 500 });
+  }
+
+  const books = (data ?? []).map((row) => {
+    const book = Array.isArray(row.books) ? row.books[0] : row.books;
+    const category = book?.book_categories
+      ? Array.isArray(book.book_categories)
+        ? book.book_categories[0]
+        : book.book_categories
+      : null;
+
+    return {
+      copyId: row.id,
+      bookId: book?.id ?? null,
+      regNo: row.reg_no,
+      status: row.status,
+      donorName: row.donor_name,
+      donorUserId: row.donor_user_id,
+      title: book?.title ?? '(제목 없음)',
+      author: book?.author ?? null,
+      publisher: book?.publisher ?? null,
+      page: book?.page ?? null,
+      price: book?.price ?? null,
+      pubDate: book?.pub_date ?? null,
+      authorCode: book?.author_code ?? null,
+      categoryCode: book?.category_code ?? null,
+      categoryMain: category?.main_code ?? null,
+      categoryLabel: category
+        ? `${category.main_label} > ${category.label}`
+        : null,
+    };
+  });
+
+  return Response.json({ books });
+}
+
 export async function POST(request: Request) {
   const supabase = await createRouteClient();
   const {
