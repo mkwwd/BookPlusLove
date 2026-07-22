@@ -472,10 +472,10 @@ export default function AdminBooksPage() {
         <table className="w-full text-left text-base">
           <thead className="border-b border-amber-900/20 text-amber-700">
             <tr>
+              <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">제목</th>
               <th className="px-5 py-3 font-medium">저자</th>
               <th className="px-5 py-3 font-medium">카테고리</th>
-              <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">상태</th>
               <th className="px-5 py-3 font-medium">관리</th>
             </tr>
@@ -500,17 +500,17 @@ export default function AdminBooksPage() {
             ) : (
               visibleBooks.map((book) => (
                 <tr key={book.copyId}>
+                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                    {book.regNo}
+                  </td>
                   <td className="px-5 py-3 text-amber-900">{book.title}</td>
                   <td className="px-5 py-3 text-amber-700">
                     {book.author ?? '-'}
                   </td>
                   <td className="px-5 py-3">
                     <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
-                      {book.categoryLabel ?? '-'}
+                      {book.categoryCode ?? '-'}
                     </span>
-                  </td>
-                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
-                    {book.regNo}
                   </td>
                   <td className="px-5 py-3">
                     <span
