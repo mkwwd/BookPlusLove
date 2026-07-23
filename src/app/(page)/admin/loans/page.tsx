@@ -305,6 +305,9 @@ export default function AdminLoansPage() {
   const [selectedBorrower, setSelectedBorrower] =
     useState<SelectedBorrower | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | '대여중' | '연체중' | '반납완료'
+  >('all');
   const [managingLoan, setManagingLoan] = useState<LoanRow | null>(null);
 
   const { data: categories = [] } = useQuery({
@@ -459,21 +462,28 @@ export default function AdminLoansPage() {
   });
 
   const trimmedSearch = searchText.trim();
-  const visibleLoans = (loansData ?? [])
-    .map((loan) => {
-      const status = loan.returnedAt
-        ? '반납완료'
-        : loan.dueAt < todayString()
-          ? '연체중'
-          : '대여중';
-      return { ...loan, computedStatus: status };
-    })
-    .filter(
-      (loan) =>
-        !trimmedSearch ||
+  const loansWithStatus = (loansData ?? []).map((loan) => {
+    const status = loan.returnedAt
+      ? '반납완료'
+      : loan.dueAt < todayString()
+        ? '연체중'
+        : '대여중';
+    return { ...loan, computedStatus: status };
+  });
+  const statusCounts = {
+    all: loansWithStatus.length,
+    대여중: loansWithStatus.filter((l) => l.computedStatus === '대여중').length,
+    연체중: loansWithStatus.filter((l) => l.computedStatus === '연체중').length,
+    반납완료: loansWithStatus.filter((l) => l.computedStatus === '반납완료')
+      .length,
+  };
+  const visibleLoans = loansWithStatus.filter(
+    (loan) =>
+      (statusFilter === 'all' || loan.computedStatus === statusFilter) &&
+      (!trimmedSearch ||
         loan.title.includes(trimmedSearch) ||
-        loan.borrowerName.includes(trimmedSearch),
-    );
+        loan.borrowerName.includes(trimmedSearch)),
+  );
 
   return (
     <div className="space-y-6">
@@ -629,6 +639,22 @@ export default function AdminLoansPage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {(['all', '대여중', '연체중', '반납완료'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatusFilter(key)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              statusFilter === key
+                ? 'bg-red-900 text-white'
+                : 'border border-amber-900/30 bg-white/70 text-amber-900 hover:bg-amber-50'
+            }`}>
+            {key === 'all' ? '전체' : key} ({statusCounts[key]})
+          </button>
+        ))}
       </div>
 
       <div className="relative max-w-sm">
