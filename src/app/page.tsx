@@ -44,7 +44,7 @@ async function getNewBooks(): Promise<BookCardData[]> {
 function HeroBackground() {
   return (
     <div className="fixed inset-0 -z-10 flex flex-col">
-      <div className="relative h-3/4 w-full">
+      <div className="relative h-4/5 w-full">
         <Image
           src="/image/book4.png"
           alt=""
@@ -53,9 +53,9 @@ function HeroBackground() {
           sizes="100vw"
           className="object-cover object-center"
         />
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b from-transparent to-[rgba(255,251,235,0.95)]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
       </div>
-      <div className="h-1/4 w-full bg-[rgba(255,251,235,0.98)]" />
+      <div className="page-bg h-1/5 w-full" />
     </div>
   );
 }
@@ -70,7 +70,7 @@ function BookSection({
   const placeholderCount = Math.max(0, SECTION_SIZE - books.length);
 
   return (
-    <div className="rounded-lg border border-amber-900/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
+    <div className="rounded-lg border border-amber-900/10 p-6">
       <h2 className="mb-5 font-serif text-2xl text-amber-950">{title}</h2>
       <div className="grid grid-cols-2 gap-x-4 gap-y-6">
         {books.map((book) => (
