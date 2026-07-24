@@ -1,4 +1,6 @@
-import { BookOpen } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { BookOpen, Cross } from 'lucide-react';
 
 export interface BookCardData {
   id: number;
@@ -7,10 +9,21 @@ export interface BookCardData {
   coverUrl: string | null;
 }
 
+function BookShape({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative h-48 w-40 shrink-0">
+      <div className="absolute inset-y-1 right-0 w-2 rounded-r-md bg-gradient-to-r from-amber-50 via-amber-100 to-amber-50" />
+      <div className="absolute inset-y-0 right-2 left-0 overflow-hidden rounded-md shadow-[3px_6px_10px_rgba(0,0,0,0.18)] ring-1 ring-black/10">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function BookCard({ book }: { book: BookCardData }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <div className="relative h-48 w-40 overflow-hidden rounded-md border border-amber-900/10 bg-amber-50 shadow-sm">
+      <BookShape>
         {book.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -19,12 +32,12 @@ export function BookCard({ book }: { book: BookCardData }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-b from-amber-100 to-amber-200 text-amber-700">
-            <BookOpen className="h-8 w-8" />
-            <span className="text-xs">표지 준비중</span>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-800 to-amber-950 text-amber-100">
+            <Cross className="h-10 w-10" strokeWidth={1.5} />
+            <span className="text-xs text-amber-200/80">표지 준비중</span>
           </div>
         )}
-      </div>
+      </BookShape>
       <p className="line-clamp-2 w-40 text-sm font-medium text-amber-950">
         {book.title}
       </p>
