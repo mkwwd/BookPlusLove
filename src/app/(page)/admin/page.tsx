@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
           <div
             key={label}
             className="rounded-lg border border-amber-900/20 bg-white/70 p-5 shadow-sm backdrop-blur-sm">
-            <Icon className="h-5 w-5 text-red-900" />
+            <Icon className="h-5 w-5 text-gray-900" />
             <p className="mt-3 text-base text-amber-700">{label}</p>
             <p className="mt-1 text-2xl font-medium text-amber-900">{value}</p>
           </div>
@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
             key={href}
             href={href}
             className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm transition hover:bg-amber-50">
-            <Icon className="h-6 w-6 text-red-900" />
+            <Icon className="h-6 w-6 text-gray-900" />
             <p className="mt-3 text-lg font-medium text-amber-900">{label}</p>
             <p className="mt-1 text-base text-amber-700">{description}</p>
           </Link>
@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
         <ul className="mt-4 divide-y divide-amber-900/10">
           {RECENT_ACTIVITY.map((item, i) => (
             <li key={i} className="flex gap-4 py-3">
-              <span className="w-12 shrink-0 text-base text-red-900">
+              <span className="w-12 shrink-0 text-base text-gray-900">
                 {item.date}
               </span>
               <span className="text-base text-amber-900">{item.text}</span>

@@ -205,7 +205,7 @@ export default function MemberRegisterForm({
       <form className="space-y-6" onSubmit={handleSubmit} noValidate>
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            이름 <span className="text-red-600">*</span>
+            이름 <span className="text-gray-900">*</span>
           </label>
           <input
             type="text"
@@ -215,13 +215,13 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.name}</p>
           )}
         </div>
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            핸드폰번호 <span className="text-red-600">*</span>
+            핸드폰번호 <span className="text-gray-900">*</span>
           </label>
           <input
             type="tel"
@@ -231,13 +231,13 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.phone && (
-            <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.phone}</p>
           )}
         </div>
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            이메일 <span className="text-red-600">*</span>
+            이메일 <span className="text-gray-900">*</span>
           </label>
           <EmailFields
             emailId={emailId}
@@ -246,13 +246,13 @@ export default function MemberRegisterForm({
             onEmailDomainChange={setEmailDomain}
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.email}</p>
           )}
         </div>
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            아이디 <span className="text-red-600">*</span>
+            아이디 <span className="text-gray-900">*</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -283,7 +283,7 @@ export default function MemberRegisterForm({
             </button>
           </div>
           {errors.userId && (
-            <p className="mt-1 text-sm text-red-600">{errors.userId}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.userId}</p>
           )}
           {userIdCheckStatus === 'available' && (
             <p className="mt-1 text-sm text-green-600">
@@ -291,12 +291,12 @@ export default function MemberRegisterForm({
             </p>
           )}
           {userIdCheckStatus === 'taken' && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm text-gray-900">
               이미 사용 중인 아이디입니다
             </p>
           )}
           {userIdCheckError && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm text-gray-900">
               {userIdCheckError.message}
             </p>
           )}
@@ -304,7 +304,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            비밀번호 <span className="text-red-600">*</span>
+            비밀번호 <span className="text-gray-900">*</span>
           </label>
           <div className="relative">
             <input
@@ -329,7 +329,7 @@ export default function MemberRegisterForm({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
+              className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-gray-900">
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
               ) : (
@@ -338,13 +338,15 @@ export default function MemberRegisterForm({
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.password}</p>
           )}
           {errors.passwordLength && (
-            <p className="mt-1 text-sm text-red-600">{errors.passwordLength}</p>
+            <p className="mt-1 text-sm text-gray-900">
+              {errors.passwordLength}
+            </p>
           )}
           {errors.passwordSpecialChar && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm text-gray-900">
               {errors.passwordSpecialChar}
             </p>
           )}
@@ -352,7 +354,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            비밀번호 확인 <span className="text-red-600">*</span>
+            비밀번호 확인 <span className="text-gray-900">*</span>
           </label>
           <input
             type={showPassword ? 'text' : 'password'}
@@ -369,7 +371,7 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.passwordConfirm && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm text-gray-900">
               {errors.passwordConfirm}
             </p>
           )}
@@ -377,7 +379,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            생년월일 <span className="text-red-600">*</span>
+            생년월일 <span className="text-gray-900">*</span>
           </label>
           <div className="flex gap-2">
             <select
@@ -429,7 +431,7 @@ export default function MemberRegisterForm({
             </select>
           </div>
           {errors.birthdate && (
-            <p className="mt-1 text-sm text-red-600">{errors.birthdate}</p>
+            <p className="mt-1 text-sm text-gray-900">{errors.birthdate}</p>
           )}
         </div>
 
@@ -469,7 +471,7 @@ export default function MemberRegisterForm({
         </div>
 
         {submitError && (
-          <p className="text-center text-base text-red-600">
+          <p className="text-center text-base text-gray-900">
             {submitError.message}
           </p>
         )}
@@ -477,7 +479,7 @@ export default function MemberRegisterForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+          className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
           {isSubmitting ? '가입 처리 중...' : submitLabel}
         </button>
       </form>

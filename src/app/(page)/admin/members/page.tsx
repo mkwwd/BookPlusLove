@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react';
 
 const ROLE_STYLE: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-800',
+  ADMIN: 'bg-gray-200 text-gray-900',
   USER: 'bg-amber-100 text-amber-800',
 };
 

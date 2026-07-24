@@ -32,7 +32,7 @@ export default function AdminNav() {
                 href={href}
                 className={`flex items-center gap-1.5 border-b-2 px-3 py-4 text-base transition ${
                   isActive
-                    ? 'border-red-900 text-red-900'
+                    ? 'border-gray-900 text-gray-900'
                     : 'border-transparent text-amber-700 hover:text-amber-900'
                 }`}>
                 <Icon className="h-4 w-4" />

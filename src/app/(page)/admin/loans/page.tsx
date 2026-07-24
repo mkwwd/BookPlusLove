@@ -272,18 +272,20 @@ function LoanManageModal({
         onSelect={setSelectedBorrower}
       />
 
-      {saveError && <p className="text-sm text-red-600">{saveError.message}</p>}
+      {saveError && (
+        <p className="text-sm text-gray-900">{saveError.message}</p>
+      )}
       <button
         type="button"
         disabled={!selectedBorrower || !dueAt || isSaving}
         onClick={() => save()}
-        className="w-full rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+        className="w-full rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
         {isSaving ? '수정 중...' : '수정하기'}
       </button>
 
       <div className="border-t border-amber-900/10 pt-4">
         {returnError && (
-          <p className="mb-2 text-sm text-red-600">{returnError.message}</p>
+          <p className="mb-2 text-sm text-gray-900">{returnError.message}</p>
         )}
         <button
           type="button"
@@ -528,7 +530,7 @@ export default function AdminLoansPage() {
           </button>
         </div>
         {scanError && (
-          <p className="mt-1.5 text-sm text-red-600">{scanError.message}</p>
+          <p className="mt-1.5 text-sm text-gray-900">{scanError.message}</p>
         )}
 
         {!isCameraOpen && (
@@ -564,14 +566,14 @@ export default function AdminLoansPage() {
             <button
               type="button"
               onClick={() => setIsBookModalOpen(true)}
-              className="mt-2 rounded bg-red-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800">
+              className="mt-2 rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800">
               지금 등록하고 대출 진행하기
             </button>
           </div>
         )}
 
         {scanResult?.status === 'unavailable' && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+          <div className="mt-4 rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
             &quot;{scanResult.book.title}&quot; ({scanResult.copy.regNo})은(는)
             현재 상태가 &quot;{scanResult.copy.status}&quot;라서 대출할 수
             없어요.
@@ -590,7 +592,7 @@ export default function AdminLoansPage() {
               {scanResult.loan.dueAt}
             </p>
             {returnError && (
-              <p className="mt-1.5 text-sm text-red-600">
+              <p className="mt-1.5 text-sm text-gray-900">
                 {returnError.message}
               </p>
             )}
@@ -598,7 +600,7 @@ export default function AdminLoansPage() {
               type="button"
               disabled={isReturning}
               onClick={() => processReturn(scanResult.loan.id)}
-              className="mt-3 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              className="mt-3 rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
               {isReturning ? '반납 처리 중...' : '반납 처리'}
             </button>
           </div>
@@ -628,13 +630,13 @@ export default function AdminLoansPage() {
               />
             </div>
             {checkoutError && (
-              <p className="text-sm text-red-600">{checkoutError.message}</p>
+              <p className="text-sm text-gray-900">{checkoutError.message}</p>
             )}
             <button
               type="button"
               disabled={!selectedBorrower || !dueAt || isCheckingOut}
               onClick={() => checkout()}
-              className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              className="rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
               {isCheckingOut ? '대출 처리 중...' : '대출 처리'}
             </button>
           </div>
@@ -649,7 +651,7 @@ export default function AdminLoansPage() {
             onClick={() => setStatusFilter(key)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               statusFilter === key
-                ? 'bg-red-900 text-white'
+                ? 'bg-gray-900 text-white'
                 : 'border border-amber-900/30 bg-white/70 text-amber-900 hover:bg-amber-50'
             }`}>
             {key === 'all' ? '전체' : key} ({statusCounts[key]})
@@ -735,7 +737,7 @@ export default function AdminLoansPage() {
       {isBookModalOpen && (
         <Modal title="도서 등록" onClose={() => setIsBookModalOpen(false)}>
           {registerBookError && (
-            <p className="mb-3 text-sm text-red-600">
+            <p className="mb-3 text-sm text-gray-900">
               {registerBookError.message}
             </p>
           )}

@@ -20,7 +20,7 @@ export default function Modal({
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="text-amber-700 hover:text-red-800">
+            className="text-amber-700 hover:text-gray-900">
             <X className="h-5 w-5" />
           </button>
         </div>

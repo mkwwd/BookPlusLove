@@ -131,7 +131,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
+                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-gray-900">
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
                   ) : (
@@ -155,12 +155,12 @@ export default function ResetPasswordPage() {
             </div>
 
             {validationError && (
-              <p className="text-center text-base text-red-600">
+              <p className="text-center text-base text-gray-900">
                 {validationError}
               </p>
             )}
             {submitError && (
-              <p className="text-center text-base text-red-600">
+              <p className="text-center text-base text-gray-900">
                 {submitError.message}
               </p>
             )}
@@ -168,7 +168,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+              className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
               {isPending ? '변경 중...' : '비밀번호 변경'}
             </button>
           </form>

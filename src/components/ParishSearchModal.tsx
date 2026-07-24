@@ -112,13 +112,13 @@ export default function ParishSearchModal({
                 type="button"
                 disabled={isRegistering}
                 onClick={() => registerParish(trimmedKeyword)}
-                className="rounded bg-red-900 px-4 py-2 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
+                className="rounded bg-gray-900 px-4 py-2 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
                 {isRegistering
                   ? '등록 중...'
                   : `'${trimmedKeyword}'(으)로 직접 입력`}
               </button>
               {registerError && (
-                <span className="text-sm text-red-600">
+                <span className="text-sm text-gray-900">
                   {registerError.message}
                 </span>
               )}

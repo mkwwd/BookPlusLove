@@ -166,7 +166,7 @@ function EditBookForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-900">
-            제목 <span className="text-red-600">*</span>
+            제목 <span className="text-gray-900">*</span>
           </label>
           <input
             type="text"
@@ -244,7 +244,7 @@ function EditBookForm({
         </div>
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-900">
-            등록번호 <span className="text-red-600">*</span>
+            등록번호 <span className="text-gray-900">*</span>
           </label>
           <input
             type="text"
@@ -412,7 +412,7 @@ function EditBookForm({
       </div>
 
       {(formError || saveError) && (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-gray-900">
           {formError ?? saveError?.message}
         </p>
       )}
@@ -421,7 +421,7 @@ function EditBookForm({
         type="button"
         disabled={isSaving}
         onClick={handleSave}
-        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
+        className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {isSaving ? '저장 중...' : '저장'}
       </button>
     </div>
@@ -513,7 +513,7 @@ export default function AdminBooksPage() {
   return (
     <div className="space-y-6">
       {deleteError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+        <div className="rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
           {deleteError.message}
         </div>
       )}
@@ -537,7 +537,7 @@ export default function AdminBooksPage() {
           </div>
           <Link
             href="/admin/books/new"
-            className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            className="flex items-center gap-1.5 rounded bg-gray-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-gray-800">
             <Plus className="h-4 w-4" />
             도서 등록
           </Link>
@@ -660,7 +660,7 @@ export default function AdminBooksPage() {
                         aria-label="삭제"
                         disabled={isDeleting && deletingCopyId === book.copyId}
                         onClick={() => handleDelete(book)}
-                        className="text-amber-600 hover:text-red-800 disabled:opacity-40">
+                        className="text-amber-600 hover:text-gray-900 disabled:opacity-40">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
