@@ -10,7 +10,7 @@ const bookmarkClipPath = {
 };
 
 const bookmarkClass =
-  'bg-gray-900 px-4 pt-1.5 pb-3.5 text-base text-white hover:bg-gray-800';
+  'bg-red-900 px-4 pt-1.5 pb-3.5 text-base text-white hover:bg-red-800';
 
 export default function HeaderTopBar({
   isLoggedIn,

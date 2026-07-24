@@ -205,7 +205,7 @@ export default function MemberRegisterForm({
       <form className="space-y-6" onSubmit={handleSubmit} noValidate>
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            이름 <span className="text-gray-900">*</span>
+            이름 <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
@@ -221,7 +221,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            핸드폰번호 <span className="text-gray-900">*</span>
+            핸드폰번호 <span className="text-red-600">*</span>
           </label>
           <input
             type="tel"
@@ -237,7 +237,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            이메일 <span className="text-gray-900">*</span>
+            이메일 <span className="text-red-600">*</span>
           </label>
           <EmailFields
             emailId={emailId}
@@ -252,7 +252,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            아이디 <span className="text-gray-900">*</span>
+            아이디 <span className="text-red-600">*</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -304,7 +304,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            비밀번호 <span className="text-gray-900">*</span>
+            비밀번호 <span className="text-red-600">*</span>
           </label>
           <div className="relative">
             <input
@@ -354,7 +354,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            비밀번호 확인 <span className="text-gray-900">*</span>
+            비밀번호 확인 <span className="text-red-600">*</span>
           </label>
           <input
             type={showPassword ? 'text' : 'password'}
@@ -379,7 +379,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-900">
-            생년월일 <span className="text-gray-900">*</span>
+            생년월일 <span className="text-red-600">*</span>
           </label>
           <div className="flex gap-2">
             <select
@@ -479,7 +479,7 @@ export default function MemberRegisterForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
           {isSubmitting ? '가입 처리 중...' : submitLabel}
         </button>
       </form>

@@ -279,7 +279,7 @@ function LoanManageModal({
         type="button"
         disabled={!selectedBorrower || !dueAt || isSaving}
         onClick={() => save()}
-        className="w-full rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+        className="w-full rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
         {isSaving ? '수정 중...' : '수정하기'}
       </button>
 
@@ -566,7 +566,7 @@ export default function AdminLoansPage() {
             <button
               type="button"
               onClick={() => setIsBookModalOpen(true)}
-              className="mt-2 rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800">
+              className="mt-2 rounded bg-red-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800">
               지금 등록하고 대출 진행하기
             </button>
           </div>
@@ -600,7 +600,7 @@ export default function AdminLoansPage() {
               type="button"
               disabled={isReturning}
               onClick={() => processReturn(scanResult.loan.id)}
-              className="mt-3 rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+              className="mt-3 rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
               {isReturning ? '반납 처리 중...' : '반납 처리'}
             </button>
           </div>
@@ -636,7 +636,7 @@ export default function AdminLoansPage() {
               type="button"
               disabled={!selectedBorrower || !dueAt || isCheckingOut}
               onClick={() => checkout()}
-              className="rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+              className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
               {isCheckingOut ? '대출 처리 중...' : '대출 처리'}
             </button>
           </div>
@@ -651,7 +651,7 @@ export default function AdminLoansPage() {
             onClick={() => setStatusFilter(key)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               statusFilter === key
-                ? 'bg-gray-900 text-white'
+                ? 'bg-red-900 text-white'
                 : 'border border-amber-900/30 bg-white/70 text-amber-900 hover:bg-amber-50'
             }`}>
             {key === 'all' ? '전체' : key} ({statusCounts[key]})

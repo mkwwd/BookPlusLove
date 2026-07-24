@@ -166,7 +166,7 @@ function EditBookForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-900">
-            제목 <span className="text-gray-900">*</span>
+            제목 <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
@@ -244,7 +244,7 @@ function EditBookForm({
         </div>
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-900">
-            등록번호 <span className="text-gray-900">*</span>
+            등록번호 <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
@@ -421,7 +421,7 @@ function EditBookForm({
         type="button"
         disabled={isSaving}
         onClick={handleSave}
-        className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50 sm:w-auto sm:px-8">
+        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {isSaving ? '저장 중...' : '저장'}
       </button>
     </div>
@@ -537,7 +537,7 @@ export default function AdminBooksPage() {
           </div>
           <Link
             href="/admin/books/new"
-            className="flex items-center gap-1.5 rounded bg-gray-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-gray-800">
+            className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
             <Plus className="h-4 w-4" />
             도서 등록
           </Link>

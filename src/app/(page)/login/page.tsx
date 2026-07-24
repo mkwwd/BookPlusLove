@@ -107,7 +107,7 @@ export default function Page1Login() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+              className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
               {isPending ? '로그인 중...' : '로그인'}
             </button>
 

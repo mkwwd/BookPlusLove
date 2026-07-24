@@ -168,7 +168,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+              className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
               {isPending ? '변경 중...' : '비밀번호 변경'}
             </button>
           </form>

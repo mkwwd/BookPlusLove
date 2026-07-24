@@ -344,7 +344,7 @@ export default function ManualBookEntryForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-900">
-            제목 <span className="text-gray-900">*</span>
+            제목 <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
@@ -620,7 +620,7 @@ export default function ManualBookEntryForm({
         <button
           type="button"
           onClick={handleAddManualEntry}
-          className="rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800">
+          className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
           {submitLabel}
         </button>
       </div>

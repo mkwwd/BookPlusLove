@@ -102,7 +102,7 @@ export default function FindPasswordForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50">
         {isPending ? '전송 중...' : '재설정 링크 보내기'}
       </button>
     </form>

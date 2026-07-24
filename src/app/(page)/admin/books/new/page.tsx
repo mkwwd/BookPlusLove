@@ -581,7 +581,7 @@ function BookRegisterContent() {
         type="button"
         disabled={entries.length === 0 || hasInvalidRegNo || isSubmitting}
         onClick={handleSubmit}
-        className="w-full rounded bg-gray-900 py-3 text-lg font-medium text-white transition hover:bg-gray-800 disabled:opacity-50 sm:w-auto sm:px-8">
+        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {isSubmitting
           ? '등록 중...'
           : entries.length > 0

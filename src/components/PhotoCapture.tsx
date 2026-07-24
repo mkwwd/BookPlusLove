@@ -95,7 +95,7 @@ export default function PhotoCapture({
             <button
               type="button"
               onClick={handleCapture}
-              className="rounded bg-gray-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-gray-800">
+              className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
               촬영
             </button>
           </div>
