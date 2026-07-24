@@ -307,10 +307,10 @@ export default function ManualBookEntryForm({
           채워진 내용은 계속 수정할 수 있어요.
         </p>
         {manualIsbnError && (
-          <p className="mt-1.5 text-sm text-gray-900">{manualIsbnError}</p>
+          <p className="mt-1.5 text-sm text-red-600">{manualIsbnError}</p>
         )}
         {manualLookupError && (
-          <p className="mt-1.5 text-sm text-gray-900">
+          <p className="mt-1.5 text-sm text-red-600">
             {manualLookupError.message}
           </p>
         )}
@@ -434,12 +434,12 @@ export default function ManualBookEntryForm({
             placeholder="예: MB123456"
             className={`w-full rounded border bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:outline-none ${
               manualRegNoError
-                ? 'border-gray-500 focus:ring-gray-400'
+                ? 'border-red-400 focus:ring-red-300'
                 : 'border-amber-900/20 focus:ring-amber-900/30'
             }`}
           />
           {manualRegNoError && (
-            <p className="mt-1.5 text-sm text-gray-900">{manualRegNoError}</p>
+            <p className="mt-1.5 text-sm text-red-600">{manualRegNoError}</p>
           )}
         </div>
         <div>
@@ -608,7 +608,7 @@ export default function ManualBookEntryForm({
         </div>
       </div>
       {manualFormError && (
-        <p className="mt-3 text-sm text-gray-900">{manualFormError}</p>
+        <p className="mt-3 text-sm text-red-600">{manualFormError}</p>
       )}
       <div className="mt-4 flex gap-2">
         <button

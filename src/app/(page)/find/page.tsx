@@ -23,7 +23,7 @@ function FindTabs() {
               onClick={() => setActiveTab('id')}
               className={`flex-1 border-b-2 pb-3 text-center font-serif text-xl ${
                 activeTab === 'id'
-                  ? 'border-gray-900 text-amber-900'
+                  ? 'border-red-900 text-amber-900'
                   : 'border-amber-900/20 text-amber-900/50'
               }`}>
               아이디 찾기
@@ -33,7 +33,7 @@ function FindTabs() {
               onClick={() => setActiveTab('password')}
               className={`flex-1 border-b-2 pb-3 text-center font-serif text-xl ${
                 activeTab === 'password'
-                  ? 'border-gray-900 text-amber-900'
+                  ? 'border-red-900 text-amber-900'
                   : 'border-amber-900/20 text-amber-900/50'
               }`}>
               비밀번호 찾기

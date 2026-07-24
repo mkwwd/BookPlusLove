@@ -215,7 +215,7 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-gray-900">{errors.name}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
           )}
         </div>
 
@@ -231,7 +231,7 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.phone && (
-            <p className="mt-1 text-sm text-gray-900">{errors.phone}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
           )}
         </div>
 
@@ -246,7 +246,7 @@ export default function MemberRegisterForm({
             onEmailDomainChange={setEmailDomain}
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-gray-900">{errors.email}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
           )}
         </div>
 
@@ -283,7 +283,7 @@ export default function MemberRegisterForm({
             </button>
           </div>
           {errors.userId && (
-            <p className="mt-1 text-sm text-gray-900">{errors.userId}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.userId}</p>
           )}
           {userIdCheckStatus === 'available' && (
             <p className="mt-1 text-sm text-green-600">
@@ -291,12 +291,12 @@ export default function MemberRegisterForm({
             </p>
           )}
           {userIdCheckStatus === 'taken' && (
-            <p className="mt-1 text-sm text-gray-900">
+            <p className="mt-1 text-sm text-red-600">
               이미 사용 중인 아이디입니다
             </p>
           )}
           {userIdCheckError && (
-            <p className="mt-1 text-sm text-gray-900">
+            <p className="mt-1 text-sm text-red-600">
               {userIdCheckError.message}
             </p>
           )}
@@ -329,7 +329,7 @@ export default function MemberRegisterForm({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-gray-900">
+              className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
               ) : (
@@ -338,15 +338,13 @@ export default function MemberRegisterForm({
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-gray-900">{errors.password}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
           )}
           {errors.passwordLength && (
-            <p className="mt-1 text-sm text-gray-900">
-              {errors.passwordLength}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.passwordLength}</p>
           )}
           {errors.passwordSpecialChar && (
-            <p className="mt-1 text-sm text-gray-900">
+            <p className="mt-1 text-sm text-red-600">
               {errors.passwordSpecialChar}
             </p>
           )}
@@ -371,7 +369,7 @@ export default function MemberRegisterForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {errors.passwordConfirm && (
-            <p className="mt-1 text-sm text-gray-900">
+            <p className="mt-1 text-sm text-red-600">
               {errors.passwordConfirm}
             </p>
           )}
@@ -431,7 +429,7 @@ export default function MemberRegisterForm({
             </select>
           </div>
           {errors.birthdate && (
-            <p className="mt-1 text-sm text-gray-900">{errors.birthdate}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.birthdate}</p>
           )}
         </div>
 
@@ -471,7 +469,7 @@ export default function MemberRegisterForm({
         </div>
 
         {submitError && (
-          <p className="text-center text-base text-gray-900">
+          <p className="text-center text-base text-red-600">
             {submitError.message}
           </p>
         )}

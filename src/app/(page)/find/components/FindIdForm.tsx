@@ -70,7 +70,7 @@ export default function FindIdForm() {
         </p>
       )}
       {error && (
-        <p className="text-center text-base text-gray-900">{error.message}</p>
+        <p className="text-center text-base text-red-600">{error.message}</p>
       )}
 
       <button

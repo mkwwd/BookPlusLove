@@ -208,17 +208,15 @@ function ScannedBookTable({
                         placeholder="예: MB123456"
                         className={`w-32 rounded border bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:outline-none ${
                           isRegNoInvalid || isRegNoDuplicate
-                            ? 'border-gray-500 focus:ring-gray-400'
+                            ? 'border-red-400 focus:ring-red-300'
                             : 'border-amber-900/20 focus:ring-amber-900/30'
                         }`}
                       />
                       {isRegNoDuplicate ? (
-                        <p className="mt-1 text-xs text-gray-900">
-                          중복된 번호
-                        </p>
+                        <p className="mt-1 text-xs text-red-600">중복된 번호</p>
                       ) : (
                         isRegNoInvalid && (
-                          <p className="mt-1 text-xs text-gray-900">
+                          <p className="mt-1 text-xs text-red-600">
                             필수, MB+숫자 6자리
                           </p>
                         )
@@ -284,7 +282,7 @@ function ScannedBookTable({
                         type="button"
                         aria-label="목록에서 삭제"
                         onClick={() => onRemove(book.id)}
-                        className="text-amber-600 hover:text-gray-900">
+                        className="text-amber-600 hover:text-red-800">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -458,7 +456,7 @@ function BookRegisterContent() {
           onClick={() => switchMethod('manual')}
           className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
             method === 'manual'
-              ? 'border-gray-900 text-gray-900'
+              ? 'border-red-900 text-red-900'
               : 'border-transparent text-amber-700 hover:text-amber-900'
           }`}>
           <PencilLine className="h-4 w-4" />
@@ -469,7 +467,7 @@ function BookRegisterContent() {
           onClick={() => switchMethod('excel')}
           className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
             method === 'excel'
-              ? 'border-gray-900 text-gray-900'
+              ? 'border-red-900 text-red-900'
               : 'border-transparent text-amber-700 hover:text-amber-900'
           }`}>
           <FileSpreadsheet className="h-4 w-4" />
@@ -486,7 +484,7 @@ function BookRegisterContent() {
             </div>
           )}
           {submitResult.failed.length > 0 && (
-            <div className="rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
               <p>{submitResult.failed.length}권은 등록에 실패했습니다:</p>
               <ul className="mt-1 list-disc pl-5 text-sm">
                 {submitResult.failed.map((f) => (
@@ -510,7 +508,7 @@ function BookRegisterContent() {
         </div>
       )}
       {submitError && (
-        <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
           {submitError.message}
         </div>
       )}
@@ -571,7 +569,7 @@ function BookRegisterContent() {
       />
 
       {hasInvalidRegNo && (
-        <p className="text-sm text-gray-900">
+        <p className="text-sm text-red-600">
           등록번호 형식이 잘못되었거나 중복된 항목이 있습니다. 표에서 빨간색으로
           표시된 등록번호를 확인해주세요.
         </p>

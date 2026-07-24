@@ -412,7 +412,7 @@ function EditBookForm({
       </div>
 
       {(formError || saveError) && (
-        <p className="text-sm text-gray-900">
+        <p className="text-sm text-red-600">
           {formError ?? saveError?.message}
         </p>
       )}
@@ -513,7 +513,7 @@ export default function AdminBooksPage() {
   return (
     <div className="space-y-6">
       {deleteError && (
-        <div className="rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
           {deleteError.message}
         </div>
       )}
@@ -660,7 +660,7 @@ export default function AdminBooksPage() {
                         aria-label="삭제"
                         disabled={isDeleting && deletingCopyId === book.copyId}
                         onClick={() => handleDelete(book)}
-                        className="text-amber-600 hover:text-gray-900 disabled:opacity-40">
+                        className="text-amber-600 hover:text-red-800 disabled:opacity-40">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

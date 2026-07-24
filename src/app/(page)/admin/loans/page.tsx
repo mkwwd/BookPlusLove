@@ -272,9 +272,7 @@ function LoanManageModal({
         onSelect={setSelectedBorrower}
       />
 
-      {saveError && (
-        <p className="text-sm text-gray-900">{saveError.message}</p>
-      )}
+      {saveError && <p className="text-sm text-red-600">{saveError.message}</p>}
       <button
         type="button"
         disabled={!selectedBorrower || !dueAt || isSaving}
@@ -285,7 +283,7 @@ function LoanManageModal({
 
       <div className="border-t border-amber-900/10 pt-4">
         {returnError && (
-          <p className="mb-2 text-sm text-gray-900">{returnError.message}</p>
+          <p className="mb-2 text-sm text-red-600">{returnError.message}</p>
         )}
         <button
           type="button"
@@ -530,7 +528,7 @@ export default function AdminLoansPage() {
           </button>
         </div>
         {scanError && (
-          <p className="mt-1.5 text-sm text-gray-900">{scanError.message}</p>
+          <p className="mt-1.5 text-sm text-red-600">{scanError.message}</p>
         )}
 
         {!isCameraOpen && (
@@ -573,7 +571,7 @@ export default function AdminLoansPage() {
         )}
 
         {scanResult?.status === 'unavailable' && (
-          <div className="mt-4 rounded-lg border border-gray-300 bg-gray-50 px-5 py-3 text-base text-gray-800">
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
             &quot;{scanResult.book.title}&quot; ({scanResult.copy.regNo})은(는)
             현재 상태가 &quot;{scanResult.copy.status}&quot;라서 대출할 수
             없어요.
@@ -592,7 +590,7 @@ export default function AdminLoansPage() {
               {scanResult.loan.dueAt}
             </p>
             {returnError && (
-              <p className="mt-1.5 text-sm text-gray-900">
+              <p className="mt-1.5 text-sm text-red-600">
                 {returnError.message}
               </p>
             )}
@@ -630,7 +628,7 @@ export default function AdminLoansPage() {
               />
             </div>
             {checkoutError && (
-              <p className="text-sm text-gray-900">{checkoutError.message}</p>
+              <p className="text-sm text-red-600">{checkoutError.message}</p>
             )}
             <button
               type="button"
@@ -737,7 +735,7 @@ export default function AdminLoansPage() {
       {isBookModalOpen && (
         <Modal title="도서 등록" onClose={() => setIsBookModalOpen(false)}>
           {registerBookError && (
-            <p className="mb-3 text-sm text-gray-900">
+            <p className="mb-3 text-sm text-red-600">
               {registerBookError.message}
             </p>
           )}

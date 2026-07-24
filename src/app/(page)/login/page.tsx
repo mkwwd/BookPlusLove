@@ -56,7 +56,7 @@ export default function Page1Login() {
               </div>
             </div>
             <div className="mb-2 font-serif text-4xl text-amber-900">
-              책더하기사랑도서관
+              책더하기사랑작은도서관
             </div>
           </div>
 
@@ -88,7 +88,7 @@ export default function Page1Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-gray-900">
+                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
                   ) : (
@@ -99,7 +99,7 @@ export default function Page1Login() {
             </div>
 
             {error && (
-              <p className="text-center text-base text-gray-900">
+              <p className="text-center text-base text-red-600">
                 {error.message}
               </p>
             )}

@@ -118,7 +118,7 @@ export default function ParishSearchModal({
                   : `'${trimmedKeyword}'(으)로 직접 입력`}
               </button>
               {registerError && (
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-red-600">
                   {registerError.message}
                 </span>
               )}
