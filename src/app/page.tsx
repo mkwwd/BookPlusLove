@@ -87,7 +87,7 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="page-bg min-h-screen">
+    <div className="min-h-screen">
       <HeroBackground />
 
       <section className="flex min-h-[560px] items-center justify-center">
