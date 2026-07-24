@@ -532,7 +532,7 @@ export default function AdminBooksPage() {
                 setCurrentPage(1);
               }}
               placeholder="제목 또는 저자 검색"
-              className="w-64 rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+              className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
             />
           </div>
           <Link
@@ -552,7 +552,7 @@ export default function AdminBooksPage() {
       <div
         ref={scrollRef}
         onWheel={handleWheel}
-        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-gray-700">
             <tr>
@@ -678,7 +678,7 @@ export default function AdminBooksPage() {
             type="button"
             disabled={safePage <= 1}
             onClick={() => setCurrentPage(safePage - 1)}
-            className="rounded border border-amber-900/30 bg-white/70 px-4 py-2 text-base text-gray-900 transition hover:bg-amber-50 disabled:opacity-40">
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-gray-900 transition hover:bg-amber-50 disabled:opacity-40">
             이전
           </button>
           <span className="text-base text-gray-700">
@@ -688,7 +688,7 @@ export default function AdminBooksPage() {
             type="button"
             disabled={safePage >= totalPages}
             onClick={() => setCurrentPage(safePage + 1)}
-            className="rounded border border-amber-900/30 bg-white/70 px-4 py-2 text-base text-gray-900 transition hover:bg-amber-50 disabled:opacity-40">
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-gray-900 transition hover:bg-amber-50 disabled:opacity-40">
             다음
           </button>
         </div>

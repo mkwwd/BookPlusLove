@@ -14,7 +14,7 @@ export default function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b border-amber-900/20 bg-white/70 backdrop-blur-sm">
+    <nav className="border-b border-amber-900/20 bg-white/40 backdrop-blur-sm">
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-6">
         <Link
           href="/admin"

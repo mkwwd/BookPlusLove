@@ -112,7 +112,7 @@ function ScannedBookTable({
       <div
         ref={scrollRef}
         onWheel={handleWheel}
-        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-gray-700">
             <tr>
@@ -523,7 +523,7 @@ function BookRegisterContent() {
       )}
 
       {method === 'excel' && (
-        <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+        <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
           <label className="mb-2 block text-base font-medium text-gray-900">
             엑셀 파일
           </label>

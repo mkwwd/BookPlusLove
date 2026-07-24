@@ -491,7 +491,7 @@ export default function AdminLoansPage() {
         <h2 className="font-serif text-3xl text-gray-900">대출/대여 관리</h2>
       </div>
 
-      <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+      <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
         <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-gray-900">
           <Barcode className="h-4 w-4" />
           등록번호 스캔
@@ -650,7 +650,7 @@ export default function AdminLoansPage() {
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               statusFilter === key
                 ? 'bg-red-900 text-white'
-                : 'border border-amber-900/30 bg-white/70 text-gray-900 hover:bg-amber-50'
+                : 'border border-amber-900/30 bg-white/40 text-gray-900 hover:bg-amber-50'
             }`}>
             {key === 'all' ? '전체' : key} ({statusCounts[key]})
           </button>
@@ -664,11 +664,11 @@ export default function AdminLoansPage() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           placeholder="도서명 또는 회원명 검색"
-          className="w-full rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+          className="w-full rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-base">
           <thead className="border-b border-amber-900/20 text-gray-700">
             <tr>

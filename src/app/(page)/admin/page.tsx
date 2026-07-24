@@ -48,7 +48,7 @@ export default function AdminDashboardPage() {
         {STATS.map(({ label, value, icon: Icon }) => (
           <div
             key={label}
-            className="rounded-lg border border-amber-900/20 bg-white/70 p-5 shadow-sm backdrop-blur-sm">
+            className="rounded-lg border border-amber-900/20 bg-white/40 p-5 shadow-sm backdrop-blur-sm">
             <Icon className="h-5 w-5 text-red-900" />
             <p className="mt-3 text-base text-gray-700">{label}</p>
             <p className="mt-1 text-2xl font-medium text-gray-900">{value}</p>
@@ -61,7 +61,7 @@ export default function AdminDashboardPage() {
           <Link
             key={href}
             href={href}
-            className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm transition hover:bg-amber-50">
+            className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm transition hover:bg-amber-50">
             <Icon className="h-6 w-6 text-red-900" />
             <p className="mt-3 text-lg font-medium text-gray-900">{label}</p>
             <p className="mt-1 text-base text-gray-700">{description}</p>
@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+      <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
         <h3 className="font-serif text-xl text-gray-900">최근 활동</h3>
         <ul className="mt-4 divide-y divide-amber-900/10">
           {RECENT_ACTIVITY.map((item, i) => (

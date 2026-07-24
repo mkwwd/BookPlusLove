@@ -50,11 +50,11 @@ export default function AdminMembersPage() {
         <input
           type="text"
           placeholder="아이디, 이름 또는 이메일 검색"
-          className="w-full rounded border border-amber-900/30 bg-white/70 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+          className="w-full rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
+      <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-base">
           <thead className="border-b border-amber-900/20 text-gray-700">
             <tr>

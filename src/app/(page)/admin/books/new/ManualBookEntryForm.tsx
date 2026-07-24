@@ -266,7 +266,7 @@ export default function ManualBookEntryForm({
   };
 
   return (
-    <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
+    <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
       <p className="mb-4 text-sm text-gray-700">
         ISBN이 있으면 스캔하거나 입력해서 조회하고, 없는 책은 아래 항목을 직접
         입력해주세요.
