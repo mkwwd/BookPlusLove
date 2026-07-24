@@ -204,7 +204,7 @@ export default function MemberRegisterForm({
     <>
       <form className="space-y-6" onSubmit={handleSubmit} noValidate>
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             이름 <span className="text-red-600">*</span>
           </label>
           <input
@@ -220,7 +220,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             핸드폰번호 <span className="text-red-600">*</span>
           </label>
           <input
@@ -236,7 +236,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             이메일 <span className="text-red-600">*</span>
           </label>
           <EmailFields
@@ -251,7 +251,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             아이디 <span className="text-red-600">*</span>
           </label>
           <div className="flex gap-2">
@@ -278,7 +278,7 @@ export default function MemberRegisterForm({
                 setErrors((prev) => ({ ...prev, userId: error }));
                 if (!error) checkUserId();
               }}
-              className="flex shrink-0 items-center rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+              className="flex shrink-0 items-center rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-950 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
               {isCheckingUserId ? '확인 중...' : '중복확인'}
             </button>
           </div>
@@ -303,7 +303,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             비밀번호 <span className="text-red-600">*</span>
           </label>
           <div className="relative">
@@ -329,7 +329,7 @@ export default function MemberRegisterForm({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
+              className="absolute top-3 right-3 cursor-pointer text-amber-950 hover:text-red-800">
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
               ) : (
@@ -351,7 +351,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             비밀번호 확인 <span className="text-red-600">*</span>
           </label>
           <input
@@ -376,7 +376,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             생년월일 <span className="text-red-600">*</span>
           </label>
           <div className="flex gap-2">
@@ -389,7 +389,7 @@ export default function MemberRegisterForm({
                   setBirthDay('');
                 }
               }}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <option value="">년</option>
               {BIRTH_YEARS.map((year) => (
                 <option key={year} value={year}>
@@ -406,7 +406,7 @@ export default function MemberRegisterForm({
                   setBirthDay('');
                 }
               }}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <option value="">월</option>
               {BIRTH_MONTHS.map((month) => (
                 <option key={month} value={month}>
@@ -417,7 +417,7 @@ export default function MemberRegisterForm({
             <select
               value={birthDay}
               onChange={(e) => setBirthDay(e.target.value)}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-3 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <option value="">일</option>
               {Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1).map(
                 (day) => (
@@ -434,7 +434,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             세례명
           </label>
           <input
@@ -447,7 +447,7 @@ export default function MemberRegisterForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-amber-950">
             본당
           </label>
           <div className="flex gap-2">
@@ -461,7 +461,7 @@ export default function MemberRegisterForm({
             <button
               type="button"
               onClick={() => setIsParishModalOpen(true)}
-              className="flex shrink-0 items-center gap-1 rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-900 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="flex shrink-0 items-center gap-1 rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-base text-amber-950 hover:bg-amber-50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <Search className="h-4 w-4" />
               검색
             </button>

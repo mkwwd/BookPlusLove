@@ -43,10 +43,10 @@ const MEMBERS = [
 export default function AdminMembersPage() {
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-3xl text-amber-900">회원 관리</h2>
+      <h2 className="font-serif text-3xl text-amber-950">회원 관리</h2>
 
       <div className="relative max-w-sm">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
         <input
           type="text"
           placeholder="아이디, 이름 또는 이메일 검색"
@@ -56,7 +56,7 @@ export default function AdminMembersPage() {
 
       <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-base">
-          <thead className="border-b border-amber-900/20 text-amber-700">
+          <thead className="border-b border-amber-900/20 text-amber-800">
             <tr>
               <th className="px-5 py-3 font-medium">아이디</th>
               <th className="px-5 py-3 font-medium">이름</th>
@@ -70,11 +70,11 @@ export default function AdminMembersPage() {
           <tbody className="divide-y divide-amber-900/10">
             {MEMBERS.map((member) => (
               <tr key={member.userId}>
-                <td className="px-5 py-3 text-amber-900">{member.userId}</td>
-                <td className="px-5 py-3 text-amber-900">{member.name}</td>
-                <td className="px-5 py-3 text-amber-700">{member.email}</td>
-                <td className="px-5 py-3 text-amber-700">{member.parish}</td>
-                <td className="px-5 py-3 text-amber-700">{member.joinedAt}</td>
+                <td className="px-5 py-3 text-amber-950">{member.userId}</td>
+                <td className="px-5 py-3 text-amber-950">{member.name}</td>
+                <td className="px-5 py-3 text-amber-800">{member.email}</td>
+                <td className="px-5 py-3 text-amber-800">{member.parish}</td>
+                <td className="px-5 py-3 text-amber-800">{member.joinedAt}</td>
                 <td className="px-5 py-3">
                   <span
                     className={`rounded px-2 py-1 text-sm font-medium ${ROLE_STYLE[member.role]}`}>
@@ -84,7 +84,7 @@ export default function AdminMembersPage() {
                 <td className="px-5 py-3">
                   <button
                     type="button"
-                    className="text-sm text-amber-700 hover:text-amber-900 hover:underline">
+                    className="text-sm text-amber-800 hover:text-amber-950 hover:underline">
                     상세보기
                   </button>
                 </td>

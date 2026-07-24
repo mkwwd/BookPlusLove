@@ -165,7 +165,7 @@ function EditBookForm({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             제목 <span className="text-red-600">*</span>
           </label>
           <input
@@ -176,7 +176,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             저자
           </label>
           <input
@@ -187,7 +187,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             출판사
           </label>
           <input
@@ -198,7 +198,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             ISBN
           </label>
           <input
@@ -209,7 +209,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             출판일
           </label>
           <input
@@ -221,7 +221,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             페이지
           </label>
           <input
@@ -232,7 +232,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             정가
           </label>
           <input
@@ -243,7 +243,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             등록번호 <span className="text-red-600">*</span>
           </label>
           <input
@@ -263,13 +263,13 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             상태
           </label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+            className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -278,7 +278,7 @@ function EditBookForm({
           </select>
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             저자기호
           </label>
           <div className="flex gap-2">
@@ -295,13 +295,13 @@ function EditBookForm({
                   generateAuthorCode(author.trim(), title.trim()) ?? '',
                 )
               }
-              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-950 transition hover:bg-amber-50">
               자동생성
             </button>
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             기증자명
           </label>
           <input
@@ -312,7 +312,7 @@ function EditBookForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             분류코드
           </label>
           <div className="flex gap-2">
@@ -322,7 +322,7 @@ function EditBookForm({
                 setCategoryMain(e.target.value);
                 setCategory('');
               }}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <option value="">대분류</option>
               {mainOptions.map(([code, label]) => (
                 <option key={code} value={code}>
@@ -334,7 +334,7 @@ function EditBookForm({
               value={category}
               disabled={!categoryMain}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
               <option value="">세부분류</option>
               {categories
                 .filter((c) => c.main_code === categoryMain)
@@ -347,7 +347,7 @@ function EditBookForm({
           </div>
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1.5 block text-base font-medium text-amber-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
             표지 이미지
           </label>
           <div className="flex items-center gap-3">
@@ -375,7 +375,7 @@ function EditBookForm({
               placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
               className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
             />
-            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
               파일 선택
               <input
                 type="file"
@@ -387,12 +387,12 @@ function EditBookForm({
             <button
               type="button"
               onClick={() => setIsCoverCameraOpen(true)}
-              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
               사진으로 촬영
             </button>
           </div>
           {coverFile && (
-            <p className="mt-1.5 text-sm text-amber-700">
+            <p className="mt-1.5 text-sm text-amber-800">
               선택된 파일: {coverFile.name} (저장할 때 업로드됩니다)
             </p>
           )}
@@ -519,11 +519,11 @@ export default function AdminBooksPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="font-serif text-3xl text-amber-900">도서 목록 관리</h2>
+        <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
             <input
               type="text"
               value={searchText}
@@ -545,7 +545,7 @@ export default function AdminBooksPage() {
       </div>
 
       {pagedBooks.length > 0 && (
-        <p className="text-sm text-amber-700">
+        <p className="text-sm text-amber-800">
           → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
         </p>
       )}
@@ -554,7 +554,7 @@ export default function AdminBooksPage() {
         onWheel={handleWheel}
         className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
-          <thead className="border-b border-amber-900/20 text-amber-700">
+          <thead className="border-b border-amber-900/20 text-amber-800">
             <tr>
               <th className="px-5 py-3 font-medium">표지</th>
               <th className="px-5 py-3 font-medium">등록번호</th>
@@ -607,32 +607,32 @@ export default function AdminBooksPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                  <td className="px-5 py-3 font-mono text-sm text-amber-800">
                     {book.regNo}
                   </td>
-                  <td className="px-5 py-3 text-amber-900">{book.title}</td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-950">{book.title}</td>
+                  <td className="px-5 py-3 text-amber-800">
                     {book.author ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.publisher ?? '-'}
                   </td>
-                  <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                  <td className="px-5 py-3 font-mono text-sm text-amber-800">
                     {book.isbn ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.pubDate ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.page ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.price ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.authorCode ?? '-'}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {book.donorName ?? '-'}
                   </td>
                   <td className="px-5 py-3">
@@ -652,7 +652,7 @@ export default function AdminBooksPage() {
                         type="button"
                         aria-label="수정"
                         onClick={() => setEditingBook(book)}
-                        className="text-amber-600 hover:text-amber-900">
+                        className="text-amber-600 hover:text-amber-950">
                         <SquarePen className="h-4 w-4" />
                       </button>
                       <button
@@ -678,17 +678,17 @@ export default function AdminBooksPage() {
             type="button"
             disabled={safePage <= 1}
             onClick={() => setCurrentPage(safePage - 1)}
-            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-900 transition hover:bg-amber-50 disabled:opacity-40">
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
             이전
           </button>
-          <span className="text-base text-amber-700">
+          <span className="text-base text-amber-800">
             {safePage} / {totalPages}페이지
           </span>
           <button
             type="button"
             disabled={safePage >= totalPages}
             onClick={() => setCurrentPage(safePage + 1)}
-            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-900 transition hover:bg-amber-50 disabled:opacity-40">
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
             다음
           </button>
         </div>

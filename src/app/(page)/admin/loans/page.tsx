@@ -125,7 +125,7 @@ function BorrowerPicker({
 
   return (
     <div className="relative">
-      <label className="mb-1.5 block text-base font-medium text-amber-900">
+      <label className="mb-1.5 block text-base font-medium text-amber-950">
         대출자
       </label>
       <input
@@ -142,7 +142,7 @@ function BorrowerPicker({
         className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
       />
       {selected ? (
-        <p className="mt-1.5 text-sm text-amber-700">✓ 회원과 연결됨</p>
+        <p className="mt-1.5 text-sm text-amber-800">✓ 회원과 연결됨</p>
       ) : (
         isDropdownOpen &&
         suggestions.length > 0 && (
@@ -172,7 +172,7 @@ function BorrowerPicker({
         <button
           type="button"
           onClick={() => setIsMemberModalOpen(true)}
-          className="mt-2 text-sm text-amber-700 underline hover:text-amber-900">
+          className="mt-2 text-sm text-amber-800 underline hover:text-amber-950">
           회원이 아닌가요? 지금 회원등록
         </button>
       )}
@@ -251,12 +251,12 @@ function LoanManageModal({
 
   return (
     <div className="space-y-4">
-      <p className="text-base text-amber-900">
+      <p className="text-base text-amber-950">
         <strong>{loan.title}</strong> ({loan.regNo})
       </p>
 
       <div>
-        <label className="mb-1.5 block text-base font-medium text-amber-900">
+        <label className="mb-1.5 block text-base font-medium text-amber-950">
           반납예정일
         </label>
         <input
@@ -289,7 +289,7 @@ function LoanManageModal({
           type="button"
           disabled={isReturning}
           onClick={() => processReturn()}
-          className="w-full rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-900 transition hover:bg-amber-50 disabled:opacity-50">
+          className="w-full rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
           {isReturning ? '반납 처리 중...' : '반납 처리'}
         </button>
       </div>
@@ -488,11 +488,11 @@ export default function AdminLoansPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-3xl text-amber-900">대출/대여 관리</h2>
+        <h2 className="font-serif text-3xl text-amber-950">대출/대여 관리</h2>
       </div>
 
       <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
-        <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-amber-900">
+        <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-amber-950">
           <Barcode className="h-4 w-4" />
           등록번호 스캔
         </label>
@@ -535,7 +535,7 @@ export default function AdminLoansPage() {
           <button
             type="button"
             onClick={() => setIsCameraOpen(true)}
-            className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
+            className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-950 transition hover:bg-amber-50">
             <ScanLine className="h-4 w-4" />
             카메라로 스캔
           </button>
@@ -580,12 +580,12 @@ export default function AdminLoansPage() {
 
         {scanResult?.status === 'on_loan' && (
           <div className="mt-4 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
-            <p className="text-base text-amber-900">
+            <p className="text-base text-amber-950">
               <strong>{scanResult.book.title}</strong> ({scanResult.copy.regNo}
               )은(는) <strong>{scanResult.borrower.name}</strong>님이 대출
               중입니다.
             </p>
-            <p className="mt-1 text-sm text-amber-700">
+            <p className="mt-1 text-sm text-amber-800">
               대출일 {scanResult.loan.loanedAt.slice(0, 10)} · 반납예정일{' '}
               {scanResult.loan.dueAt}
             </p>
@@ -608,7 +608,7 @@ export default function AdminLoansPage() {
           <div
             key={scanResult.copy.id}
             className="mt-4 space-y-3 rounded-lg border border-amber-900/20 bg-white px-5 py-4">
-            <p className="text-base text-amber-900">
+            <p className="text-base text-amber-950">
               <strong>{scanResult.book.title}</strong> ({scanResult.copy.regNo}
               )은(는) 대출 가능합니다.
             </p>
@@ -617,7 +617,7 @@ export default function AdminLoansPage() {
               onSelect={setSelectedBorrower}
             />
             <div>
-              <label className="mb-1.5 block text-base font-medium text-amber-900">
+              <label className="mb-1.5 block text-base font-medium text-amber-950">
                 반납예정일
               </label>
               <input
@@ -650,7 +650,7 @@ export default function AdminLoansPage() {
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               statusFilter === key
                 ? 'bg-red-900 text-white'
-                : 'border border-amber-900/30 bg-white/40 text-amber-900 hover:bg-amber-50'
+                : 'border border-amber-900/30 bg-white/40 text-amber-950 hover:bg-amber-50'
             }`}>
             {key === 'all' ? '전체' : key} ({statusCounts[key]})
           </button>
@@ -658,7 +658,7 @@ export default function AdminLoansPage() {
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
         <input
           type="text"
           value={searchText}
@@ -670,7 +670,7 @@ export default function AdminLoansPage() {
 
       <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-base">
-          <thead className="border-b border-amber-900/20 text-amber-700">
+          <thead className="border-b border-amber-900/20 text-amber-800">
             <tr>
               <th className="px-5 py-3 font-medium">도서명</th>
               <th className="px-5 py-3 font-medium">대출자</th>
@@ -700,14 +700,14 @@ export default function AdminLoansPage() {
             ) : (
               visibleLoans.map((loan) => (
                 <tr key={loan.id}>
-                  <td className="px-5 py-3 text-amber-900">{loan.title}</td>
-                  <td className="px-5 py-3 text-amber-900">
+                  <td className="px-5 py-3 text-amber-950">{loan.title}</td>
+                  <td className="px-5 py-3 text-amber-950">
                     {loan.borrowerName}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">
+                  <td className="px-5 py-3 text-amber-800">
                     {loan.loanedAt.slice(0, 10)}
                   </td>
-                  <td className="px-5 py-3 text-amber-700">{loan.dueAt}</td>
+                  <td className="px-5 py-3 text-amber-800">{loan.dueAt}</td>
                   <td className="px-5 py-3">
                     <span
                       className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[loan.computedStatus]}`}>
@@ -720,7 +720,7 @@ export default function AdminLoansPage() {
                         type="button"
                         aria-label="관리"
                         onClick={() => setManagingLoan(loan)}
-                        className="text-amber-600 hover:text-amber-900">
+                        className="text-amber-600 hover:text-amber-950">
                         <SquarePen className="h-4 w-4" />
                       </button>
                     )}

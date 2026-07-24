@@ -23,7 +23,7 @@ function FindTabs() {
               onClick={() => setActiveTab('id')}
               className={`flex-1 border-b-2 pb-3 text-center font-serif text-xl ${
                 activeTab === 'id'
-                  ? 'border-red-900 text-amber-900'
+                  ? 'border-red-900 text-amber-950'
                   : 'border-amber-900/20 text-amber-900/50'
               }`}>
               아이디 찾기
@@ -33,7 +33,7 @@ function FindTabs() {
               onClick={() => setActiveTab('password')}
               className={`flex-1 border-b-2 pb-3 text-center font-serif text-xl ${
                 activeTab === 'password'
-                  ? 'border-red-900 text-amber-900'
+                  ? 'border-red-900 text-amber-950'
                   : 'border-amber-900/20 text-amber-900/50'
               }`}>
               비밀번호 찾기
@@ -42,10 +42,10 @@ function FindTabs() {
 
           {activeTab === 'id' ? <FindIdForm /> : <FindPasswordForm />}
 
-          <div className="mt-6 text-center text-base text-amber-700">
+          <div className="mt-6 text-center text-base text-amber-800">
             <Link
               href="/login"
-              className="hover:text-amber-900 hover:underline">
+              className="hover:text-amber-950 hover:underline">
               로그인으로 돌아가기
             </Link>
           </div>
