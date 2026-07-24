@@ -42,7 +42,7 @@ const RECENT_ACTIVITY = [
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
-      <h2 className="font-serif text-3xl text-amber-900">대시보드</h2>
+      <h2 className="font-serif text-3xl text-gray-900">대시보드</h2>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {STATS.map(({ label, value, icon: Icon }) => (
@@ -50,8 +50,8 @@ export default function AdminDashboardPage() {
             key={label}
             className="rounded-lg border border-amber-900/20 bg-white/70 p-5 shadow-sm backdrop-blur-sm">
             <Icon className="h-5 w-5 text-red-900" />
-            <p className="mt-3 text-base text-amber-700">{label}</p>
-            <p className="mt-1 text-2xl font-medium text-amber-900">{value}</p>
+            <p className="mt-3 text-base text-gray-700">{label}</p>
+            <p className="mt-1 text-2xl font-medium text-gray-900">{value}</p>
           </div>
         ))}
       </div>
@@ -63,21 +63,21 @@ export default function AdminDashboardPage() {
             href={href}
             className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm transition hover:bg-amber-50">
             <Icon className="h-6 w-6 text-red-900" />
-            <p className="mt-3 text-lg font-medium text-amber-900">{label}</p>
-            <p className="mt-1 text-base text-amber-700">{description}</p>
+            <p className="mt-3 text-lg font-medium text-gray-900">{label}</p>
+            <p className="mt-1 text-base text-gray-700">{description}</p>
           </Link>
         ))}
       </div>
 
       <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-        <h3 className="font-serif text-xl text-amber-900">최근 활동</h3>
+        <h3 className="font-serif text-xl text-gray-900">최근 활동</h3>
         <ul className="mt-4 divide-y divide-amber-900/10">
           {RECENT_ACTIVITY.map((item, i) => (
             <li key={i} className="flex gap-4 py-3">
               <span className="w-12 shrink-0 text-base text-red-900">
                 {item.date}
               </span>
-              <span className="text-base text-amber-900">{item.text}</span>
+              <span className="text-base text-gray-900">{item.text}</span>
             </li>
           ))}
         </ul>

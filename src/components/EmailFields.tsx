@@ -29,7 +29,7 @@ export default function EmailFields({
           placeholder="이메일"
           className={inputClass}
         />
-        <span className="text-amber-900">@</span>
+        <span className="text-gray-900">@</span>
         <input
           type="text"
           value={emailDomain}

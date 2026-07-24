@@ -105,7 +105,7 @@ function ScannedBookTable({
   return (
     <div>
       {books.length > 0 && (
-        <p className="mb-1.5 text-sm text-amber-700">
+        <p className="mb-1.5 text-sm text-gray-700">
           → 표를 옆으로 스크롤하면 삭제 버튼 등 나머지 항목을 볼 수 있어요.
         </p>
       )}
@@ -114,7 +114,7 @@ function ScannedBookTable({
         onWheel={handleWheel}
         className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/70 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
-          <thead className="border-b border-amber-900/20 text-amber-700">
+          <thead className="border-b border-amber-900/20 text-gray-700">
             <tr>
               <th className="px-5 py-3 font-medium">표지</th>
               <th className="px-5 py-3 font-medium">제목</th>
@@ -164,21 +164,21 @@ function ScannedBookTable({
                         <div className="h-14 w-10 rounded-sm bg-amber-100" />
                       )}
                     </td>
-                    <td className="px-5 py-3 text-amber-900">{book.title}</td>
-                    <td className="px-5 py-3 text-amber-700">{book.author}</td>
-                    <td className="px-5 py-3 text-amber-700">
+                    <td className="px-5 py-3 text-gray-900">{book.title}</td>
+                    <td className="px-5 py-3 text-gray-700">{book.author}</td>
+                    <td className="px-5 py-3 text-gray-700">
                       {book.publisher}
                     </td>
-                    <td className="px-5 py-3 text-amber-700">
+                    <td className="px-5 py-3 text-gray-700">
                       {book.pubDate ?? '-'}
                     </td>
-                    <td className="px-5 py-3 font-mono text-sm text-amber-700">
+                    <td className="px-5 py-3 font-mono text-sm text-gray-700">
                       {book.isbn || '-'}
                     </td>
-                    <td className="px-5 py-3 text-amber-700">
+                    <td className="px-5 py-3 text-gray-700">
                       {book.page ?? '-'}
                     </td>
-                    <td className="px-5 py-3 text-amber-700">
+                    <td className="px-5 py-3 text-gray-700">
                       {book.price ?? '-'}
                     </td>
                     <td className="px-5 py-3">
@@ -229,7 +229,7 @@ function ScannedBookTable({
                           onChange={(e) =>
                             onCategoryMainChange(book.id, e.target.value)
                           }
-                          className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+                          className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                           <option value="">대분류</option>
                           {mainOptions.map(([code, label]) => (
                             <option key={code} value={code}>
@@ -243,7 +243,7 @@ function ScannedBookTable({
                           onChange={(e) =>
                             onCategoryChange(book.id, e.target.value)
                           }
-                          className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+                          className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
                           <option value="">세부분류</option>
                           {categories
                             .filter((c) => c.main_code === book.categoryMain)
@@ -444,10 +444,10 @@ function BookRegisterContent() {
         <Link
           href="/admin/books"
           aria-label="목록으로"
-          className="text-amber-700 hover:text-amber-900">
+          className="text-gray-700 hover:text-gray-900">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h2 className="font-serif text-3xl text-amber-900">도서 등록</h2>
+        <h2 className="font-serif text-3xl text-gray-900">도서 등록</h2>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
@@ -457,7 +457,7 @@ function BookRegisterContent() {
           className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
             method === 'manual'
               ? 'border-red-900 text-red-900'
-              : 'border-transparent text-amber-700 hover:text-amber-900'
+              : 'border-transparent text-gray-700 hover:text-gray-900'
           }`}>
           <PencilLine className="h-4 w-4" />
           도서 등록
@@ -468,7 +468,7 @@ function BookRegisterContent() {
           className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-base transition ${
             method === 'excel'
               ? 'border-red-900 text-red-900'
-              : 'border-transparent text-amber-700 hover:text-amber-900'
+              : 'border-transparent text-gray-700 hover:text-gray-900'
           }`}>
           <FileSpreadsheet className="h-4 w-4" />
           엑셀 업로드
@@ -524,20 +524,20 @@ function BookRegisterContent() {
 
       {method === 'excel' && (
         <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm">
-          <label className="mb-2 block text-base font-medium text-amber-900">
+          <label className="mb-2 block text-base font-medium text-gray-900">
             엑셀 파일
           </label>
           <input
             type="file"
             accept=".xlsx,.xls,.csv"
             onChange={handleFileChange}
-            className="block w-full text-base text-amber-900 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
+            className="block w-full text-base text-gray-900 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
           />
-          <p className="mt-2 text-sm text-amber-700">
+          <p className="mt-2 text-sm text-gray-700">
             열 순서: 제목, 저자, 출판사, ISBN, 카테고리, 수량
           </p>
           {fileName && (
-            <p className="mt-2 text-sm text-amber-900">
+            <p className="mt-2 text-sm text-gray-900">
               선택된 파일: {fileName}
             </p>
           )}

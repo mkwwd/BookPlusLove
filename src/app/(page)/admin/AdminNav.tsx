@@ -18,7 +18,7 @@ export default function AdminNav() {
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-6">
         <Link
           href="/admin"
-          className="flex items-center gap-2 py-4 font-serif text-lg text-amber-900">
+          className="flex items-center gap-2 py-4 font-serif text-lg text-gray-900">
           <LayoutDashboard className="h-5 w-5" />
           관리자
         </Link>
@@ -33,7 +33,7 @@ export default function AdminNav() {
                 className={`flex items-center gap-1.5 border-b-2 px-3 py-4 text-base transition ${
                   isActive
                     ? 'border-red-900 text-red-900'
-                    : 'border-transparent text-amber-700 hover:text-amber-900'
+                    : 'border-transparent text-gray-700 hover:text-gray-900'
                 }`}>
                 <Icon className="h-4 w-4" />
                 {label}

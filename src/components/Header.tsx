@@ -26,7 +26,7 @@ export default async function Header() {
 
   return (
     <header className="header-bg sticky top-0 z-50 border-b border-amber-100 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-6">
         <div className="flex items-center justify-between py-2 text-sm text-amber-950/70">
           <span>광주가톨릭평생교육원</span>
           <HeaderTopBar isLoggedIn={!!user} isAdmin={isAdmin} />
@@ -43,13 +43,13 @@ export default async function Header() {
                 className="object-contain"
               />
             </div>
-            <h1 className="font-serif text-2xl text-amber-900 sm:text-3xl">
-              책더하기사랑작은도서관
+            <h1 className="font-serif text-2xl text-gray-900 sm:text-3xl">
+              책더하기사랑도서관
             </h1>
           </Link>
 
           {user && userId && (
-            <div className="flex items-center gap-2 text-amber-900">
+            <div className="flex items-center gap-2 text-gray-900">
               <UserRound className="h-6 w-6" />
               <span className="text-base">{userId}님 환영합니다</span>
             </div>
