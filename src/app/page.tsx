@@ -88,13 +88,13 @@ export default async function Home() {
     <div className="page-bg min-h-screen">
       <section className="relative flex min-h-[560px] items-center justify-center overflow-hidden">
         <HeroBackground />
-        <div className="absolute inset-0 bg-black/25" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
 
         <div className="relative mx-auto max-w-2xl px-4 py-24 text-center">
-          <p className="mb-3 font-serif text-2xl text-white sm:text-3xl">
+          <p className="mb-3 font-serif text-2xl text-amber-950 drop-shadow-[0_2px_10px_rgba(255,255,255,0.85)] sm:text-3xl">
             깊이 있는 독서, 믿음의 시작이 되는 공간
           </p>
-          <p className="mb-9 text-base text-amber-100/90 sm:text-lg">
+          <p className="mb-9 text-base text-amber-900 drop-shadow-[0_1px_8px_rgba(255,255,255,0.85)] sm:text-lg">
             ◈찾고 싶은 도서를 빠르게 검색해보세요.◈
           </p>
 
