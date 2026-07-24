@@ -2,6 +2,7 @@ import { UserRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import HeaderBar from '@/components/HeaderBar';
 import HeaderTopBar from '@/components/HeaderTopBar';
 import { supabaseServer } from '@/utils/supabase/server';
 import { createSessionClient } from '@/utils/supabase/session';
@@ -25,7 +26,7 @@ export default async function Header() {
   }
 
   return (
-    <header className="header-bg sticky top-0 z-50 border-b border-amber-100 backdrop-blur-sm">
+    <HeaderBar>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-2 text-sm text-amber-950/70">
           <span>광주가톨릭평생교육원</span>
@@ -56,6 +57,6 @@ export default async function Header() {
           )}
         </div>
       </div>
-    </header>
+    </HeaderBar>
   );
 }

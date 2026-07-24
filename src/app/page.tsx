@@ -50,7 +50,7 @@ function HeroBackground() {
         fill
         priority
         sizes="(min-width: 768px) 68vw, 100vw"
-        className="object-cover object-[68%_42%]"
+        className="object-cover object-[50%_88%]"
       />
       <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[var(--brand-bg)] to-transparent" />
     </div>
