@@ -43,14 +43,16 @@ async function getNewBooks(): Promise<BookCardData[]> {
 
 function HeroBackground() {
   return (
-    <Image
-      src="/image/book4.png"
-      alt=""
-      fill
-      priority
-      sizes="100vw"
-      className="object-cover object-center"
-    />
+    <div className="fixed inset-0 -z-10">
+      <Image
+        src="/image/book4.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover object-center"
+      />
+    </div>
   );
 }
 
@@ -86,10 +88,9 @@ export default async function Home() {
 
   return (
     <div className="page-bg min-h-screen">
-      <section className="relative flex min-h-[560px] items-center justify-center overflow-hidden">
-        <HeroBackground />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
+      <HeroBackground />
 
+      <section className="flex min-h-[560px] items-center justify-center">
         <div className="relative mx-auto max-w-2xl px-4 py-24 text-center">
           <p className="mb-3 font-serif text-2xl text-amber-950 drop-shadow-[0_2px_10px_rgba(255,255,255,0.85)] sm:text-3xl">
             깊이 있는 독서, 믿음의 시작이 되는 공간
@@ -113,12 +114,15 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <div className="grid gap-8 md:grid-cols-2">
-          <BookSection title="추천 도서" books={recommended} />
-          <BookSection title="신규 도서" books={newBooks} />
-        </div>
-      </section>
+      <div className="relative">
+        <div className="h-24 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
+        <section className="page-bg mx-auto max-w-6xl px-4 pb-12">
+          <div className="grid gap-8 md:grid-cols-2">
+            <BookSection title="추천 도서" books={recommended} />
+            <BookSection title="신규 도서" books={newBooks} />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
