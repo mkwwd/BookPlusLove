@@ -1,4 +1,3 @@
-import { UserRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -13,15 +12,13 @@ export default async function Header() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let userId: string | null = null;
   let isAdmin = false;
   if (user?.email) {
     const { data } = await supabaseServer
       .from('users')
-      .select('user_id, role')
+      .select('role')
       .eq('email', user.email)
       .maybeSingle();
-    userId = data?.user_id ?? null;
     isAdmin = data?.role === 'ADMIN';
   }
 
@@ -48,13 +45,6 @@ export default async function Header() {
               책더하기사랑작은도서관
             </h1>
           </Link>
-
-          {user && userId && (
-            <div className="flex items-center gap-2 text-amber-900">
-              <UserRound className="h-6 w-6" />
-              <span className="text-base">{userId}님 환영합니다</span>
-            </div>
-          )}
         </div>
       </div>
     </HeaderBar>
