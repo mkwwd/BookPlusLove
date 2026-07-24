@@ -46,6 +46,7 @@ interface BookRow {
   price: string | null;
   pubDate: string | null;
   authorCode: string | null;
+  isRecommended: boolean;
   categoryCode: string | null;
   categoryMain: string | null;
   categoryLabel: string | null;
@@ -77,6 +78,7 @@ function EditBookForm({
   const [donorName, setDonorName] = useState(book.donorName ?? '');
   const [regNo, setRegNo] = useState(book.regNo);
   const [status, setStatus] = useState(book.status);
+  const [isRecommended, setIsRecommended] = useState(book.isRecommended);
   const [formError, setFormError] = useState<string | null>(null);
 
   const mainOptions = Array.from(
@@ -123,6 +125,7 @@ function EditBookForm({
             donorName.trim() === book.donorName ? book.donorUserId : null,
           regNo,
           status,
+          isRecommended,
         }),
       });
       const body = await res.json();
@@ -277,6 +280,17 @@ function EditBookForm({
             ))}
           </select>
         </div>
+        <div className="flex items-center">
+          <label className="flex items-center gap-2 text-base font-medium text-amber-950">
+            <input
+              type="checkbox"
+              checked={isRecommended}
+              onChange={(e) => setIsRecommended(e.target.checked)}
+              className="h-4 w-4 rounded border-amber-900/30 text-red-900 focus:ring-2 focus:ring-amber-900/30"
+            />
+            추천 도서
+          </label>
+        </div>
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-950">
             저자기호
@@ -430,6 +444,7 @@ function EditBookForm({
 
 export default function AdminBooksPage() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'all' | 'recommended'>('all');
   const [searchText, setSearchText] = useState('');
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -483,6 +498,41 @@ export default function AdminBooksPage() {
     }
   };
 
+  const {
+    mutate: unrecommendBook,
+    isPending: isUnrecommending,
+    variables: unrecommendingCopyId,
+  } = useMutation({
+    mutationFn: async (book: BookRow) => {
+      const res = await fetch(`/api/admin/books/${book.copyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: book.title,
+          isbn: book.isbn ?? '',
+          author: book.author ?? '',
+          publisher: book.publisher ?? '',
+          coverUrl: book.coverUrl ?? '',
+          page: book.page ?? '',
+          price: book.price ?? '',
+          pubDate: book.pubDate ?? '',
+          authorCode: book.authorCode ?? '',
+          category: book.categoryCode ?? '',
+          donorName: book.donorName ?? '',
+          donorUserId: book.donorUserId,
+          regNo: book.regNo,
+          status: book.status,
+          isRecommended: false,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? '해제에 실패했습니다.');
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-books'] });
+    },
+  });
+
   const { data: categories = [] } = useQuery({
     queryKey: ['book-categories'],
     queryFn: async () => {
@@ -521,177 +571,282 @@ export default function AdminBooksPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => {
-                setSearchText(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="제목 또는 저자 검색"
-              className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
-            />
+        {activeTab === 'all' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="제목 또는 저자 검색"
+                className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+              />
+            </div>
+            <Link
+              href="/admin/books/new"
+              className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+              <Plus className="h-4 w-4" />
+              도서 등록
+            </Link>
           </div>
-          <Link
-            href="/admin/books/new"
-            className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-            <Plus className="h-4 w-4" />
-            도서 등록
-          </Link>
-        </div>
+        )}
       </div>
 
-      {pagedBooks.length > 0 && (
+      <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
+        <button
+          type="button"
+          onClick={() => setActiveTab('all')}
+          className={`border-b-2 px-4 py-3 text-base transition ${
+            activeTab === 'all'
+              ? 'border-red-900 text-red-900'
+              : 'border-transparent text-amber-800 hover:text-amber-950'
+          }`}>
+          전체 도서
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('recommended')}
+          className={`border-b-2 px-4 py-3 text-base transition ${
+            activeTab === 'recommended'
+              ? 'border-red-900 text-red-900'
+              : 'border-transparent text-amber-800 hover:text-amber-950'
+          }`}>
+          추천 도서
+        </button>
+      </div>
+
+      {activeTab === 'recommended' && (
+        <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
+          <table className="w-full text-left text-base">
+            <thead className="border-b border-amber-900/20 text-amber-800">
+              <tr>
+                <th className="px-5 py-3 font-medium">표지</th>
+                <th className="px-5 py-3 font-medium">제목</th>
+                <th className="px-5 py-3 font-medium">저자</th>
+                <th className="px-5 py-3 font-medium">출판사</th>
+                <th className="px-5 py-3 font-medium">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-amber-900/10">
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-amber-900/50">
+                    불러오는 중...
+                  </td>
+                </tr>
+              ) : books.filter((b) => b.isRecommended).length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-amber-900/50">
+                    추천 도서가 없습니다. &quot;전체 도서&quot; 탭에서 책을
+                    수정해 추천으로 표시해주세요.
+                  </td>
+                </tr>
+              ) : (
+                books
+                  .filter((b) => b.isRecommended)
+                  .map((book) => (
+                    <tr key={book.copyId}>
+                      <td className="px-5 py-3">
+                        {book.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={book.coverUrl}
+                            alt=""
+                            className="h-14 w-10 rounded-sm object-cover"
+                          />
+                        ) : (
+                          <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-amber-950">{book.title}</td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.author ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.publisher ?? '-'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <button
+                          type="button"
+                          disabled={
+                            isUnrecommending &&
+                            unrecommendingCopyId?.copyId === book.copyId
+                          }
+                          onClick={() => unrecommendBook(book)}
+                          className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
+                          해제
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === 'all' && pagedBooks.length > 0 && (
         <p className="text-sm text-amber-800">
           → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
         </p>
       )}
-      <div
-        ref={scrollRef}
-        onWheel={handleWheel}
-        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
-        <table className="w-full min-w-max text-left text-base whitespace-nowrap">
-          <thead className="border-b border-amber-900/20 text-amber-800">
-            <tr>
-              <th className="px-5 py-3 font-medium">표지</th>
-              <th className="px-5 py-3 font-medium">등록번호</th>
-              <th className="px-5 py-3 font-medium">제목</th>
-              <th className="px-5 py-3 font-medium">저자</th>
-              <th className="px-5 py-3 font-medium">출판사</th>
-              <th className="px-5 py-3 font-medium">ISBN</th>
-              <th className="px-5 py-3 font-medium">출판일</th>
-              <th className="px-5 py-3 font-medium">페이지</th>
-              <th className="px-5 py-3 font-medium">정가</th>
-              <th className="px-5 py-3 font-medium">저자기호</th>
-              <th className="px-5 py-3 font-medium">기증자명</th>
-              <th className="px-5 py-3 font-medium">카테고리</th>
-              <th className="px-5 py-3 font-medium">상태</th>
-              <th className="px-5 py-3 font-medium">관리</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-amber-900/10">
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={14}
-                  className="px-5 py-8 text-center text-amber-900/50">
-                  불러오는 중...
-                </td>
-              </tr>
-            ) : pagedBooks.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={14}
-                  className="px-5 py-8 text-center text-amber-900/50">
-                  등록된 도서가 없습니다.
-                </td>
-              </tr>
-            ) : (
-              pagedBooks.map((book) => (
-                <tr key={book.copyId}>
-                  <td className="px-5 py-3">
-                    {book.coverUrl ? (
-                      <span
-                        title="표지 있음"
-                        className="inline-flex items-center justify-center rounded-full bg-green-100 p-1 text-green-700">
-                        <Check className="h-4 w-4" />
-                      </span>
-                    ) : (
-                      <span
-                        title="표지 없음"
-                        className="inline-flex items-center justify-center rounded-full bg-gray-100 p-1 text-gray-400">
-                        <Minus className="h-4 w-4" />
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 font-mono text-sm text-amber-800">
-                    {book.regNo}
-                  </td>
-                  <td className="px-5 py-3 text-amber-950">{book.title}</td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.author ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.publisher ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 font-mono text-sm text-amber-800">
-                    {book.isbn ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.pubDate ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.page ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.price ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.authorCode ?? '-'}
-                  </td>
-                  <td className="px-5 py-3 text-amber-800">
-                    {book.donorName ?? '-'}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
-                      {book.categoryCode ?? '-'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[book.status]}`}>
-                      {book.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        aria-label="수정"
-                        onClick={() => setEditingBook(book)}
-                        className="text-amber-600 hover:text-amber-950">
-                        <SquarePen className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="삭제"
-                        disabled={isDeleting && deletingCopyId === book.copyId}
-                        onClick={() => handleDelete(book)}
-                        className="text-amber-600 hover:text-red-800 disabled:opacity-40">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+      {activeTab === 'all' && (
+        <>
+          <div
+            ref={scrollRef}
+            onWheel={handleWheel}
+            className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
+            <table className="w-full min-w-max text-left text-base whitespace-nowrap">
+              <thead className="border-b border-amber-900/20 text-amber-800">
+                <tr>
+                  <th className="px-5 py-3 font-medium">표지</th>
+                  <th className="px-5 py-3 font-medium">등록번호</th>
+                  <th className="px-5 py-3 font-medium">제목</th>
+                  <th className="px-5 py-3 font-medium">저자</th>
+                  <th className="px-5 py-3 font-medium">출판사</th>
+                  <th className="px-5 py-3 font-medium">ISBN</th>
+                  <th className="px-5 py-3 font-medium">출판일</th>
+                  <th className="px-5 py-3 font-medium">페이지</th>
+                  <th className="px-5 py-3 font-medium">정가</th>
+                  <th className="px-5 py-3 font-medium">저자기호</th>
+                  <th className="px-5 py-3 font-medium">기증자명</th>
+                  <th className="px-5 py-3 font-medium">카테고리</th>
+                  <th className="px-5 py-3 font-medium">상태</th>
+                  <th className="px-5 py-3 font-medium">관리</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-amber-900/10">
+                {isLoading ? (
+                  <tr>
+                    <td
+                      colSpan={14}
+                      className="px-5 py-8 text-center text-amber-900/50">
+                      불러오는 중...
+                    </td>
+                  </tr>
+                ) : pagedBooks.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={14}
+                      className="px-5 py-8 text-center text-amber-900/50">
+                      등록된 도서가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  pagedBooks.map((book) => (
+                    <tr key={book.copyId}>
+                      <td className="px-5 py-3">
+                        {book.coverUrl ? (
+                          <span
+                            title="표지 있음"
+                            className="inline-flex items-center justify-center rounded-full bg-green-100 p-1 text-green-700">
+                            <Check className="h-4 w-4" />
+                          </span>
+                        ) : (
+                          <span
+                            title="표지 없음"
+                            className="inline-flex items-center justify-center rounded-full bg-gray-100 p-1 text-gray-400">
+                            <Minus className="h-4 w-4" />
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 font-mono text-sm text-amber-800">
+                        {book.regNo}
+                      </td>
+                      <td className="px-5 py-3 text-amber-950">{book.title}</td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.author ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.publisher ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 font-mono text-sm text-amber-800">
+                        {book.isbn ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.pubDate ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.page ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.price ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.authorCode ?? '-'}
+                      </td>
+                      <td className="px-5 py-3 text-amber-800">
+                        {book.donorName ?? '-'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="font-medium text-amber-800 underline decoration-amber-400 underline-offset-2">
+                          {book.categoryCode ?? '-'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span
+                          className={`rounded px-2 py-1 text-sm font-medium ${STATUS_STYLE[book.status]}`}>
+                          {book.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            aria-label="수정"
+                            onClick={() => setEditingBook(book)}
+                            className="text-amber-600 hover:text-amber-950">
+                            <SquarePen className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="삭제"
+                            disabled={
+                              isDeleting && deletingCopyId === book.copyId
+                            }
+                            onClick={() => handleDelete(book)}
+                            className="text-amber-600 hover:text-red-800 disabled:opacity-40">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            disabled={safePage <= 1}
-            onClick={() => setCurrentPage(safePage - 1)}
-            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
-            이전
-          </button>
-          <span className="text-base text-amber-800">
-            {safePage} / {totalPages}페이지
-          </span>
-          <button
-            type="button"
-            disabled={safePage >= totalPages}
-            onClick={() => setCurrentPage(safePage + 1)}
-            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
-            다음
-          </button>
-        </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                disabled={safePage <= 1}
+                onClick={() => setCurrentPage(safePage - 1)}
+                className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
+                이전
+              </button>
+              <span className="text-base text-amber-800">
+                {safePage} / {totalPages}페이지
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages}
+                onClick={() => setCurrentPage(safePage + 1)}
+                className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
+                다음
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {editingBook && (

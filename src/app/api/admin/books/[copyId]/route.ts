@@ -114,6 +114,8 @@ export async function PATCH(
           : null,
       category_code:
         typeof body?.category === 'string' ? body.category || null : null,
+      is_recommended:
+        typeof body?.isRecommended === 'boolean' ? body.isRecommended : false,
     })
     .eq('id', existingCopy.book_id);
 

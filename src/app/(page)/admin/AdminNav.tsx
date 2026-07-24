@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
   { href: '/admin/loans', label: '대출/대여', icon: Handshake },
-  { href: '/admin/books', label: '도서 등록', icon: BookPlus },
+  { href: '/admin/books', label: '도서 관리', icon: BookPlus },
   { href: '/admin/members', label: '회원 관리', icon: Users },
 ];
 
