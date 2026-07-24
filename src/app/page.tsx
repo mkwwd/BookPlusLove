@@ -114,14 +114,15 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-screen-2xl px-4 pb-12 sm:px-6 lg:px-6">
-        <div className="grid gap-8 md:grid-cols-2">
-          <BookSection title="추천 도서" books={recommended} />
-          <BookSection title="신규 도서" books={newBooks} />
-        </div>
-      </section>
-
-      <div className="page-bg h-16" />
+      <div className="h-32 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
+      <div className="page-bg">
+        <section className="mx-auto max-w-screen-2xl px-4 pb-12 sm:px-6 lg:px-6">
+          <div className="grid gap-8 md:grid-cols-2">
+            <BookSection title="추천 도서" books={recommended} />
+            <BookSection title="신규 도서" books={newBooks} />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
