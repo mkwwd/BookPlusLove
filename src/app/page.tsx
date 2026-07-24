@@ -45,12 +45,12 @@ function HeroBackground() {
   return (
     <div className="absolute inset-y-0 right-0 w-full sm:w-[85%] md:w-[68%]">
       <Image
-        src="/image/book.png"
+        src="/image/book4.png"
         alt=""
         fill
         priority
         sizes="(min-width: 768px) 68vw, 100vw"
-        className="object-cover object-bottom"
+        className="object-cover object-center"
       />
       <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[var(--brand-bg)] to-transparent" />
     </div>
