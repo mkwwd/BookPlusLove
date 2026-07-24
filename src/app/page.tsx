@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import Image from 'next/image';
 
 import {
   BookCard,
@@ -42,73 +43,17 @@ async function getNewBooks(): Promise<BookCardData[]> {
 
 function HeroBackground() {
   return (
-    <svg
-      viewBox="0 0 1600 900"
-      preserveAspectRatio="xMidYMid slice"
-      className="absolute inset-0 h-full w-full"
-      aria-hidden="true">
-      <defs>
-        <radialGradient id="bgGlow" cx="50%" cy="38%" r="70%">
-          <stop offset="0%" stopColor="#5a3413" />
-          <stop offset="55%" stopColor="#33200f" />
-          <stop offset="100%" stopColor="#150c06" />
-        </radialGradient>
-        <radialGradient id="lampGlow" cx="50%" cy="46%" r="38%">
-          <stop offset="0%" stopColor="#f7d9a0" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#f7d9a0" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="pageLeft" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#e8d3ab" />
-          <stop offset="100%" stopColor="#f8ecd6" />
-        </linearGradient>
-        <linearGradient id="pageRight" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#f8ecd6" />
-          <stop offset="100%" stopColor="#e8d3ab" />
-        </linearGradient>
-      </defs>
-
-      <rect width="1600" height="900" fill="url(#bgGlow)" />
-      <ellipse cx="800" cy="560" rx="620" ry="360" fill="url(#lampGlow)" />
-
-      {/* light particles */}
-      <g fill="#f7d9a0" opacity="0.5">
-        <circle cx="420" cy="190" r="3" />
-        <circle cx="1180" cy="230" r="2.5" />
-        <circle cx="300" cy="330" r="2" />
-        <circle cx="1300" cy="360" r="3" />
-        <circle cx="740" cy="140" r="2" />
-        <circle cx="960" cy="170" r="2.5" />
-      </g>
-
-      {/* open book, viewed from above */}
-      <g transform="translate(800 700)">
-        {/* left page */}
-        <path
-          d="M0,-40 C -230,-95 -430,-60 -560,10 C -430,55 -230,70 0,40 Z"
-          fill="url(#pageLeft)"
-        />
-        {/* right page */}
-        <path
-          d="M0,-40 C 230,-95 430,-60 560,10 C 430,55 230,70 0,40 Z"
-          fill="url(#pageRight)"
-        />
-        {/* page-edge lines */}
-        <g stroke="#c9a86e" strokeWidth="2" opacity="0.55" fill="none">
-          <path d="M-30,-30 C -250,-80 -420,-50 -535,12" />
-          <path d="M-20,-15 C -220,-55 -390,-32 -510,15" />
-          <path d="M30,-30 C 250,-80 420,-50 535,12" />
-          <path d="M20,-15 C 220,-55 390,-32 510,15" />
-        </g>
-        {/* spine */}
-        <path
-          d="M0,-42 C 4,-10 4,20 0,42"
-          stroke="#8a6a3a"
-          strokeWidth="4"
-          fill="none"
-          opacity="0.6"
-        />
-      </g>
-    </svg>
+    <div className="absolute inset-y-0 right-0 w-full sm:w-[85%] md:w-[68%]">
+      <Image
+        src="/image/bible.jpg"
+        alt=""
+        fill
+        priority
+        sizes="(min-width: 768px) 68vw, 100vw"
+        className="object-cover object-[68%_42%]"
+      />
+      <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[var(--brand-bg)] to-transparent" />
+    </div>
   );
 }
 
