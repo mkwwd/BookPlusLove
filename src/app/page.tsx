@@ -114,8 +114,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="h-32 bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
-      <div className="page-bg">
+      <div className="h-32 bg-gradient-to-b from-transparent to-[rgba(255,251,235,0.85)]" />
+      <div className="bg-[rgba(255,251,235,0.85)] backdrop-blur-md">
         <section className="mx-auto max-w-screen-2xl px-4 pb-12 sm:px-6 lg:px-6">
           <div className="grid gap-8 md:grid-cols-2">
             <BookSection title="추천 도서" books={recommended} />
