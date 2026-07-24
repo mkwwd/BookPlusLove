@@ -120,6 +120,8 @@ export default async function Home() {
           <BookSection title="신규 도서" books={newBooks} />
         </div>
       </section>
+
+      <div className="page-bg h-16" />
     </div>
   );
 }
