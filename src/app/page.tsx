@@ -124,7 +124,7 @@ function BookSection({
   return (
     <div className="rounded-lg border border-amber-900/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
       <h2 className="mb-5 font-serif text-2xl text-amber-950">{title}</h2>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-6">
         {books.map((book) => (
           <BookCard key={book.id} book={book} />
         ))}
