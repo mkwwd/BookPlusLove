@@ -43,16 +43,19 @@ async function getNewBooks(): Promise<BookCardData[]> {
 
 function HeroBackground() {
   return (
-    <div className="fixed inset-0 -z-10">
-      <Image
-        src="/image/book4.png"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover object-center"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-75% to-[rgba(255,251,235,0.95)]" />
+    <div className="fixed inset-0 -z-10 flex flex-col">
+      <div className="relative h-3/4 w-full">
+        <Image
+          src="/image/book4.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b from-transparent to-[rgba(255,251,235,0.95)]" />
+      </div>
+      <div className="h-1/4 w-full bg-[rgba(255,251,235,0.98)]" />
     </div>
   );
 }
