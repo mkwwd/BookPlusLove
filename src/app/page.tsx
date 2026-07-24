@@ -52,7 +52,7 @@ function HeroBackground() {
         sizes="100vw"
         className="object-cover object-center"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-20% to-[rgba(255,251,235,0.95)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-75% to-[rgba(255,251,235,0.95)]" />
     </div>
   );
 }
