@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
       <div className="page-bg min-h-screen">
         <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
           <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm sm:p-8">
-            <p className="text-lg text-gray-900">확인 중입니다...</p>
+            <p className="text-lg text-amber-900">확인 중입니다...</p>
           </div>
         </div>
       </div>
@@ -91,12 +91,12 @@ export default function ResetPasswordPage() {
       <div className="page-bg min-h-screen">
         <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
           <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm sm:p-8">
-            <p className="text-lg text-gray-900">
+            <p className="text-lg text-amber-900">
               유효하지 않거나 만료된 링크입니다.
             </p>
             <Link
               href="/find?tab=password"
-              className="mt-4 inline-block text-base text-gray-700 hover:text-gray-900 hover:underline">
+              className="mt-4 inline-block text-base text-amber-700 hover:text-amber-900 hover:underline">
               비밀번호 찾기로 돌아가기
             </Link>
           </div>
@@ -110,14 +110,14 @@ export default function ResetPasswordPage() {
       <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
         <div className="rounded-lg border border-amber-900/20 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-8">
           <div className="mb-8 text-center">
-            <h3 className="mb-2 font-serif text-3xl text-gray-900">
+            <h3 className="mb-2 font-serif text-3xl text-amber-900">
               비밀번호 재설정
             </h3>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div>
-              <label className="mb-2 block text-base font-medium text-gray-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 새 비밀번호
               </label>
               <div className="relative">
@@ -131,7 +131,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-3 right-3 cursor-pointer text-gray-900 hover:text-red-800">
+                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
                   ) : (
@@ -142,7 +142,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-base font-medium text-gray-900">
+              <label className="mb-2 block text-base font-medium text-amber-900">
                 새 비밀번호 확인
               </label>
               <input

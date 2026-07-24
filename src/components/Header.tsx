@@ -43,13 +43,13 @@ export default async function Header() {
                 className="object-contain"
               />
             </div>
-            <h1 className="font-serif text-2xl text-gray-900 sm:text-3xl">
+            <h1 className="font-serif text-2xl text-amber-900 sm:text-3xl">
               책더하기사랑도서관
             </h1>
           </Link>
 
           {user && userId && (
-            <div className="flex items-center gap-2 text-gray-900">
+            <div className="flex items-center gap-2 text-amber-900">
               <UserRound className="h-6 w-6" />
               <span className="text-base">{userId}님 환영합니다</span>
             </div>

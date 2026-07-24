@@ -3,8 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --brand-bg: #fbf6f3;
-  --brand-header-bg: rgb(251 246 243 / 0.7);
+  --brand-bg: #ffffff;
+  --brand-header-bg: rgb(255 255 255 / 0.7);
 }
 
 @layer base {

@@ -53,7 +53,7 @@ export default function FindPasswordForm() {
         sendResetEmail();
       }}>
       <div>
-        <label className="mb-2 block text-base font-medium text-gray-900">
+        <label className="mb-2 block text-base font-medium text-amber-900">
           아이디
         </label>
         <input
@@ -66,7 +66,7 @@ export default function FindPasswordForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-base font-medium text-gray-900">
+        <label className="mb-2 block text-base font-medium text-amber-900">
           이름
         </label>
         <input
@@ -79,7 +79,7 @@ export default function FindPasswordForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-base font-medium text-gray-900">
+        <label className="mb-2 block text-base font-medium text-amber-900">
           이메일
         </label>
         <EmailFields
@@ -91,7 +91,7 @@ export default function FindPasswordForm() {
       </div>
 
       {isSuccess && (
-        <p className="text-center text-base text-gray-900">
+        <p className="text-center text-base text-amber-900">
           입력하신 이메일로 재설정 링크를 보냈습니다.
         </p>
       )}

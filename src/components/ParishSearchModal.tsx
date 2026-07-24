@@ -72,19 +72,19 @@ export default function ParishSearchModal({
         className="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white shadow-lg"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-amber-900/20 px-5 py-4">
-          <h2 className="font-serif text-xl text-gray-900">본당 검색</h2>
+          <h2 className="font-serif text-xl text-amber-900">본당 검색</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="text-amber-600 hover:text-gray-900">
+            className="text-amber-600 hover:text-amber-900">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="border-b border-amber-900/20 px-5 py-4">
           <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-900" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-900" />
             <input
               type="text"
               autoFocus
@@ -107,7 +107,7 @@ export default function ParishSearchModal({
             </li>
           ) : filtered.length === 0 ? (
             <li className="flex flex-col items-center gap-3 px-5 py-6 text-center text-base">
-              <span className="text-gray-900">검색 결과가 없습니다</span>
+              <span className="text-amber-900">검색 결과가 없습니다</span>
               <button
                 type="button"
                 disabled={isRegistering}
@@ -129,7 +129,7 @@ export default function ParishSearchModal({
                 <button
                   type="button"
                   onClick={() => onSelect(parish)}
-                  className="w-full px-5 py-3 text-left text-base text-gray-900 hover:bg-amber-50">
+                  className="w-full px-5 py-3 text-left text-base text-amber-900 hover:bg-amber-50">
                   {parish.name}
                 </button>
               </li>

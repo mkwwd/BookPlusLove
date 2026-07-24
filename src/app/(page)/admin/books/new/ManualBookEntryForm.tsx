@@ -267,12 +267,12 @@ export default function ManualBookEntryForm({
 
   return (
     <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
-      <p className="mb-4 text-sm text-gray-700">
+      <p className="mb-4 text-sm text-amber-700">
         ISBN이 있으면 스캔하거나 입력해서 조회하고, 없는 책은 아래 항목을 직접
         입력해주세요.
       </p>
       <div className="mb-4">
-        <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-gray-900">
+        <label className="mb-1.5 flex items-center gap-1.5 text-base font-medium text-amber-900">
           <Barcode className="h-4 w-4" />
           ISBN (있는 경우)
         </label>
@@ -302,7 +302,7 @@ export default function ManualBookEntryForm({
             {isManualLookingUp ? '조회 중...' : '조회'}
           </button>
         </div>
-        <p className="mt-1.5 text-sm text-gray-700">
+        <p className="mt-1.5 text-sm text-amber-700">
           조회하면 아래 제목/저자/출판사/페이지/정가가 자동으로 채워집니다.
           채워진 내용은 계속 수정할 수 있어요.
         </p>
@@ -319,7 +319,7 @@ export default function ManualBookEntryForm({
           <button
             type="button"
             onClick={() => setIsCameraOpen(true)}
-            className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-gray-900 transition hover:bg-amber-50">
+            className="mt-3 flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
             <ScanLine className="h-4 w-4" />
             카메라로 스캔
           </button>
@@ -343,7 +343,7 @@ export default function ManualBookEntryForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             제목 <span className="text-red-600">*</span>
           </label>
           <input
@@ -355,7 +355,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             저자
           </label>
           <input
@@ -367,7 +367,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             출판사
           </label>
           <input
@@ -379,7 +379,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             페이지
           </label>
           <input
@@ -391,7 +391,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             정가
           </label>
           <input
@@ -403,7 +403,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             출판일
           </label>
           <input
@@ -415,7 +415,7 @@ export default function ManualBookEntryForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             등록번호
           </label>
           <input
@@ -443,7 +443,7 @@ export default function ManualBookEntryForm({
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             저자기호
           </label>
           <div className="flex gap-2">
@@ -457,13 +457,13 @@ export default function ManualBookEntryForm({
             <button
               type="button"
               onClick={handleAutoGenerateAuthorCode}
-              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-gray-900 transition hover:bg-amber-50">
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base text-amber-900 transition hover:bg-amber-50">
               자동생성
             </button>
           </div>
         </div>
         <div className="relative">
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             기증자명
           </label>
           <input
@@ -480,7 +480,7 @@ export default function ManualBookEntryForm({
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
           {manualDonorUserId ? (
-            <p className="mt-1.5 text-sm text-gray-700">✓ 회원과 연결됨</p>
+            <p className="mt-1.5 text-sm text-amber-700">✓ 회원과 연결됨</p>
           ) : (
             isDonorDropdownOpen &&
             donorSuggestions.length > 0 && (
@@ -508,7 +508,7 @@ export default function ManualBookEntryForm({
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             분류코드
           </label>
           <div className="flex gap-2">
@@ -518,7 +518,7 @@ export default function ManualBookEntryForm({
                 setManualCategoryMain(e.target.value);
                 setManualCategory('');
               }}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-gray-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
               <option value="">대분류</option>
               {manualMainOptions.map(([code, label]) => (
                 <option key={code} value={code}>
@@ -530,7 +530,7 @@ export default function ManualBookEntryForm({
               value={manualCategory}
               disabled={!manualCategoryMain}
               onChange={(e) => setManualCategory(e.target.value)}
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-gray-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-3 py-2.5 text-base text-amber-900 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
               <option value="">세부분류</option>
               {categories
                 .filter((c) => c.main_code === manualCategoryMain)
@@ -543,7 +543,7 @@ export default function ManualBookEntryForm({
           </div>
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1.5 block text-base font-medium text-gray-900">
+          <label className="mb-1.5 block text-base font-medium text-amber-900">
             표지 이미지
           </label>
           <div className="flex items-center gap-3">
@@ -572,7 +572,7 @@ export default function ManualBookEntryForm({
               placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
               className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
             />
-            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-gray-900 transition hover:bg-amber-50">
+            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
               파일 선택
               <input
                 type="file"
@@ -584,12 +584,12 @@ export default function ManualBookEntryForm({
             <button
               type="button"
               onClick={() => setIsCoverCameraOpen(true)}
-              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-gray-900 transition hover:bg-amber-50">
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-900 transition hover:bg-amber-50">
               사진으로 촬영
             </button>
           </div>
           {manualCoverFile && (
-            <p className="mt-1.5 text-sm text-gray-700">
+            <p className="mt-1.5 text-sm text-amber-700">
               선택된 파일: {manualCoverFile.name} (실제 등록할 때 업로드됩니다)
             </p>
           )}
@@ -614,7 +614,7 @@ export default function ManualBookEntryForm({
         <button
           type="button"
           onClick={handleResetManualForm}
-          className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-gray-900 transition hover:bg-amber-50">
+          className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-900 transition hover:bg-amber-50">
           초기화
         </button>
         <button

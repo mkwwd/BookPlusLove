@@ -39,7 +39,7 @@ export default function FindIdForm() {
         findUserId();
       }}>
       <div>
-        <label className="mb-2 block text-base font-medium text-gray-900">
+        <label className="mb-2 block text-base font-medium text-amber-900">
           이름
         </label>
         <input
@@ -52,7 +52,7 @@ export default function FindIdForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-base font-medium text-gray-900">
+        <label className="mb-2 block text-base font-medium text-amber-900">
           이메일
         </label>
         <EmailFields
@@ -64,7 +64,7 @@ export default function FindIdForm() {
       </div>
 
       {foundUserId && (
-        <p className="text-center text-base text-gray-900">
+        <p className="text-center text-base text-amber-900">
           회원님의 아이디는 <span className="font-medium">{foundUserId}</span>{' '}
           입니다
         </p>
