@@ -12,7 +12,7 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
     <header
       className={
         isHome
-          ? 'header-bg fixed inset-x-0 top-0 z-50 backdrop-blur-sm'
+          ? 'fixed inset-x-0 top-0 z-50'
           : 'header-bg sticky top-0 z-50 border-b border-amber-100 backdrop-blur-sm'
       }>
       {children}
