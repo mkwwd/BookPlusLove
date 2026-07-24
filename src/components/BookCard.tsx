@@ -9,12 +9,28 @@ export interface BookCardData {
   coverUrl: string | null;
 }
 
+const PAGE_THICKNESS = 14;
+
 function BookShape({ children }: { children: ReactNode }) {
   return (
-    <div className="relative h-48 w-40 shrink-0">
-      <div className="absolute inset-y-1 right-0 w-2 rounded-r-md bg-gradient-to-r from-amber-50 via-amber-100 to-amber-50" />
-      <div className="absolute inset-y-0 right-2 left-0 overflow-hidden rounded-md shadow-[3px_6px_10px_rgba(0,0,0,0.18)] ring-1 ring-black/10">
-        {children}
+    <div className="h-48 w-40 shrink-0 [perspective:900px]">
+      <div
+        className="relative h-full w-full [transform-style:preserve-3d]"
+        style={{
+          transformOrigin: 'right center',
+          transform: 'rotateY(-22deg)',
+        }}>
+        <div
+          className="absolute top-0 right-0 h-full rounded-r-[3px] bg-gradient-to-b [background-image:repeating-linear-gradient(to_bottom,rgba(120,90,50,0.35)_0px,rgba(120,90,50,0.35)_1px,transparent_1px,transparent_3px)] from-amber-50 via-amber-100 to-amber-50"
+          style={{
+            width: `${PAGE_THICKNESS}px`,
+            transformOrigin: 'left center',
+            transform: `translateX(${PAGE_THICKNESS}px) rotateY(90deg)`,
+          }}
+        />
+        <div className="absolute inset-0 overflow-hidden rounded-md shadow-xl ring-1 ring-black/10 [backface-visibility:hidden]">
+          {children}
+        </div>
       </div>
     </div>
   );
