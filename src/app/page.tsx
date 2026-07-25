@@ -46,7 +46,7 @@ function HeroBackground() {
     <div className="fixed inset-0 -z-10 flex flex-col">
       <div className="relative h-[90%] w-full">
         <Image
-          src="/image/background.png"
+          src="/image/book5.png"
           alt=""
           fill
           priority
@@ -95,11 +95,11 @@ export default async function Home() {
       <HeroBackground />
 
       <section className="flex min-h-[560px] items-center justify-center">
-        <div className="relative mx-auto max-w-2xl px-4 py-24 text-center">
-          <p className="mb-3 font-serif text-2xl text-amber-950 drop-shadow-[0_2px_10px_rgba(255,255,255,0.85)] sm:text-3xl">
+        <div className="relative mx-auto max-w-2xl px-4 pt-36 pb-16 text-center">
+          <p className="mb-3 font-serif text-2xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-3xl">
             깊이 있는 독서, 믿음의 시작이 되는 공간
           </p>
-          <p className="mb-9 text-base text-amber-900 drop-shadow-[0_1px_8px_rgba(255,255,255,0.85)] sm:text-lg">
+          <p className="mb-9 text-base text-amber-50 [filter:drop-shadow(0_0_10px_rgba(253,230,138,0.85))_drop-shadow(0_1px_6px_rgba(0,0,0,0.6))] sm:text-lg">
             ◈찾고 싶은 도서를 빠르게 검색해보세요.◈
           </p>
 
