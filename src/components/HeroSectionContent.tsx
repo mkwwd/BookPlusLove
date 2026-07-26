@@ -67,7 +67,7 @@ export default function HeroSectionContent({
             type="text"
             name="q"
             placeholder={placeholder}
-            className="w-full rounded-full bg-white/95 py-4 pr-5 pl-12 text-base text-amber-950 shadow-lg placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+            className="w-full rounded-full bg-white/95 py-4 pr-5 pl-12 text-lg text-amber-950 shadow-lg placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none lg:text-2xl"
           />
         </form>
       </div>

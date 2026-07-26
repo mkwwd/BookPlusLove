@@ -72,30 +72,30 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
       <BookThumbnail title={book.title} coverUrl={book.coverUrl} />
 
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-bold break-keep text-red-900">
+        <h2 className="text-2xl leading-tight font-bold break-keep text-red-900 sm:text-3xl">
           {book.title}
         </h2>
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-amber-950/70">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-base text-amber-950/70 sm:text-lg">
           {book.author && <span>{book.author} 지음</span>}
           {book.publisher && <span>{book.publisher}</span>}
           {callNumber && <span>{callNumber}</span>}
           {year && <span>{year}</span>}
         </div>
 
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[420px] border-collapse text-sm">
+        <div className="mt-7 overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse text-base sm:text-lg">
             <thead>
-              <tr className="border-b border-amber-900/15 text-left text-xs text-amber-900/50">
-                <th className="py-1.5 pr-3 font-medium">자료실/서가</th>
-                <th className="py-1.5 pr-3 font-medium">청구기호</th>
-                <th className="py-1.5 pr-3 font-medium">등록번호</th>
-                <th className="py-1.5 font-medium">도서상태</th>
+              <tr className="border-b border-amber-900/15 text-left text-sm text-amber-900/55 sm:text-base">
+                <th className="py-2 pr-4 font-medium">자료실/서가</th>
+                <th className="py-2 pr-4 font-medium">청구기호</th>
+                <th className="py-2 pr-4 font-medium">등록번호</th>
+                <th className="py-2 font-medium">도서상태</th>
               </tr>
             </thead>
             <tbody>
               {book.copies.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-2 text-amber-700/60">
+                  <td colSpan={4} className="py-3 text-amber-700/60">
                     등록된 소장 정보가 없습니다.
                   </td>
                 </tr>
@@ -104,18 +104,18 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
                   <tr
                     key={copy.id}
                     className="border-b border-amber-900/5 last:border-0">
-                    <td className="py-2 pr-3 whitespace-nowrap text-amber-950/80">
+                    <td className="py-3 pr-4 whitespace-nowrap text-amber-950/80">
                       {LIBRARY_NAME}
                     </td>
-                    <td className="py-2 pr-3 text-amber-950/80 tabular-nums">
+                    <td className="py-3 pr-4 text-amber-950/80 tabular-nums">
                       {callNumber || '-'}
                     </td>
-                    <td className="py-2 pr-3 text-amber-950/80 tabular-nums">
+                    <td className="py-3 pr-4 text-amber-950/80 tabular-nums">
                       {copy.regNo}
                     </td>
-                    <td className="py-2">
+                    <td className="py-3">
                       <span
-                        className={`rounded px-2 py-1 text-sm font-medium ${
+                        className={`rounded-md px-3 py-1.5 text-base font-semibold ${
                           STATUS_STYLE[copy.status] ??
                           'bg-gray-200 text-gray-700'
                         }`}>
