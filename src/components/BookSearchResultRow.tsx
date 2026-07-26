@@ -68,21 +68,21 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
   const callNumber = buildCallNumber(book.categoryCode, book.authorCode);
 
   return (
-    <article className="flex flex-col gap-5 p-5 sm:flex-row sm:gap-6 sm:p-6">
+    <article className="flex flex-col gap-6 p-6 sm:flex-row sm:gap-8 sm:p-8">
       <BookThumbnail title={book.title} coverUrl={book.coverUrl} />
 
       <div className="min-w-0 flex-1">
         <h2 className="text-xl font-bold break-keep text-red-900">
           {book.title}
         </h2>
-        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-amber-950/70">
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-amber-950/70">
           {book.author && <span>{book.author} 지음</span>}
           {book.publisher && <span>{book.publisher}</span>}
           {callNumber && <span>{callNumber}</span>}
           {year && <span>{year}</span>}
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-amber-900/15 text-left text-xs text-amber-900/50">
