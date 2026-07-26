@@ -1,10 +1,10 @@
 const LIBRARY_NAME = '광주가톨릭평생교육원';
 
-const STATUS_STYLES: Record<string, string> = {
-  대여가능: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',
-  대여중: 'bg-amber-50 text-amber-800 ring-1 ring-amber-600/20',
-  분실: 'bg-red-50 text-red-700 ring-1 ring-red-600/20',
-  폐기: 'bg-zinc-100 text-zinc-500 ring-1 ring-zinc-400/20',
+const STATUS_STYLE: Record<string, string> = {
+  대여가능: 'bg-green-100 text-green-800',
+  대여중: 'bg-yellow-100 text-yellow-800',
+  분실: 'bg-gray-200 text-gray-700',
+  폐기: 'bg-gray-200 text-gray-700',
 };
 
 export interface BookSearchResultCopy {
@@ -119,9 +119,9 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
                     </td>
                     <td className="py-2">
                       <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          STATUS_STYLES[copy.status] ??
-                          'bg-zinc-100 text-zinc-500'
+                        className={`rounded px-2 py-1 text-sm font-medium ${
+                          STATUS_STYLE[copy.status] ??
+                          'bg-gray-200 text-gray-700'
                         }`}>
                         {copy.status}
                       </span>

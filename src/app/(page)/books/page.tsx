@@ -54,7 +54,9 @@ export default async function BooksPage({
   return (
     <div className="page-bg min-h-screen">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="mb-6 font-serif text-3xl text-amber-950">도서 검색</h1>
+        <h1 className="mb-6 font-serif text-3xl font-bold text-amber-950">
+          검색 결과
+        </h1>
 
         <form action="/books" method="get" className="relative mb-10 max-w-lg">
           <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-amber-900/50" />
