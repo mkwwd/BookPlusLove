@@ -14,11 +14,13 @@ export default function HeaderBrand() {
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <h1 className="font-serif text-2xl text-amber-900 sm:text-3xl">
+      <div className="flex flex-col">
+        <h1 className="font-serif text-2xl font-bold text-amber-900 sm:text-3xl">
           책더하기사랑도서관
         </h1>
-        <span className="text-sm text-amber-950/70">광주가톨릭평생교육원</span>
+        <span className="text-sm font-bold tracking-widest text-amber-950/70">
+          광주가톨릭평생교육원
+        </span>
       </div>
     </Link>
   );
