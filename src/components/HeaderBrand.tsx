@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function HeaderBrand() {
   return (
-    <Link href="/" className="flex items-center gap-3 pt-3">
+    <Link href="/" className="flex items-center gap-3 pt-5 pb-5">
       <div className="relative h-10 w-10 shrink-0 sm:h-[46px] sm:w-[46px]">
         <Image
           src="/image/logo.png"
