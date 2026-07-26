@@ -22,14 +22,10 @@ export default async function Header() {
 
   return (
     <HeaderBar>
-      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-6">
-        <div className="flex items-center justify-between pb-2 text-sm text-amber-950/70">
-          <span>광주가톨릭평생교육원</span>
-          <HeaderTopBar isLoggedIn={!!user} isAdmin={isAdmin} />
-        </div>
-
-        <div className="flex items-center justify-between pb-4">
+      <div className="mx-auto max-w-screen-2xl px-4 pb-3 sm:px-6 lg:px-6">
+        <div className="flex items-start justify-between">
           <HeaderBrand />
+          <HeaderTopBar isLoggedIn={!!user} isAdmin={isAdmin} />
         </div>
       </div>
     </HeaderBar>
