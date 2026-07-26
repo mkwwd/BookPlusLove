@@ -13,7 +13,7 @@ const PAGE_THICKNESS = 14;
 
 function BookShape({ children }: { children: ReactNode }) {
   return (
-    <div className="h-48 w-40 shrink-0 [perspective:900px]">
+    <div className="aspect-[5/6] w-full max-w-40 shrink-0 [perspective:900px]">
       <div
         className="relative h-full w-full [transform-style:preserve-3d]"
         style={{
@@ -54,11 +54,11 @@ export function BookCard({ book }: { book: BookCardData }) {
           </div>
         )}
       </BookShape>
-      <p className="line-clamp-2 w-40 text-sm font-medium text-amber-950">
+      <p className="line-clamp-2 w-full max-w-40 text-sm font-medium text-amber-950">
         {book.title}
       </p>
       {book.author && (
-        <p className="line-clamp-1 w-40 text-xs text-amber-700">
+        <p className="line-clamp-1 w-full max-w-40 text-xs text-amber-700">
           {book.author}
         </p>
       )}
@@ -69,7 +69,7 @@ export function BookCard({ book }: { book: BookCardData }) {
 export function BookCardPlaceholder() {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <div className="flex h-48 w-40 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-amber-900/20 bg-amber-50/40 text-amber-400">
+      <div className="flex aspect-[5/6] w-full max-w-40 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-amber-900/20 bg-amber-50/40 text-amber-400">
         <BookOpen className="h-8 w-8" />
       </div>
       <p className="text-sm text-amber-400">준비중</p>
