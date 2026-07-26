@@ -28,7 +28,7 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
       className={
         isHome
           ? homeClassName
-          : 'header-bg sticky top-0 z-50 border-b border-amber-100 backdrop-blur-sm'
+          : 'header-bg sticky top-0 z-50 border-b border-amber-100/30 backdrop-blur-sm'
       }>
       {children}
     </header>
