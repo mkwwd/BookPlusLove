@@ -126,7 +126,7 @@ export function BookCard({ book }: { book: BookCardData }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
+          <div className="h-full w-full bg-gradient-to-br from-amber-900 to-stone-900" />
         )}
       </BookShape>
 
@@ -139,7 +139,13 @@ export function BookCardPlaceholder() {
   return (
     <div className="flex flex-col items-center text-center">
       <BookShape>
-        <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950">
+          <span
+            aria-hidden="true"
+            className="font-serif text-5xl font-bold text-amber-100/40">
+            ?
+          </span>
+        </div>
       </BookShape>
 
       <BookMeta title="준비중" />
