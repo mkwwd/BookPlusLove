@@ -102,12 +102,12 @@ function BookMeta({
     <div className="mt-4 flex w-full max-w-40 flex-col items-center text-center">
       {/* h-12로 세로 중앙 정렬을 유지하면서 break-keep 추가 */}
       <div className="flex h-12 w-full items-center justify-center">
-        <p className="line-clamp-2 w-full text-lg leading-tight font-bold break-keep text-zinc-950 sm:text-xl">
+        <p className="line-clamp-2 w-full text-lg leading-tight font-bold break-keep text-amber-950 sm:text-xl">
           {title}
         </p>
       </div>
 
-      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-neutral-900/70">
+      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-amber-800/70">
         {author ?? '\u00A0'}
       </p>
     </div>
@@ -126,7 +126,7 @@ export function BookCard({ book }: { book: BookCardData }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-amber-900 to-stone-900" />
+          <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
         )}
       </BookShape>
 
