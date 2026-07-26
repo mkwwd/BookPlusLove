@@ -96,11 +96,11 @@ export default async function Home() {
       <HeroBackground />
 
       <section className="flex min-h-[560px] items-center justify-center">
-        <div className="relative mx-auto max-w-2xl px-4 pt-36 pb-16 text-center">
+        <div className="relative mx-auto max-w-2xl px-4 pt-60 pb-16 text-center">
           <StagedHeading
             firstPart="깊이 있는 독서, "
             secondPart="믿음의 시작이 되는 공간"
-            className="mb-3 font-serif text-3xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-4xl"
+            className="mb-5 font-serif text-3xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-4xl"
           />
           <p className="mb-9 text-base text-amber-50 [filter:drop-shadow(0_0_10px_rgba(253,230,138,0.85))_drop-shadow(0_1px_6px_rgba(0,0,0,0.6))] sm:text-lg">
             ◈찾고 싶은 도서를 빠르게 검색해보세요.◈
