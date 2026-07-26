@@ -1,6 +1,9 @@
 import { Search } from 'lucide-react';
 
-import { BookCard, type BookCardData } from '@/components/BookCard';
+import {
+  BookSearchResultRow,
+  type BookSearchResultData,
+} from '@/components/BookSearchResultRow';
 import { supabaseServer } from '@/utils/supabase/server';
 
 function sanitizeForOrFilter(value: string) {
@@ -10,11 +13,14 @@ function sanitizeForOrFilter(value: string) {
   return value.replace(/"/g, '\\"');
 }
 
-async function searchBooks(query: string): Promise<BookCardData[]> {
+async function searchBooks(query: string): Promise<BookSearchResultData[]> {
   const safeQuery = sanitizeForOrFilter(query);
   const { data } = await supabaseServer
     .from('books')
-    .select('id, title, author, cover_url')
+    .select(
+      `id, title, author, publisher, cover_url, pub_date, category_code, author_code,
+      book_copies(id, reg_no, status)`,
+    )
     .or(`title.ilike."%${safeQuery}%",author.ilike."%${safeQuery}%"`)
     .order('created_at', { ascending: false })
     .limit(60);
@@ -23,7 +29,16 @@ async function searchBooks(query: string): Promise<BookCardData[]> {
     id: b.id,
     title: b.title,
     author: b.author,
+    publisher: b.publisher,
     coverUrl: b.cover_url,
+    pubDate: b.pub_date,
+    categoryCode: b.category_code,
+    authorCode: b.author_code,
+    copies: (b.book_copies ?? []).map((c) => ({
+      id: c.id,
+      regNo: c.reg_no,
+      status: c.status,
+    })),
   }));
 }
 
@@ -59,9 +74,9 @@ export default async function BooksPage({
             &quot;{trimmedQuery}&quot;에 대한 검색 결과가 없습니다.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 md:grid-cols-6">
+          <div className="divide-y divide-amber-900/10 rounded-lg border border-amber-900/10 bg-white/70 shadow-sm">
             {books.map((book) => (
-              <BookCard key={book.id} book={book} />
+              <BookSearchResultRow key={book.id} book={book} />
             ))}
           </div>
         )}
