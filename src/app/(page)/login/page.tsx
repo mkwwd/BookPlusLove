@@ -56,7 +56,7 @@ export default function Page1Login() {
               </div>
             </div>
             <div className="mb-2 font-serif text-4xl text-amber-900">
-              책더하기사랑작은도서관
+              책더하기사랑도서관
             </div>
           </div>
 
