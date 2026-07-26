@@ -13,9 +13,9 @@ const PAGE_THICKNESS = 14;
 
 function BookShape({ children }: { children: ReactNode }) {
   return (
-    <div className="aspect-[5/6] w-full max-w-40 shrink-0 [perspective:900px]">
+    <div className="relative aspect-[5/6] w-full max-w-40 shrink-0 [perspective:900px]">
       <div
-        className="relative h-full w-full [transform-style:preserve-3d]"
+        className="absolute inset-0 [transform-style:preserve-3d]"
         style={{
           transformOrigin: 'right center',
           transform: 'rotateY(-22deg)',
@@ -50,7 +50,6 @@ export function BookCard({ book }: { book: BookCardData }) {
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-800 to-amber-950 text-amber-100">
             <Cross className="h-10 w-10" strokeWidth={1.5} />
-            <span className="text-xs text-amber-200/80">표지 준비중</span>
           </div>
         )}
       </BookShape>
