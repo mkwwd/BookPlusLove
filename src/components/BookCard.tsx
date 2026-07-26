@@ -107,7 +107,7 @@ function BookMeta({
         </p>
       </div>
 
-      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-amber-800/70">
+      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-amber-900">
         {author ?? '\u00A0'}
       </p>
     </div>
