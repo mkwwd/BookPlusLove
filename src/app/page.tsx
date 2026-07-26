@@ -53,9 +53,9 @@ function HeroBackground() {
           sizes="100vw"
           className="object-cover object-center"
         />
-        <div className="absolute inset-x-0 bottom-0 h-[12.5%] bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[12.5%] bg-gradient-to-b from-transparent to-amber-100" />
       </div>
-      <div className="page-bg h-[calc(1/15*100%)] w-full" />
+      <div className="h-[calc(1/15*100%)] w-full bg-amber-100" />
     </div>
   );
 }
