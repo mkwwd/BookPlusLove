@@ -1,12 +1,40 @@
 import { BookPlus, BookText, Handshake, Users } from 'lucide-react';
 import Link from 'next/link';
 
-const STATS = [
-  { label: '전체 회원', value: '128명', icon: Users },
-  { label: '전체 도서', value: '342권', icon: BookText },
-  { label: '대출 중', value: '27건', icon: Handshake },
-  { label: '이번 주 신규 등록', value: '6권', icon: BookPlus },
-];
+import { supabaseServer } from '@/utils/supabase/server';
+
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function getStats() {
+  const weekAgo = new Date(Date.now() - ONE_WEEK_MS).toISOString();
+
+  const [
+    { count: totalMembers },
+    { count: totalBooks },
+    { count: onLoan },
+    { count: newThisWeek },
+  ] = await Promise.all([
+    supabaseServer.from('users').select('*', { count: 'exact', head: true }),
+    supabaseServer
+      .from('book_copies')
+      .select('*', { count: 'exact', head: true }),
+    supabaseServer
+      .from('book_copies')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', '대여중'),
+    supabaseServer
+      .from('book_copies')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', weekAgo),
+  ]);
+
+  return {
+    totalMembers: totalMembers ?? 0,
+    totalBooks: totalBooks ?? 0,
+    onLoan: onLoan ?? 0,
+    newThisWeek: newThisWeek ?? 0,
+  };
+}
 
 const QUICK_LINKS = [
   {
@@ -29,17 +57,20 @@ const QUICK_LINKS = [
   },
 ];
 
-const RECENT_ACTIVITY = [
-  {
-    date: '07.20',
-    text: '한소연 회원이 「혼자여도 괜찮은 시간」을 대출했습니다',
-  },
-  { date: '07.19', text: '「낯설게 읽는 성경」 외 3권이 신규 등록되었습니다' },
-  { date: '07.18', text: '이현민 회원이 「침묵의 기도학교」를 반납했습니다' },
-  { date: '07.17', text: '정요한 회원이 신규 가입했습니다' },
-];
+export default async function AdminDashboardPage() {
+  const stats = await getStats();
 
-export default function AdminDashboardPage() {
+  const STATS = [
+    { label: '전체 회원', value: `${stats.totalMembers}명`, icon: Users },
+    { label: '전체 도서', value: `${stats.totalBooks}권`, icon: BookText },
+    { label: '대출 중', value: `${stats.onLoan}건`, icon: Handshake },
+    {
+      label: '이번 주 신규 등록',
+      value: `${stats.newThisWeek}권`,
+      icon: BookPlus,
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <h2 className="font-serif text-3xl text-amber-950">대시보드</h2>
@@ -67,20 +98,6 @@ export default function AdminDashboardPage() {
             <p className="mt-1 text-base text-amber-800">{description}</p>
           </Link>
         ))}
-      </div>
-
-      <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
-        <h3 className="font-serif text-xl text-amber-950">최근 활동</h3>
-        <ul className="mt-4 divide-y divide-amber-900/10">
-          {RECENT_ACTIVITY.map((item, i) => (
-            <li key={i} className="flex gap-4 py-3">
-              <span className="w-12 shrink-0 text-base text-red-900">
-                {item.date}
-              </span>
-              <span className="text-base text-amber-950">{item.text}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
