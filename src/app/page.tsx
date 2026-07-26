@@ -6,6 +6,7 @@ import {
   BookCardPlaceholder,
   type BookCardData,
 } from '@/components/BookCard';
+import StagedHeading from '@/components/StagedHeading';
 import { supabaseServer } from '@/utils/supabase/server';
 
 const SECTION_SIZE = 4;
@@ -96,9 +97,11 @@ export default async function Home() {
 
       <section className="flex min-h-[560px] items-center justify-center">
         <div className="relative mx-auto max-w-2xl px-4 pt-36 pb-16 text-center">
-          <p className="mb-3 font-serif text-2xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-3xl">
-            깊이 있는 독서, 믿음의 시작이 되는 공간
-          </p>
+          <StagedHeading
+            firstPart="깊이 있는 독서, "
+            secondPart="믿음의 시작이 되는 공간"
+            className="mb-3 font-serif text-3xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-4xl"
+          />
           <p className="mb-9 text-base text-amber-50 [filter:drop-shadow(0_0_10px_rgba(253,230,138,0.85))_drop-shadow(0_1px_6px_rgba(0,0,0,0.6))] sm:text-lg">
             ◈찾고 싶은 도서를 빠르게 검색해보세요.◈
           </p>
