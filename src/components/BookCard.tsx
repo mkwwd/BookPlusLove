@@ -100,8 +100,8 @@ function BookMeta({
 }) {
   return (
     <div className="mt-4 flex w-full max-w-40 flex-col items-start">
-      <div className="flex h-12 w-full items-center justify-center">
-        <p className="line-clamp-2 text-lg leading-tight font-bold text-zinc-950 sm:text-xl">
+      <div className="flex h-12 w-full items-center justify-start">
+        <p className="line-clamp-2 w-full text-left text-lg leading-tight font-bold break-keep text-zinc-950 sm:text-xl">
           {title}
         </p>
       </div>

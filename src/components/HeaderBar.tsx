@@ -13,22 +13,29 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isHome) return;
 
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [isHome]);
 
   const homeClassName = scrolled
-    ? 'header-bg fixed inset-x-0 top-0 z-50 backdrop-blur-sm transition-colors'
-    : 'fixed inset-x-0 top-0 z-50 transition-colors';
+    ? 'fixed inset-x-0 top-0 z-50 bg-[#fffdfa] shadow-md transition-all duration-300'
+    : 'fixed inset-x-0 top-0 z-50 bg-[#fffdfa] shadow-md sm:bg-transparent sm:shadow-none sm:backdrop-blur-xs transition-all duration-300';
 
   return (
     <header
       className={
         isHome
           ? homeClassName
-          : 'header-bg sticky top-0 z-50 border-b border-amber-100/30 backdrop-blur-sm'
+          : 'header-bg sticky top-0 z-50 transition-all duration-300'
       }>
       {children}
     </header>
