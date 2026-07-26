@@ -32,7 +32,7 @@ export default async function AdminLayout({
   return (
     <div className="page-bg min-h-screen">
       <AdminNav />
-      <main className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-6">
+      <main className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-8 lg:px-12">
         {children}
       </main>
     </div>

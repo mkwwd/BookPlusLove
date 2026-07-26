@@ -15,7 +15,7 @@ export default function AdminNav() {
 
   return (
     <nav className="border-b border-amber-900/20 bg-white/40 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-6">
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-8 lg:px-12">
         <Link
           href="/admin"
           className="flex items-center gap-2 py-4 font-serif text-lg text-amber-950">
