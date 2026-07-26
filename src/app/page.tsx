@@ -44,7 +44,7 @@ async function getNewBooks(): Promise<BookCardData[]> {
 function HeroBackground() {
   return (
     <div className="fixed inset-0 -z-10 flex flex-col">
-      <div className="relative h-[90%] w-full">
+      <div className="relative h-[calc(14/15*100%)] w-full">
         <Image
           src="/image/book5.png"
           alt=""
@@ -55,7 +55,7 @@ function HeroBackground() {
         />
         <div className="absolute inset-x-0 bottom-0 h-[12.5%] bg-gradient-to-b from-transparent to-[var(--brand-bg)]" />
       </div>
-      <div className="page-bg h-[10%] w-full" />
+      <div className="page-bg h-[calc(1/15*100%)] w-full" />
     </div>
   );
 }
