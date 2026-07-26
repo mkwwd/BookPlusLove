@@ -9,7 +9,7 @@ export interface BookCardData {
 
 const PAGE_THICKNESS = 8;
 
-function BookShape({ children }: { children: ReactNode }) {
+export function BookShape({ children }: { children: ReactNode }) {
   return (
     <div className="group relative aspect-[5/6] w-full max-w-40 shrink-0 [perspective:1200px]">
       {/* 책 아래 그림자 */}
@@ -99,13 +99,15 @@ function BookMeta({
   author?: string | null;
 }) {
   return (
-    <div className="mt-4 flex w-full max-w-40 flex-col items-start">
-      <div className="flex h-12 w-full items-center justify-start">
-        <p className="line-clamp-2 w-full text-left text-lg leading-tight font-bold break-keep text-zinc-950 sm:text-xl">
+    <div className="mt-4 flex w-full max-w-40 flex-col items-center text-center">
+      {/* h-12로 세로 중앙 정렬을 유지하면서 break-keep 추가 */}
+      <div className="flex h-12 w-full items-center justify-center">
+        <p className="line-clamp-2 w-full text-lg leading-tight font-bold break-keep text-amber-950 drop-shadow-[0_1px_1.5px_rgba(70,40,20,0.25)] sm:text-xl">
           {title}
         </p>
       </div>
-      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-neutral-900/70">
+
+      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-semibold text-amber-950/60">
         {author ?? '\u00A0'}
       </p>
     </div>
@@ -124,7 +126,7 @@ export function BookCard({ book }: { book: BookCardData }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
+          <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
         )}
       </BookShape>
 
@@ -137,7 +139,13 @@ export function BookCardPlaceholder() {
   return (
     <div className="flex flex-col items-center text-center">
       <BookShape>
-        <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950">
+          <span
+            aria-hidden="true"
+            className="font-serif text-5xl font-bold text-amber-100/40">
+            ?
+          </span>
+        </div>
       </BookShape>
 
       <BookMeta title="준비중" />

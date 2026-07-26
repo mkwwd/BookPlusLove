@@ -6,6 +6,7 @@ import {
   type BookCardData,
 } from '@/components/BookCard';
 import HeroSectionContent from '@/components/HeroSectionContent';
+import RevealSection from '@/components/RevealSection';
 import { supabaseServer } from '@/utils/supabase/server';
 
 const SECTION_SIZE = 6;
@@ -114,10 +115,12 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-screen-2xl px-4 py-15 pb-12 sm:px-8 lg:px-12">
-        <div className="grid gap-8 md:grid-cols-2">
-          <BookSection title="추천 도서" books={recommended} />
-          <BookSection title="신규 도서" books={newBooks} />
-        </div>
+        <RevealSection>
+          <div className="grid gap-8 md:grid-cols-2">
+            <BookSection title="추천 도서" books={recommended} />
+            <BookSection title="신규 도서" books={newBooks} />
+          </div>
+        </RevealSection>
       </section>
     </div>
   );

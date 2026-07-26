@@ -5,8 +5,8 @@ import './globals.css';
 import QueryProvider from '@/providers/QueryProvider';
 
 export const metadata: Metadata = {
-  title: 'bookpluslove',
-  description: '',
+  title: '책더하기사랑도서관',
+  description: '광주가톨릭평생교육원 책더하기사랑도서관',
 };
 
 export default function RootLayout({
