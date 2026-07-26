@@ -9,7 +9,7 @@ export interface BookCardData {
 
 const PAGE_THICKNESS = 8;
 
-function BookShape({ children }: { children: ReactNode }) {
+export function BookShape({ children }: { children: ReactNode }) {
   return (
     <div className="group relative aspect-[5/6] w-full max-w-40 shrink-0 [perspective:1200px]">
       {/* 책 아래 그림자 */}

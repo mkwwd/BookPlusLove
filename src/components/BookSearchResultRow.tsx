@@ -1,3 +1,5 @@
+import { BookShape } from '@/components/BookCard';
+
 const LIBRARY_NAME = '광주가톨릭평생교육원';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -45,7 +47,7 @@ function BookThumbnail({
 }) {
   return (
     <div className="mx-auto w-24 shrink-0 sm:mx-0">
-      <div className="aspect-[5/6] w-full overflow-hidden rounded-md border border-amber-900/10 bg-amber-950 shadow-md">
+      <BookShape>
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -54,15 +56,9 @@ function BookThumbnail({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950">
-            <span
-              aria-hidden="true"
-              className="font-serif text-2xl font-bold text-amber-100/40">
-              ?
-            </span>
-          </div>
+          <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
         )}
-      </div>
+      </BookShape>
     </div>
   );
 }
