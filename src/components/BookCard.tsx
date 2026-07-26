@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 
-import { BookOpen, Cross } from 'lucide-react';
-
 export interface BookCardData {
   id: number;
   title: string;
@@ -61,7 +59,7 @@ function BookShape({ children }: { children: ReactNode }) {
           {/* 책등 음영 */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-7 border-r border-black/10 bg-gradient-to-r from-black/25 via-black/10 to-transparent transition-all duration-700 group-hover:w-6"
+            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-7 bg-gradient-to-r from-black/25 via-black/10 to-transparent transition-all duration-700 group-hover:w-6"
           />
 
           {/* 책등 하이라이트 */}
@@ -93,45 +91,56 @@ function BookShape({ children }: { children: ReactNode }) {
   );
 }
 
+function BookMeta({
+  title,
+  author,
+}: {
+  title: string;
+  author?: string | null;
+}) {
+  return (
+    <div className="mt-4 flex w-full max-w-40 flex-col items-start">
+      <div className="flex h-12 w-full items-center justify-center">
+        <p className="line-clamp-2 text-lg leading-tight font-bold text-zinc-950 sm:text-xl">
+          {title}
+        </p>
+      </div>
+      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-neutral-900/70">
+        {author ?? '\u00A0'}
+      </p>
+    </div>
+  );
+}
+
 export function BookCard({ book }: { book: BookCardData }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
+    <div className="flex flex-col items-center text-center">
       <BookShape>
         {book.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={book.coverUrl}
-            alt=""
+            alt={`${book.title} 표지`}
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-800 to-amber-950 text-amber-100">
-            <Cross className="h-10 w-10" strokeWidth={1.5} />
-          </div>
+          <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
         )}
       </BookShape>
 
-      <p className="line-clamp-2 w-full max-w-40 text-sm font-medium text-amber-950">
-        {book.title}
-      </p>
-
-      {book.author && (
-        <p className="line-clamp-1 w-full max-w-40 text-xs text-amber-700">
-          {book.author}
-        </p>
-      )}
+      <BookMeta title={book.title} author={book.author} />
     </div>
   );
 }
 
 export function BookCardPlaceholder() {
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <div className="flex aspect-[5/6] w-full max-w-40 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-amber-900/20 bg-amber-50/40 text-amber-400">
-        <BookOpen className="h-8 w-8" />
-      </div>
+    <div className="flex flex-col items-center text-center">
+      <BookShape>
+        <div className="h-full w-full bg-gradient-to-br from-amber-800 to-amber-950" />
+      </BookShape>
 
-      <p className="text-sm text-amber-400">준비중</p>
+      <BookMeta title="준비중" />
     </div>
   );
 }
