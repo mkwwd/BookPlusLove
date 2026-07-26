@@ -102,12 +102,12 @@ function BookMeta({
     <div className="mt-4 flex w-full max-w-40 flex-col items-center text-center">
       {/* h-12로 세로 중앙 정렬을 유지하면서 break-keep 추가 */}
       <div className="flex h-12 w-full items-center justify-center">
-        <p className="line-clamp-2 w-full text-lg leading-tight font-bold break-keep text-amber-950 sm:text-xl">
+        <p className="line-clamp-2 w-full text-lg leading-tight font-bold break-keep text-amber-950 drop-shadow-[0_1px_1.5px_rgba(70,40,20,0.25)] sm:text-xl">
           {title}
         </p>
       </div>
 
-      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-bold text-amber-900">
+      <p className="mt-2 h-5 w-full truncate text-base leading-5 font-semibold text-amber-950/60">
         {author ?? '\u00A0'}
       </p>
     </div>
