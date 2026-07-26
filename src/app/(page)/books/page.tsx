@@ -53,19 +53,19 @@ export default async function BooksPage({
 
   return (
     <div className="page-bg min-h-screen">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-8 sm:py-14 lg:px-12">
-        <h1 className="mb-8 font-serif text-3xl font-bold text-amber-950">
+      <div className="mx-auto max-w-screen-2xl px-4 pt-6 pb-12 sm:px-8 sm:pt-8 sm:pb-16 lg:px-12">
+        <h1 className="mb-6 font-serif text-3xl font-bold text-amber-950">
           검색 결과
         </h1>
 
-        <form action="/books" method="get" className="relative mb-12 max-w-lg">
+        <form action="/books" method="get" className="relative mb-8 max-w-lg">
           <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-amber-900/50" />
           <input
             type="text"
             name="q"
             defaultValue={trimmedQuery}
             placeholder="책 제목이나 저자를 입력해주세요"
-            className="w-full rounded-full border border-amber-900/20 bg-white/70 py-3 pr-5 pl-11 text-base placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+            className="w-full rounded-full border border-amber-900/20 bg-white/70 py-4 pr-5 pl-11 text-lg placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none sm:text-xl"
           />
         </form>
 
