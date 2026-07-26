@@ -6,8 +6,8 @@ export default function StagedHeading({
   firstPart,
   secondPart,
   className,
-  delayMs = 300,
-  stepMs = 600,
+  delayMs = 600,
+  stepMs = 1000,
 }: {
   firstPart: string;
   secondPart: string;
@@ -42,7 +42,7 @@ export default function StagedHeading({
           opacity: stage >= 2 ? 1 : 0,
           transform: stage >= 2 ? 'translateY(0)' : 'translateY(0.4em)',
         }}>
-        {secondPart}
+        &nbsp;&nbsp;{secondPart}
       </span>
     </p>
   );
