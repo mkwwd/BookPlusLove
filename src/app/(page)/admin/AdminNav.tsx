@@ -26,7 +26,7 @@ export default function AdminNav() {
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   return (
-    <nav className="border-b border-amber-900/20 bg-white/40 backdrop-blur-sm">
+    <nav className="relative z-40 border-b border-amber-900/20 bg-white/40 backdrop-blur-sm">
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12">
         <div className="hidden items-center justify-between gap-4 sm:flex">
           <Link
