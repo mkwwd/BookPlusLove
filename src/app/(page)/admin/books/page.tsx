@@ -56,10 +56,14 @@ function EditBookForm({
   book,
   categories,
   onSaved,
+  onDelete,
+  isDeleting,
 }: {
   book: BookRow;
   categories: BookCategory[];
   onSaved: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
 }) {
   const [title, setTitle] = useState(book.title);
   const [isbn, setIsbn] = useState(book.isbn ?? '');
@@ -431,13 +435,24 @@ function EditBookForm({
         </p>
       )}
 
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={handleSave}
-        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-        {isSaving ? '저장 중...' : '저장'}
-      </button>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          disabled={isDeleting}
+          onClick={onDelete}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-red-800/30 py-3 text-base font-medium text-red-800 transition hover:bg-red-50 disabled:opacity-50 sm:w-auto sm:px-6">
+          <Trash2 className="h-4 w-4" />
+          {isDeleting ? '삭제 중...' : '도서 삭제'}
+        </button>
+
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
+          {isSaving ? '저장 중...' : '저장'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -488,13 +503,13 @@ export default function AdminBooksPage() {
     },
   });
 
-  const handleDelete = (book: BookRow) => {
+  const handleDelete = (book: BookRow, onDeleted?: () => void) => {
     if (
       window.confirm(
         `"${book.title}" (${book.regNo})을(를) 삭제할까요? 되돌릴 수 없습니다.`,
       )
     ) {
-      deleteBook(book.copyId);
+      deleteBook(book.copyId, { onSuccess: onDeleted });
     }
   };
 
@@ -858,6 +873,10 @@ export default function AdminBooksPage() {
               setEditingBook(null);
               void queryClient.invalidateQueries({ queryKey: ['admin-books'] });
             }}
+            onDelete={() =>
+              handleDelete(editingBook, () => setEditingBook(null))
+            }
+            isDeleting={isDeleting && deletingCopyId === editingBook.copyId}
           />
         </Modal>
       )}
