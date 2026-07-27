@@ -1,3 +1,5 @@
+import { connection } from 'next/server';
+
 import HeaderBar from '@/components/HeaderBar';
 import HeaderBrand from '@/components/HeaderBrand';
 import HeaderTopBar from '@/components/HeaderTopBar';
@@ -5,6 +7,8 @@ import { supabaseServer } from '@/utils/supabase/server';
 import { createSessionClient } from '@/utils/supabase/session';
 
 export default async function Header() {
+  await connection();
+
   const supabase = await createSessionClient();
   const {
     data: { user },

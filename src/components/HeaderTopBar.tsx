@@ -6,8 +6,6 @@ import { Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { supabase } from '@/utils/supabase/client';
-
 const bookmarkClipPath = {
   clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%)',
 };
@@ -33,8 +31,8 @@ export default function HeaderTopBar({
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/login';
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.replace('/login');
   };
 
   const items: MenuItem[] = isLoggedIn
