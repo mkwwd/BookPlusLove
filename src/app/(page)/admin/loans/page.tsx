@@ -202,6 +202,13 @@ function LoanManageModal({
   onChanged: () => void;
 }) {
   const [dueAt, setDueAt] = useState(loan.dueAt);
+  const bumpDueAt = (days: number) => {
+    const base =
+      dueAt && !Number.isNaN(new Date(dueAt).getTime())
+        ? new Date(dueAt)
+        : new Date();
+    setDueAt(addDays(base, days));
+  };
   const [selectedBorrower, setSelectedBorrower] =
     useState<SelectedBorrower | null>(
       loan.borrowerId != null
@@ -309,6 +316,20 @@ function LoanManageModal({
           onChange={(e) => setDueAt(e.target.value)}
           className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
         />
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => bumpDueAt(1)}
+            className="rounded border border-amber-900/20 px-3 py-1.5 text-sm text-amber-800 transition hover:bg-amber-50">
+            +1일
+          </button>
+          <button
+            type="button"
+            onClick={() => bumpDueAt(7)}
+            className="rounded border border-amber-900/20 px-3 py-1.5 text-sm text-amber-800 transition hover:bg-amber-50">
+            +7일
+          </button>
+        </div>
       </div>
 
       <BorrowerPicker
