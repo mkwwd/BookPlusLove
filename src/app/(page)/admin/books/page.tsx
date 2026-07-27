@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Minus, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
+import { Check, Plus, Search, SquarePen, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
@@ -754,7 +754,7 @@ export default function AdminBooksPage() {
                           <span
                             title="표지 없음"
                             className="inline-flex items-center justify-center rounded-full bg-gray-100 p-1 text-gray-400">
-                            <Minus className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </span>
                         )}
                       </td>
