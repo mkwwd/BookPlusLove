@@ -35,7 +35,7 @@ export default function HeroSectionContent({
 
   return (
     <div className="relative mx-auto max-w-5xl px-4 pt-50 pb-16 text-center">
-      <p className="mb-5 font-serif text-3xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-6xl">
+      <p className="mb-5 font-serif text-2xl text-white [filter:drop-shadow(0_0_14px_rgba(253,230,138,0.9))_drop-shadow(0_2px_8px_rgba(0,0,0,0.6))] sm:text-6xl">
         <span
           className="inline-block transition-all duration-700 ease-out"
           style={{
@@ -54,7 +54,7 @@ export default function HeroSectionContent({
           opacity: stage >= 2 ? 1 : 0,
           transform: stage >= 2 ? 'translateY(0)' : 'translateY(0.6em)',
         }}>
-        <p className="mb-5 text-lg text-amber-50 [filter:drop-shadow(0_0_10px_rgba(253,230,138,0.85))_drop-shadow(0_1px_6px_rgba(0,0,0,0.6))] sm:text-[26px]">
+        <p className="mb-5 text-base text-amber-50 [filter:drop-shadow(0_0_10px_rgba(253,230,138,0.85))_drop-shadow(0_1px_6px_rgba(0,0,0,0.6))] sm:text-[26px]">
           {subText}
         </p>
 

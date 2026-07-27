@@ -15,7 +15,7 @@ export default function HeaderBrand() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <h1 className="font-serif text-2xl leading-none font-black text-amber-900 drop-shadow-[1px_-0.5px_0.5px_rgba(255,255,255,0.8)] sm:text-3xl">
+        <h1 className="font-serif text-xl leading-none font-black text-amber-900 drop-shadow-[1px_-0.5px_0.5px_rgba(255,255,255,0.8)] sm:text-3xl">
           책더하기사랑도서관
         </h1>
         <div className="flex justify-around text-sm leading-none font-bold text-amber-950/60 drop-shadow-[1px_1px_0px_rgba(255,255,255)]">
