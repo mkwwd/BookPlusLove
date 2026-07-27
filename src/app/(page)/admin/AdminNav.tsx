@@ -53,33 +53,35 @@ export default function AdminNav() {
           </div>
         </div>
 
-        <div className="relative flex items-center justify-between py-3 sm:hidden">
-          <Link
-            href="/admin"
-            className="flex items-center gap-2 font-serif text-lg text-amber-950">
-            <LayoutDashboard className="h-5 w-5" />
-            관리자 대시보드
-          </Link>
+        <div className="sm:hidden">
+          <div className="flex items-center justify-between py-3">
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 font-serif text-lg text-amber-950">
+              <LayoutDashboard className="h-5 w-5" />
+              관리자 대시보드
+            </Link>
 
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label="관리자 메뉴 열기"
-            className="rounded-md border border-amber-900/20 bg-white/60 p-2 text-amber-900">
-            <Menu className="h-5 w-5" />
-          </button>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-label="관리자 메뉴 열기"
+              className="rounded-md border border-amber-900/20 bg-white/60 p-2 text-amber-900">
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
 
           {open && (
-            <div className="absolute top-full right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border border-amber-900/10 bg-white shadow-lg">
+            <div className="flex flex-wrap gap-2 border-t border-amber-900/10 py-3">
               {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setOpen(false)}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm ${
+                  className={`flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm ${
                     isItemActive(href)
-                      ? 'bg-amber-50 text-red-900'
-                      : 'text-amber-950 hover:bg-amber-50'
+                      ? 'border-red-900/30 bg-amber-50 text-red-900'
+                      : 'border-amber-900/20 text-amber-950 hover:bg-amber-50'
                   }`}>
                   <Icon className="h-4 w-4" />
                   {label}
