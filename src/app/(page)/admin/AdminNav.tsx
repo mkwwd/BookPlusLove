@@ -18,11 +18,6 @@ const NAV_ITEMS = [
   { href: '/admin/members', label: '회원 관리', icon: Users },
 ];
 
-const ALL_ITEMS = [
-  { href: '/admin', label: '관리자 대시보드', icon: LayoutDashboard },
-  ...NAV_ITEMS,
-];
-
 export default function AdminNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -58,7 +53,14 @@ export default function AdminNav() {
           </div>
         </div>
 
-        <div className="relative flex justify-end py-3 sm:hidden">
+        <div className="relative flex items-center justify-between py-3 sm:hidden">
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 font-serif text-lg text-amber-950">
+            <LayoutDashboard className="h-5 w-5" />
+            관리자 대시보드
+          </Link>
+
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -68,8 +70,8 @@ export default function AdminNav() {
           </button>
 
           {open && (
-            <div className="absolute top-full right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-amber-900/10 bg-white shadow-lg">
-              {ALL_ITEMS.map(({ href, label, icon: Icon }) => (
+            <div className="absolute top-full right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border border-amber-900/10 bg-white shadow-lg">
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   href={href}
