@@ -249,6 +249,50 @@ function LoanManageModal({
     },
   });
 
+  const {
+    mutate: unreturn,
+    isPending: isUnreturning,
+    error: unreturnError,
+  } = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/loans/${loan.id}/unreturn`, {
+        method: 'POST',
+      });
+      const body = await res.json();
+      if (!res.ok)
+        throw new Error(body.error ?? '대출중으로 되돌리는데 실패했습니다.');
+    },
+    onSuccess: () => {
+      onChanged();
+      onClose();
+    },
+  });
+
+  if (loan.returnedAt) {
+    return (
+      <div className="space-y-4">
+        <p className="text-base text-amber-950">
+          <strong>{loan.title}</strong> ({loan.regNo})
+        </p>
+        <p className="text-base text-amber-800">
+          이미 반납 처리된 대출입니다. 반납예정일이나 대출자를 수정하려면 먼저
+          대출중 상태로 되돌려주세요.
+        </p>
+
+        {unreturnError && (
+          <p className="text-sm text-red-600">{unreturnError.message}</p>
+        )}
+        <button
+          type="button"
+          disabled={isUnreturning}
+          onClick={() => unreturn()}
+          className="w-full rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
+          {isUnreturning ? '되돌리는 중...' : '대출중으로 되돌리기'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-base text-amber-950">
@@ -730,15 +774,13 @@ export default function AdminLoansPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    {!loan.returnedAt && (
-                      <button
-                        type="button"
-                        aria-label="관리"
-                        onClick={() => setManagingLoan(loan)}
-                        className="text-amber-600 hover:text-amber-950">
-                        <SquarePen className="h-4 w-4" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      aria-label="관리"
+                      onClick={() => setManagingLoan(loan)}
+                      className="text-amber-600 hover:text-amber-950">
+                      <SquarePen className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))
