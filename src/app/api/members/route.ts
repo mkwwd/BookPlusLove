@@ -79,16 +79,20 @@ export async function POST(request: Request) {
     return Response.json({ error: message }, { status: 409 });
   }
 
-  const { error: insertError } = await supabaseServer.from('users').insert({
-    user_id: userId,
-    email,
-    name,
-    phone,
-    birthdate,
-    address: address || null,
-    baptismal_name: baptismalName || null,
-    parish_id: parishId,
-  });
+  const { data: inserted, error: insertError } = await supabaseServer
+    .from('users')
+    .insert({
+      user_id: userId,
+      email,
+      name,
+      phone,
+      birthdate,
+      address: address || null,
+      baptismal_name: baptismalName || null,
+      parish_id: parishId,
+    })
+    .select('id, name')
+    .single();
 
   if (insertError) {
     await supabaseServer.auth.admin.deleteUser(authData.user.id);
@@ -98,5 +102,8 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json({ id: authData.user.id }, { status: 201 });
+  return Response.json(
+    { authId: authData.user.id, id: inserted.id, name: inserted.name },
+    { status: 201 },
+  );
 }

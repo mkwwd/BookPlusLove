@@ -62,7 +62,7 @@ export default function Page1Login() {
 
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div>
-              <label className="mb-2 block text-base font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-950">
                 아이디
               </label>
               <input
@@ -74,7 +74,7 @@ export default function Page1Login() {
               />
             </div>
             <div>
-              <label className="mb-2 block text-base font-medium text-amber-900">
+              <label className="mb-2 block text-base font-medium text-amber-950">
                 비밀번호
               </label>
               <div className="relative">
@@ -88,7 +88,7 @@ export default function Page1Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-3 right-3 cursor-pointer text-amber-900 hover:text-red-800">
+                  className="absolute top-3 right-3 cursor-pointer text-amber-950 hover:text-red-800">
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
                   ) : (
@@ -111,22 +111,22 @@ export default function Page1Login() {
               {isPending ? '로그인 중...' : '로그인'}
             </button>
 
-            <div className="flex justify-center gap-4 text-base text-amber-700">
+            <div className="flex justify-center gap-4 text-base text-amber-800">
               <Link
                 href="/register"
-                className="hover:text-amber-900 hover:underline">
+                className="hover:text-amber-950 hover:underline">
                 회원가입
               </Link>
               <span>|</span>
               <Link
                 href="/find?tab=id"
-                className="hover:text-amber-900 hover:underline">
+                className="hover:text-amber-950 hover:underline">
                 아이디 찾기
               </Link>
               <span>|</span>
               <Link
                 href="/find?tab=password"
-                className="hover:text-amber-900 hover:underline">
+                className="hover:text-amber-950 hover:underline">
                 비밀번호 찾기
               </Link>
             </div>

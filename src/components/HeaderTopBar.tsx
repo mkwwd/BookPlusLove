@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { supabase } from '@/utils/supabase/client';
 
@@ -27,6 +28,8 @@ export default function HeaderTopBar({
   isLoggedIn: boolean;
   isAdmin: boolean;
 }) {
+  const pathname = usePathname();
+  const inAdminSection = pathname.startsWith('/admin');
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -36,12 +39,18 @@ export default function HeaderTopBar({
 
   const items: MenuItem[] = isLoggedIn
     ? [
-        ...(isAdmin ? [{ label: '관리자', href: '/admin' }] : []),
-        { label: '로그아웃', onClick: handleLogout },
+        ...(isAdmin
+          ? [
+              inAdminSection
+                ? { label: '\uD648', href: '/' }
+                : { label: '\uAD00\uB9AC\uC790', href: '/admin' },
+            ]
+          : []),
+        { label: '\uB85C\uADF8\uC544\uC6C3', onClick: handleLogout },
       ]
     : [
-        { label: '로그인', href: '/login' },
-        { label: '회원가입', href: '/register' },
+        { label: '\uB85C\uADF8\uC778', href: '/login' },
+        { label: '\uD68C\uC6D0\uAC00\uC785', href: '/register' },
       ];
 
   return (
@@ -73,7 +82,7 @@ export default function HeaderTopBar({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          aria-label="메뉴 열기"
+          aria-label="\uBA54\uB274 \uC5F4\uAE30"
           className={`cursor-pointer ${bookmarkClass}`}
           style={bookmarkClipPath}>
           <Menu className="h-5 w-5" />
