@@ -126,13 +126,7 @@ export function BookCard({ book }: { book: BookCardData }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-950 to-amber-950">
-            <span
-              aria-hidden="true"
-              className="font-serif text-5xl font-bold text-amber-100/40">
-              ×
-            </span>
-          </div>
+          <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
         )}
       </BookShape>
 
