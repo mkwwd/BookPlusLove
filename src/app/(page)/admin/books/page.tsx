@@ -368,46 +368,50 @@ function EditBookForm({
           <label className="mb-1.5 block text-base font-medium text-amber-950">
             표지 이미지
           </label>
-          <div className="flex items-center gap-3">
-            {coverPreview || coverUrl.trim() ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverPreview || coverUrl.trim()}
-                alt=""
-                className="h-14 w-10 shrink-0 rounded-sm object-cover"
-              />
-            ) : (
-              <div className="h-14 w-10 shrink-0 rounded-sm bg-amber-100" />
-            )}
-            <input
-              type="text"
-              value={coverUrl}
-              onChange={(e) => {
-                setCoverUrl(e.target.value);
-                if (coverFile) {
-                  if (coverPreview) URL.revokeObjectURL(coverPreview);
-                  setCoverFile(null);
-                  setCoverPreview('');
-                }
-              }}
-              placeholder="URL을 붙여넣거나 오른쪽에서 파일을 선택해주세요"
-              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-            />
-            <label className="shrink-0 cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
-              파일 선택
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              {coverPreview || coverUrl.trim() ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={coverPreview || coverUrl.trim()}
+                  alt=""
+                  className="h-14 w-10 shrink-0 rounded-sm object-cover"
+                />
+              ) : (
+                <div className="h-14 w-10 shrink-0 rounded-sm bg-amber-100" />
+              )}
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverFileChange}
-                className="hidden"
+                type="text"
+                value={coverUrl}
+                onChange={(e) => {
+                  setCoverUrl(e.target.value);
+                  if (coverFile) {
+                    if (coverPreview) URL.revokeObjectURL(coverPreview);
+                    setCoverFile(null);
+                    setCoverPreview('');
+                  }
+                }}
+                placeholder="URL을 붙여넣거나 아래에서 파일을 선택해주세요"
+                className="w-full min-w-0 rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
               />
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsCoverCameraOpen(true)}
-              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
-              사진으로 촬영
-            </button>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="cursor-pointer rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
+                파일 선택
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverFileChange}
+                  className="hidden"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCoverCameraOpen(true)}
+                className="rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
+                사진으로 촬영
+              </button>
+            </div>
           </div>
           {coverFile && (
             <p className="mt-1.5 text-sm text-amber-800">
