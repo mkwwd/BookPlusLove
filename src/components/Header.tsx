@@ -19,7 +19,7 @@ export default async function Header() {
     const { data } = await supabaseServer
       .from('users')
       .select('role')
-      .eq('email', user.email)
+      .ilike('email', user.email)
       .maybeSingle();
     isAdmin = data?.role === 'ADMIN';
   }

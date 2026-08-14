@@ -12,6 +12,7 @@ interface IncomingBook {
   page?: string;
   price?: string;
   pubDate?: string;
+  volume?: string;
   category: string;
   authorCode: string;
   donorName: string;
@@ -71,7 +72,7 @@ async function requireAdmin() {
   const { data: profile } = await supabaseServer
     .from('users')
     .select('role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (profile?.role !== 'ADMIN') {
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
   const { data: profile } = await supabaseServer
     .from('users')
     .select('role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (profile?.role !== 'ADMIN') {
@@ -237,6 +238,7 @@ export async function POST(request: Request) {
           page: book.page || null,
           price: book.price || null,
           pub_date: book.pubDate || null,
+          volume: book.volume || null,
           category_code: book.category || null,
           author_code: book.authorCode?.trim() || null,
         })
