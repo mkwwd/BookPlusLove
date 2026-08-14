@@ -3,7 +3,7 @@ import { extractAuthorName } from '@/lib/author';
 const ALADIN_URL = 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx';
 const NL_SEOJI_URL = 'https://www.nl.go.kr/seoji/SearchApi.do';
 
-interface BookResult {
+export interface BookResult {
   isbn: string;
   title: string;
   author: string;
@@ -13,6 +13,7 @@ interface BookResult {
   page?: string;
   price?: string;
   pubDate?: string;
+  volume?: string;
 }
 
 interface AladinItem {
@@ -36,6 +37,8 @@ interface SeojiDoc {
   PRE_PRICE?: string;
   PUBLISH_PREDATE?: string;
   REAL_PUBLISH_DATE?: string;
+  VOL?: string;
+  SERIES_NO?: string;
 }
 
 // 알라딘은 "2017-03-31", 국립중앙도서관은 "20170331" 형태로 준다.
@@ -120,6 +123,7 @@ async function lookupFromNationalLibrary(
       pubDate:
         formatPubDate(doc.PUBLISH_PREDATE) ??
         formatPubDate(doc.REAL_PUBLISH_DATE),
+      volume: doc.VOL?.trim() || doc.SERIES_NO?.trim() || undefined,
     };
   } catch {
     return null;
@@ -140,17 +144,18 @@ export async function GET(request: Request) {
     );
   }
 
-  // 알라딘(상업 서점)이 표지/줄거리가 더 잘 채워져 있어 먼저 조회하고,
-  // 소규모/절판 도서라 알라딘에 없으면 국립중앙도서관 서지 데이터로 보완한다.
-  const result =
-    (await lookupFromAladin(isbn)) ?? (await lookupFromNationalLibrary(isbn));
+  // 둘 다 조회해서 관리자가 화면에서 비교하고 항목별로 고를 수 있게 한다.
+  const [aladin, nationalLibrary] = await Promise.all([
+    lookupFromAladin(isbn),
+    lookupFromNationalLibrary(isbn),
+  ]);
 
-  if (!result) {
+  if (!aladin && !nationalLibrary) {
     return Response.json(
       { error: '등록된 서지정보를 찾을 수 없습니다.' },
       { status: 404 },
     );
   }
 
-  return Response.json(result);
+  return Response.json({ aladin, nationalLibrary });
 }

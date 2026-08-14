@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import * as XLSX from 'xlsx';
 
 import { generateAuthorCode } from '@/lib/authorCode';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
@@ -24,44 +25,59 @@ import ManualBookEntryForm, {
 
 type Method = 'manual' | 'excel';
 
-const MOCK_EXCEL_SOURCE: Omit<
-  ScannedBook,
-  'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
->[] = [
-  {
-    isbn: '9791190090018',
-    title: '고백록',
-    author: '아우구스티노',
-    publisher: '분도출판사',
-  },
-  {
-    isbn: '9788934940042',
-    title: '사랑의 기술',
-    author: '에리히 프롬',
-    publisher: '문예출판사',
-  },
-  {
-    isbn: '9788937460081',
-    title: '작은 것들의 신',
-    author: '아룬다티 로이',
-    publisher: '문학동네',
-  },
-];
+// 열 순서(헤더 없음): (미사용), (미사용), 등록번호, 제목, 분류코드, 저자기호,
+// 권차, 저자, 출판사, 출판일, 정가, ISBN, 기증자명, (미사용), (미사용)
+function excelCell(row: string[], index: number): string {
+  return (row[index] ?? '').trim();
+}
 
-function toScannedBook(
-  book: Omit<
-    ScannedBook,
-    'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
-  >,
+function normalizeExcelRegNo(raw: string): string {
+  const match = raw.match(/(\d+)/);
+  if (!match) return '';
+  return `MB${match[1].slice(-6).padStart(6, '0')}`;
+}
+
+function normalizeExcelPrice(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, '');
+  return digits;
+}
+
+function normalizeExcelPubDate(raw: string): string {
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (!match) return raw;
+  const [, month, day, yy] = match;
+  const currentTwoDigitYear = new Date().getFullYear() % 100;
+  const yyyy =
+    Number(yy) <= currentTwoDigitYear ? 2000 + Number(yy) : 1900 + Number(yy);
+  return `${yyyy}년 ${Number(month)}월 ${Number(day)}일`;
+}
+
+function rowToScannedBook(
+  row: string[],
+  categories: BookCategory[],
 ): ScannedBook {
+  const author = excelCell(row, 7);
+  const title = excelCell(row, 3);
+  const rawCategoryCode = excelCell(row, 4);
+  const paddedCategoryCode = /^\d+$/.test(rawCategoryCode)
+    ? rawCategoryCode.padStart(3, '0')
+    : rawCategoryCode;
+  const matchedCategory = categories.find((c) => c.code === paddedCategoryCode);
+
   return {
-    ...book,
     id: crypto.randomUUID(),
-    category: '',
-    categoryMain: '',
-    authorCode: generateAuthorCode(book.author, book.title) ?? '',
-    donorName: '',
-    regNo: '',
+    isbn: excelCell(row, 11),
+    title,
+    author,
+    publisher: excelCell(row, 8),
+    price: normalizeExcelPrice(excelCell(row, 10)) || undefined,
+    pubDate: normalizeExcelPubDate(excelCell(row, 9)) || undefined,
+    volume: excelCell(row, 6) || undefined,
+    category: matchedCategory?.code ?? '',
+    categoryMain: matchedCategory?.main_code ?? '',
+    authorCode: excelCell(row, 5) || generateAuthorCode(author, title) || '',
+    donorName: excelCell(row, 12),
+    regNo: normalizeExcelRegNo(excelCell(row, 2)),
   };
 }
 
@@ -69,21 +85,25 @@ function ScannedBookTable({
   books,
   categories,
   onRemove,
+  onTitleChange,
   onCategoryMainChange,
   onCategoryChange,
   onAuthorCodeChange,
   onDonorNameChange,
   onRegNoChange,
+  onVolumeChange,
   emptyText,
 }: {
   books: ScannedBook[];
   categories: BookCategory[];
   onRemove: (id: string) => void;
+  onTitleChange: (id: string, title: string) => void;
   onCategoryMainChange: (id: string, mainCode: string) => void;
   onCategoryChange: (id: string, category: string) => void;
   onAuthorCodeChange: (id: string, authorCode: string) => void;
   onDonorNameChange: (id: string, donorName: string) => void;
   onRegNoChange: (id: string, regNo: string) => void;
+  onVolumeChange: (id: string, volume: string) => void;
   emptyText: string;
 }) {
   const mainOptions = Array.from(
@@ -127,6 +147,7 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">분류코드</th>
               <th className="px-5 py-3 font-medium">저자기호</th>
+              <th className="px-5 py-3 font-medium">권차</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
               <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
@@ -135,7 +156,7 @@ function ScannedBookTable({
             {books.length === 0 ? (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   className="px-5 py-8 text-center text-amber-900/50">
                   {emptyText}
                 </td>
@@ -164,7 +185,19 @@ function ScannedBookTable({
                         <div className="h-14 w-10 rounded-sm bg-amber-100" />
                       )}
                     </td>
-                    <td className="px-5 py-3 text-amber-950">{book.title}</td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.title}
+                        onChange={(e) => onTitleChange(book.id, e.target.value)}
+                        placeholder="제목 입력 필요"
+                        className={`w-40 rounded border bg-white/50 px-2 py-1.5 text-sm placeholder:text-red-400 focus:ring-2 focus:outline-none ${
+                          book.title.trim() === ''
+                            ? 'border-red-400 focus:ring-red-300'
+                            : 'border-amber-900/20 focus:ring-amber-900/30'
+                        }`}
+                      />
+                    </td>
                     <td className="px-5 py-3 text-amber-800">{book.author}</td>
                     <td className="px-5 py-3 text-amber-800">
                       {book.publisher}
@@ -269,6 +302,17 @@ function ScannedBookTable({
                     <td className="px-5 py-3">
                       <input
                         type="text"
+                        value={book.volume ?? ''}
+                        onChange={(e) =>
+                          onVolumeChange(book.id, e.target.value)
+                        }
+                        placeholder="선택"
+                        className="w-16 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
                         value={book.donorName}
                         onChange={(e) =>
                           onDonorNameChange(book.id, e.target.value)
@@ -331,14 +375,36 @@ function BookRegisterContent() {
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [excelParseError, setExcelParseError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
-    // TODO: parse the actual file once bulk upload is wired to Supabase;
-    // this is a placeholder preview so the flow can be reviewed as UI.
-    setEntries((prev) => [...prev, ...MOCK_EXCEL_SOURCE.map(toScannedBook)]);
+    setExcelParseError(null);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+
+      const parsedBooks = rows
+        .filter((row) => row.some((cell) => String(cell ?? '').trim() !== ''))
+        .map((row) => rowToScannedBook(row, categories));
+
+      setEntries((prev) => [...prev, ...parsedBooks]);
+    } catch {
+      setExcelParseError(
+        '엑셀 파일을 읽는 데 실패했습니다. 파일 형식을 확인해주세요.',
+      );
+    }
     setJustSubmitted(false);
+    e.target.value = '';
   };
 
   const [submitResult, setSubmitResult] = useState<{
@@ -438,6 +504,8 @@ function BookRegisterContent() {
     return !isValidRegNo(trimmed) || isDuplicate;
   });
 
+  const hasEmptyTitle = entries.some((book) => book.title.trim() === '');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -534,13 +602,21 @@ function BookRegisterContent() {
             className="block w-full text-base text-amber-950 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
           />
           <p className="mt-2 text-sm text-amber-800">
-            열 순서: 제목, 저자, 출판사, ISBN, 카테고리, 수량
+            열 순서(헤더 없이): (미사용), (미사용), 등록번호, 제목, 분류코드,
+            저자기호, 권차, 저자, 출판사, 출판일, 정가, ISBN, 기증자명
           </p>
           {fileName && (
             <p className="mt-2 text-sm text-amber-950">
               선택된 파일: {fileName}
             </p>
           )}
+          {excelParseError && (
+            <p className="mt-2 text-sm text-red-600">{excelParseError}</p>
+          )}
+          <p className="mt-2 text-sm text-amber-800">
+            제목이 비어있거나 분류코드가 일치하지 않는 항목은 아래 표에서
+            빨간색으로 표시되니, 표에서 직접 입력해 채워주세요.
+          </p>
         </div>
       )}
 
@@ -556,6 +632,7 @@ function BookRegisterContent() {
             return prev.filter((b) => b.id !== id);
           })
         }
+        onTitleChange={(id, title) => updateEntry(id, { title })}
         onCategoryMainChange={(id, mainCode) =>
           updateEntry(id, { categoryMain: mainCode, category: '' })
         }
@@ -565,6 +642,7 @@ function BookRegisterContent() {
           updateEntry(id, { donorName, donorUserId: null })
         }
         onRegNoChange={(id, regNo) => updateEntry(id, { regNo })}
+        onVolumeChange={(id, volume) => updateEntry(id, { volume })}
         emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
       />
 
@@ -574,10 +652,21 @@ function BookRegisterContent() {
           표시된 등록번호를 확인해주세요.
         </p>
       )}
+      {hasEmptyTitle && (
+        <p className="text-sm text-red-600">
+          제목이 비어있는 항목이 있습니다. 표에서 빨간색으로 표시된 제목 칸을
+          채워주세요.
+        </p>
+      )}
 
       <button
         type="button"
-        disabled={entries.length === 0 || hasInvalidRegNo || isSubmitting}
+        disabled={
+          entries.length === 0 ||
+          hasInvalidRegNo ||
+          hasEmptyTitle ||
+          isSubmitting
+        }
         onClick={handleSubmit}
         className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {isSubmitting
