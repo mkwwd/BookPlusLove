@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Barcode, ScanLine } from 'lucide-react';
+import { Barcode, ScanLine, X } from 'lucide-react';
 
 import Modal from '@/components/Modal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
-import { isValidIsbn13 } from '@/lib/isbn';
+import { isValidIsbn, isValidIsbn13 } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 
 import CameraScanner from './CameraScanner';
@@ -66,6 +66,7 @@ interface LookupBookResult {
   price?: string;
   pubDate?: string;
   volume?: string;
+  aladinItemId?: number;
 }
 
 interface IsbnLookupResponse {
@@ -86,6 +87,7 @@ export interface ScannedBook {
   price?: string;
   pubDate?: string;
   volume?: string;
+  aladinItemId?: number;
   category: string;
   categoryMain: string;
   authorCode: string;
@@ -141,6 +143,9 @@ export default function ManualBookEntryForm({
   const [manualPrice, setManualPrice] = useState('');
   const [manualPubDate, setManualPubDate] = useState('');
   const [manualVolume, setManualVolume] = useState('');
+  const [manualAladinItemId, setManualAladinItemId] = useState<number | null>(
+    null,
+  );
   const [manualCoverUrl, setManualCoverUrl] = useState('');
   const [manualCoverFile, setManualCoverFile] = useState<File | null>(null);
   const [manualCoverPreview, setManualCoverPreview] = useState('');
@@ -266,6 +271,14 @@ export default function ManualBookEntryForm({
     if (fieldSelection.title !== 'none' || fieldSelection.author !== 'none') {
       setManualAuthorCode(generateAuthorCode(author, title) ?? '');
     }
+    // 알라딘 오픈API 약관상, 알라딘에서 가져온 항목이 하나라도 있으면
+    // 상품페이지 링크를 표시해야 해서 itemId를 같이 들고 있는다.
+    const usedAladin = Object.values(fieldSelection).some(
+      (source) => source === 'aladin',
+    );
+    if (usedAladin) {
+      setManualAladinItemId(lookupPreview.aladin?.aladinItemId ?? null);
+    }
     setLookupPreview(null);
   };
 
@@ -289,7 +302,7 @@ export default function ManualBookEntryForm({
     if (!isbn || isManualLookingUp) return;
     if (scannedIsbn) setManualIsbn(scannedIsbn);
 
-    if (!isValidIsbn13(isbn)) {
+    if (!isValidIsbn(isbn)) {
       setManualIsbnError(`"${isbn}"은(는) ISBN 형식이 아닙니다.`);
       return;
     }
@@ -310,6 +323,7 @@ export default function ManualBookEntryForm({
       price: manualPrice.trim() || undefined,
       pubDate: manualPubDate.trim() || undefined,
       volume: manualVolume.trim() || undefined,
+      aladinItemId: manualAladinItemId ?? undefined,
       // 실제 업로드 전이라 blob 미리보기 URL을 임시로 들고 있다가,
       // 실제 등록 시점에 실제 URL로 교체한다.
       coverUrl: manualCoverPreview || manualCoverUrl.trim() || undefined,
@@ -334,6 +348,7 @@ export default function ManualBookEntryForm({
     setManualPrice('');
     setManualPubDate('');
     setManualVolume('');
+    setManualAladinItemId(null);
     setManualCoverUrl('');
     // blob 미리보기는 revoke하지 않는다 — 방금 만든 항목이 그 URL을
     // 계속 표시용으로 쓰고 있어서, 여기서 지우면 표에서 깨져 보인다.
@@ -766,7 +781,7 @@ export default function ManualBookEntryForm({
                 <p className="mb-2 text-sm font-medium text-amber-950">
                   {LOOKUP_FIELD_LABELS[key]}
                 </p>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="flex gap-2">
                   {(['aladin', 'nationalLibrary'] as LookupSource[]).map(
                     (source) => {
                       const value = lookupPreview[source]?.[key];
@@ -774,7 +789,7 @@ export default function ManualBookEntryForm({
                         return (
                           <div
                             key={source}
-                            className="rounded border border-dashed border-amber-900/15 p-2 text-xs text-amber-900/40">
+                            className="min-w-0 flex-1 rounded border border-dashed border-amber-900/15 p-2 text-xs text-amber-900/40">
                             {LOOKUP_SOURCE_LABELS[source]}: 정보 없음
                           </div>
                         );
@@ -783,7 +798,7 @@ export default function ManualBookEntryForm({
                       return (
                         <label
                           key={source}
-                          className={`flex cursor-pointer items-start gap-2 rounded border p-2 ${
+                          className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
                             isSelected
                               ? 'border-red-900 bg-red-50'
                               : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
@@ -822,7 +837,8 @@ export default function ManualBookEntryForm({
                     },
                   )}
                   <label
-                    className={`flex cursor-pointer items-center justify-center rounded border p-2 text-sm font-medium ${
+                    aria-label="가져오지 않음"
+                    className={`flex w-9 shrink-0 cursor-pointer items-center justify-center rounded border p-2 ${
                       fieldSelection[key] === 'none'
                         ? 'border-red-900 bg-red-50 text-red-800'
                         : 'border-amber-900/20 bg-white/50 text-amber-700 hover:bg-amber-50'
@@ -839,7 +855,7 @@ export default function ManualBookEntryForm({
                       }
                       className="sr-only"
                     />
-                    가져오지 않음
+                    <X className="h-4 w-4" />
                   </label>
                 </div>
               </div>

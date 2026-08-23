@@ -13,6 +13,7 @@ interface IncomingBook {
   price?: string;
   pubDate?: string;
   volume?: string;
+  aladinItemId?: number;
   category: string;
   authorCode: string;
   donorName: string;
@@ -239,6 +240,7 @@ export async function POST(request: Request) {
           price: book.price || null,
           pub_date: book.pubDate || null,
           volume: book.volume || null,
+          aladin_item_id: book.aladinItemId ?? null,
           category_code: book.category || null,
           author_code: book.authorCode?.trim() || null,
         })

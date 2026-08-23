@@ -30,6 +30,7 @@ interface BookRow {
   pub_date: string | null;
   category_code: string | null;
   author_code: string | null;
+  aladin_item_id: number | null;
   book_categories: BookCategoryRow | BookCategoryRow[] | null;
   book_copies: BookCopyRow[] | null;
 }
@@ -48,6 +49,7 @@ interface BookDetail {
   categoryCode: string | null;
   authorCode: string | null;
   categoryLabel: string | null;
+  aladinItemId: number | null;
   copies: BookCopyRow[];
 }
 
@@ -55,7 +57,7 @@ async function getBook(id: number): Promise<BookDetail | null> {
   const { data } = await supabaseServer
     .from('books')
     .select(
-      `id, isbn, title, author, publisher, cover_url, description, page, price, pub_date, category_code, author_code,
+      `id, isbn, title, author, publisher, cover_url, description, page, price, pub_date, category_code, author_code, aladin_item_id,
       book_categories(label, main_code, main_label),
       book_copies(id, reg_no, status)`,
     )
@@ -86,6 +88,7 @@ async function getBook(id: number): Promise<BookDetail | null> {
     categoryLabel: category
       ? `${category.main_label} > ${category.label}`
       : null,
+    aladinItemId: data.aladin_item_id,
     copies: data.book_copies ?? [],
   };
 }
@@ -198,6 +201,19 @@ export default async function BookDetailPage({
               {book.description && (
                 <p className="mt-6 leading-7 whitespace-pre-line text-amber-950/80">
                   {book.description}
+                </p>
+              )}
+
+              {book.aladinItemId && (
+                <p className="mt-4 text-sm text-amber-900/50">
+                  정보제공: 알라딘 ·{' '}
+                  <a
+                    href={`https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${book.aladinItemId}&partner=openAPI`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-amber-900/80">
+                    상품 페이지 보기
+                  </a>
                 </p>
               )}
             </div>
