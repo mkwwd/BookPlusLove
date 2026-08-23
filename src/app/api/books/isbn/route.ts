@@ -1,9 +1,10 @@
 import { extractAuthorName } from '@/lib/author';
+import { convertIsbn10To13 } from '@/lib/isbn';
 
 const ALADIN_URL = 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx';
 const NL_SEOJI_URL = 'https://www.nl.go.kr/seoji/SearchApi.do';
 
-interface BookResult {
+export interface BookResult {
   isbn: string;
   title: string;
   author: string;
@@ -13,9 +14,12 @@ interface BookResult {
   page?: string;
   price?: string;
   pubDate?: string;
+  volume?: string;
+  aladinItemId?: number;
 }
 
 interface AladinItem {
+  itemId?: number;
   isbn13?: string;
   title?: string;
   author?: string;
@@ -36,6 +40,9 @@ interface SeojiDoc {
   PRE_PRICE?: string;
   PUBLISH_PREDATE?: string;
   REAL_PUBLISH_DATE?: string;
+  VOL?: string;
+  SERIES_NO?: string;
+  BOOK_INTRODUCTION?: string;
 }
 
 // 알라딘은 "2017-03-31", 국립중앙도서관은 "20170331" 형태로 준다.
@@ -49,13 +56,16 @@ function formatPubDate(raw?: string): string | undefined {
   return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 }
 
-async function lookupFromAladin(isbn: string): Promise<BookResult | null> {
+async function lookupFromAladin(
+  isbn: string,
+  itemIdType: 'ISBN' | 'ISBN13',
+): Promise<BookResult | null> {
   const ttbKey = process.env.ALADIN_TTB_KEY;
   if (!ttbKey) return null;
 
   const apiUrl = new URL(ALADIN_URL);
   apiUrl.searchParams.set('ttbkey', ttbKey);
-  apiUrl.searchParams.set('itemIdType', 'ISBN13');
+  apiUrl.searchParams.set('itemIdType', itemIdType);
   apiUrl.searchParams.set('ItemId', isbn);
   apiUrl.searchParams.set('output', 'js');
   apiUrl.searchParams.set('Version', '20131101');
@@ -82,6 +92,7 @@ async function lookupFromAladin(isbn: string): Promise<BookResult | null> {
       description: item.description?.trim() || undefined,
       price: item.priceStandard ? String(item.priceStandard) : undefined,
       pubDate: formatPubDate(item.pubDate),
+      aladinItemId: item.itemId,
     };
   } catch {
     return null;
@@ -115,11 +126,13 @@ async function lookupFromNationalLibrary(
       author: doc.AUTHOR?.trim() ? extractAuthorName(doc.AUTHOR.trim()) : '',
       publisher: doc.PUBLISHER?.trim() || '',
       coverUrl: doc.TITLE_URL?.trim() || undefined,
+      description: doc.BOOK_INTRODUCTION?.trim() || undefined,
       page: doc.PAGE?.trim() || undefined,
       price: doc.PRE_PRICE?.trim() || undefined,
       pubDate:
         formatPubDate(doc.PUBLISH_PREDATE) ??
         formatPubDate(doc.REAL_PUBLISH_DATE),
+      volume: doc.VOL?.trim() || doc.SERIES_NO?.trim() || undefined,
     };
   } catch {
     return null;
@@ -127,9 +140,9 @@ async function lookupFromNationalLibrary(
 }
 
 export async function GET(request: Request) {
-  const isbn = new URL(request.url).searchParams.get('isbn')?.trim();
+  const rawIsbn = new URL(request.url).searchParams.get('isbn')?.trim();
 
-  if (!isbn) {
+  if (!rawIsbn) {
     return Response.json({ error: 'ISBN을 입력해주세요.' }, { status: 400 });
   }
 
@@ -140,17 +153,26 @@ export async function GET(request: Request) {
     );
   }
 
-  // 알라딘(상업 서점)이 표지/줄거리가 더 잘 채워져 있어 먼저 조회하고,
-  // 소규모/절판 도서라 알라딘에 없으면 국립중앙도서관 서지 데이터로 보완한다.
-  const result =
-    (await lookupFromAladin(isbn)) ?? (await lookupFromNationalLibrary(isbn));
+  // 2007년 이전 도서는 10자리 ISBN만 있는 경우가 많다. 알라딘은 10자리를
+  // 그대로 조회할 수 있고, 국립중앙도서관은 13자리로 변환해서 조회한다.
+  const cleaned = rawIsbn.replace(/[^0-9Xx]/g, '').toUpperCase();
+  const isTenDigit = cleaned.length === 10;
+  const aladinQuery = cleaned;
+  const aladinType: 'ISBN' | 'ISBN13' = isTenDigit ? 'ISBN' : 'ISBN13';
+  const isbn13 = isTenDigit ? convertIsbn10To13(cleaned) : cleaned;
 
-  if (!result) {
+  // 둘 다 조회해서 관리자가 화면에서 비교하고 항목별로 고를 수 있게 한다.
+  const [aladin, nationalLibrary] = await Promise.all([
+    lookupFromAladin(aladinQuery, aladinType),
+    lookupFromNationalLibrary(isbn13),
+  ]);
+
+  if (!aladin && !nationalLibrary) {
     return Response.json(
       { error: '등록된 서지정보를 찾을 수 없습니다.' },
       { status: 404 },
     );
   }
 
-  return Response.json(result);
+  return Response.json({ aladin, nationalLibrary });
 }

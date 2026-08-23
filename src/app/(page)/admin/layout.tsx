@@ -25,7 +25,7 @@ export default async function AdminLayout({
   const { data } = await supabaseServer
     .from('users')
     .select('role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (data?.role !== 'ADMIN') {

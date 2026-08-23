@@ -9,7 +9,8 @@ export async function POST(request: Request) {
 
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   const phone = typeof body?.phone === 'string' ? body.phone.trim() : '';
-  const email = typeof body?.email === 'string' ? body.email.trim() : '';
+  const email =
+    typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
   const userId = typeof body?.userId === 'string' ? body.userId : '';
   const password = typeof body?.password === 'string' ? body.password : '';
   const birthdate = typeof body?.birthdate === 'string' ? body.birthdate : '';
