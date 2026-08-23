@@ -9,29 +9,15 @@ import EmailFields from '@/components/EmailFields';
 import ParishSearchModal, {
   SelectedParish,
 } from '@/components/ParishSearchModal';
+import {
+  BIRTH_MONTHS,
+  BIRTH_YEARS,
+  formatBirthdate,
+  getDaysInMonth,
+} from '@/lib/birthdate';
+import { EMAIL_REGEX, formatPhoneNumber, PHONE_REGEX } from '@/lib/validation';
 
-const PHONE_REGEX = /^01[0-9]-?\d{3,4}-?\d{4}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SPECIAL_CHAR_REGEX = /[^a-zA-Z0-9]/;
-
-const CURRENT_YEAR = new Date().getFullYear();
-const BIRTH_YEARS = Array.from({ length: 111 }, (_, i) => CURRENT_YEAR - i);
-const BIRTH_MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-
-function getDaysInMonth(year: string, month: string) {
-  if (!year || !month) return 31;
-  return new Date(Number(year), Number(month), 0).getDate();
-}
-
-function formatPhoneNumber(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  if (digits.length <= 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
 
 interface FormErrors {
   name?: string;
@@ -79,10 +65,7 @@ export default function MemberRegisterForm({
   const [errors, setErrors] = useState<FormErrors>({});
 
   const email = `${emailId}@${emailDomain}`;
-  const birthdate =
-    birthYear && birthMonth && birthDay
-      ? `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`
-      : '';
+  const birthdate = formatBirthdate(birthYear, birthMonth, birthDay);
   const daysInSelectedMonth = getDaysInMonth(birthYear, birthMonth);
 
   const validateUserIdValue = (value: string) => {
@@ -122,10 +105,13 @@ export default function MemberRegisterForm({
       nextErrors.phone = '올바른 핸드폰번호 형식이 아닙니다';
     }
 
-    if (!emailId.trim() || !emailDomain.trim()) {
-      nextErrors.email = '이메일을 입력해주세요';
-    } else if (!EMAIL_REGEX.test(email.trim())) {
-      nextErrors.email = '올바른 이메일 형식이 아닙니다';
+    const emailStarted = emailId.trim() || emailDomain.trim();
+    if (emailStarted) {
+      if (!emailId.trim() || !emailDomain.trim()) {
+        nextErrors.email = '이메일을 마저 입력해주세요';
+      } else if (!EMAIL_REGEX.test(email.trim())) {
+        nextErrors.email = '올바른 이메일 형식이 아닙니다';
+      }
     }
 
     nextErrors.userId = validateUserIdValue(userId);
@@ -138,8 +124,9 @@ export default function MemberRegisterForm({
       passwordConfirm,
     );
 
-    if (!birthYear || !birthMonth || !birthDay) {
-      nextErrors.birthdate = '생년월일을 입력해주세요';
+    const birthdateStarted = birthYear || birthMonth || birthDay;
+    if (birthdateStarted && (!birthYear || !birthMonth || !birthDay)) {
+      nextErrors.birthdate = '생년월일을 마저 입력해주세요';
     }
 
     return nextErrors;
@@ -175,7 +162,7 @@ export default function MemberRegisterForm({
         body: JSON.stringify({
           name,
           phone,
-          email,
+          email: emailId.trim() && emailDomain.trim() ? email : '',
           userId,
           password,
           birthdate,
@@ -237,7 +224,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-950">
-            이메일 <span className="text-red-600">*</span>
+            이메일
           </label>
           <EmailFields
             emailId={emailId}
@@ -245,6 +232,10 @@ export default function MemberRegisterForm({
             onEmailIdChange={setEmailId}
             onEmailDomainChange={setEmailDomain}
           />
+          <p className="mt-1.5 text-sm text-amber-800">
+            입력해두시면 나중에 비밀번호를 잊어버렸을 때 이메일로 재설정할 수
+            있어요. 입력하지 않으면 관리자에게 문의해서 재설정해야 해요.
+          </p>
           {errors.email && (
             <p className="mt-1 text-sm text-red-600">{errors.email}</p>
           )}
@@ -377,7 +368,7 @@ export default function MemberRegisterForm({
 
         <div>
           <label className="mb-2 block text-base font-medium text-amber-950">
-            생년월일 <span className="text-red-600">*</span>
+            생년월일{' '}
           </label>
           <div className="flex gap-2">
             <select
