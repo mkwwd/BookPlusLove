@@ -72,6 +72,7 @@ body {
 }
 
 .scrollbar-visible::-webkit-scrollbar {
+  width: 36px;
   height: 12px;
 }
 

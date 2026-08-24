@@ -36,6 +36,17 @@ export function isValidIsbn(value: string): boolean {
   return isValidIsbn13(value) || isValidIsbn10(value);
 }
 
+// 조회(검색) 목적으로는 체크섬까지 맞을 필요 없다 — 옛날 장서 데이터엔
+// 오타로 체크섬이 안 맞는 ISBN이 많아서, 자릿수만 맞으면 일단 API 조회를
+// 시도해보고 결과가 없으면 그때 안내하는 게 낫다. 체크섬 검증
+// (isValidIsbn13/10)은 카메라 바코드 스캔에서 노이즈를 거를 때만 쓴다.
+export function looksLikeIsbn(value: string): boolean {
+  const cleaned = value.replace(/[^0-9Xx]/g, '').toUpperCase();
+  if (cleaned.length === 13) return /^\d{13}$/.test(cleaned);
+  if (cleaned.length === 10) return /^\d{9}[0-9X]$/.test(cleaned);
+  return false;
+}
+
 // 10자리 -> 13자리 표준 변환: 앞 9자리 숫자에 "978"을 붙이고 체크숫자를
 // 다시 계산한다 (마지막 체크숫자는 버림).
 export function convertIsbn10To13(value: string): string {
