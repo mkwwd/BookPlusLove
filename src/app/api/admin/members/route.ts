@@ -32,7 +32,7 @@ export async function GET() {
   const { data: profile } = await supabaseServer
     .from('users')
     .select('role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (profile?.role !== 'ADMIN') {

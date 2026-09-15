@@ -1,17 +1,32 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Plus, Search, SquarePen, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 
+import IsbnCompareModal, {
+  fetchIsbnLookup,
+  type IsbnLookupResponse,
+  type LookupFieldKey,
+} from '@/components/IsbnCompareModal';
 import Modal from '@/components/Modal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
-import { isValidIsbn13 } from '@/lib/isbn';
+import { looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
+
+const LOOKUP_FIELDS: LookupFieldKey[] = [
+  'title',
+  'author',
+  'publisher',
+  'page',
+  'price',
+  'pubDate',
+  'coverUrl',
+];
 
 const STATUS_STYLE: Record<string, string> = {
   대여가능: 'bg-green-100 text-green-800',
@@ -22,6 +37,9 @@ const STATUS_STYLE: Record<string, string> = {
 
 const STATUS_OPTIONS = ['대여가능', '대여중', '분실', '폐기'];
 const PAGE_SIZE = 50;
+
+// globals.css의 .scrollbar-visible 세로 스크롤바 두께와 맞춰야 한다.
+const SCROLLBAR_WIDTH = 36;
 
 interface BookCategory {
   code: string;
@@ -47,6 +65,7 @@ interface BookRow {
   pubDate: string | null;
   authorCode: string | null;
   isRecommended: boolean;
+  aladinItemId: number | null;
   categoryCode: string | null;
   categoryMain: string | null;
   categoryLabel: string | null;
@@ -83,11 +102,57 @@ function EditBookForm({
   const [regNo, setRegNo] = useState(book.regNo);
   const [status, setStatus] = useState(book.status);
   const [isRecommended, setIsRecommended] = useState(book.isRecommended);
+  const [aladinItemId, setAladinItemId] = useState(book.aladinItemId);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [isbnLookupError, setIsbnLookupError] = useState<string | null>(null);
+  const [lookupResult, setLookupResult] = useState<IsbnLookupResponse | null>(
+    null,
+  );
 
   const mainOptions = Array.from(
     new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
   );
+
+  const { mutate: lookupIsbn, isPending: isLookingUpIsbn } = useMutation({
+    mutationFn: fetchIsbnLookup,
+    onSuccess: (result) => setLookupResult(result),
+    onError: (err: Error) => setIsbnLookupError(err.message),
+  });
+
+  const handleIsbnLookup = () => {
+    const trimmed = isbn.trim();
+    if (!trimmed || isLookingUpIsbn) return;
+    if (!looksLikeIsbn(trimmed)) {
+      setIsbnLookupError(`"${trimmed}"은(는) ISBN 형식이 아닙니다.`);
+      return;
+    }
+    setIsbnLookupError(null);
+    lookupIsbn(trimmed);
+  };
+
+  const handleApplyLookup = (
+    values: Partial<Record<LookupFieldKey, string>>,
+    aladinItemId?: number,
+  ) => {
+    if (values.title !== undefined) setTitle(values.title);
+    if (values.author !== undefined) setAuthor(values.author);
+    if (values.publisher !== undefined) setPublisher(values.publisher);
+    if (values.page !== undefined) setPage(values.page);
+    if (values.price !== undefined) setPrice(values.price);
+    if (values.pubDate !== undefined) setPubDate(values.pubDate);
+    if (values.coverUrl !== undefined) {
+      setCoverUrl(values.coverUrl);
+      if (coverFile) {
+        if (coverPreview) URL.revokeObjectURL(coverPreview);
+        setCoverFile(null);
+        setCoverPreview('');
+      }
+    }
+
+    if (aladinItemId !== undefined) setAladinItemId(aladinItemId);
+    setLookupResult(null);
+  };
 
   const {
     mutate: save,
@@ -130,6 +195,7 @@ function EditBookForm({
           regNo,
           status,
           isRecommended,
+          aladinItemId,
         }),
       });
       const body = await res.json();
@@ -156,7 +222,7 @@ function EditBookForm({
       setFormError('제목은 필수입니다.');
       return;
     }
-    if (isbn.trim() && !isValidIsbn13(isbn.trim())) {
+    if (isbn.trim() && !looksLikeIsbn(isbn.trim())) {
       setFormError('ISBN 형식이 올바르지 않습니다.');
       return;
     }
@@ -208,12 +274,27 @@ function EditBookForm({
           <label className="mb-1.5 block text-base font-medium text-amber-950">
             ISBN
           </label>
-          <input
-            type="text"
-            value={isbn}
-            onChange={(e) => setIsbn(e.target.value)}
-            className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 font-mono text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={isbn}
+              onChange={(e) => {
+                setIsbn(e.target.value);
+                setIsbnLookupError(null);
+              }}
+              className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 font-mono text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={isLookingUpIsbn}
+              onClick={handleIsbnLookup}
+              className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-4 py-2.5 text-base whitespace-nowrap text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
+              {isLookingUpIsbn ? '조회 중...' : '조회'}
+            </button>
+          </div>
+          {isbnLookupError && (
+            <p className="mt-1.5 text-sm text-red-600">{isbnLookupError}</p>
+          )}
         </div>
         <div>
           <label className="mb-1.5 block text-base font-medium text-amber-950">
@@ -457,6 +538,24 @@ function EditBookForm({
           {isSaving ? '저장 중...' : '저장'}
         </button>
       </div>
+
+      {lookupResult && (
+        <IsbnCompareModal
+          result={lookupResult}
+          fields={LOOKUP_FIELDS}
+          currentValues={{
+            title,
+            author,
+            publisher,
+            page,
+            price,
+            pubDate,
+            coverUrl: coverPreview || coverUrl,
+          }}
+          onApply={handleApplyLookup}
+          onClose={() => setLookupResult(null)}
+        />
+      )}
     </div>
   );
 }
@@ -469,15 +568,26 @@ export default function AdminBooksPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  useEffect(() => {
     const el = scrollRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth) return;
-    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게)
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      el.scrollLeft += e.deltaY;
-      e.preventDefault();
-    }
-  };
+    if (!el) return;
+    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게).
+    // React의 onWheel은 패시브 리스너로 붙어서 preventDefault가 무시되니,
+    // 직접 { passive: false }로 등록해야 실제로 페이지 스크롤이 막힌다.
+    const handleWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      // 세로 스크롤바(오른쪽 끝, globals.css 두께와 맞춤) 위에서는 원래
+      // 세로 스크롤 동작을 그대로 둔다.
+      const rect = el.getBoundingClientRect();
+      if (e.clientX >= rect.right - SCROLLBAR_WIDTH) return;
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
 
   const { data: books = [], isLoading } = useQuery({
     queryKey: ['admin-books'],
@@ -542,6 +652,7 @@ export default function AdminBooksPage() {
           regNo: book.regNo,
           status: book.status,
           isRecommended: false,
+          aladinItemId: book.aladinItemId,
         }),
       });
       const body = await res.json();
@@ -715,14 +826,14 @@ export default function AdminBooksPage() {
       {activeTab === 'all' && pagedBooks.length > 0 && (
         <p className="text-sm text-amber-800">
           → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
+          <br />→ 세로 스크롤바 위에서 휠을 돌리면 아래로 스크롤돼요.
         </p>
       )}
       {activeTab === 'all' && (
         <>
           <div
             ref={scrollRef}
-            onWheel={handleWheel}
-            className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
+            className="scrollbar-visible max-h-[70vh] max-w-full overflow-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
             <table className="w-full min-w-max text-left text-base whitespace-nowrap">
               <thead className="border-b border-amber-900/20 text-amber-800">
                 <tr>

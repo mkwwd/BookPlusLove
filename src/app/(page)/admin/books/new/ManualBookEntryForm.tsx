@@ -5,12 +5,29 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Barcode, ScanLine } from 'lucide-react';
 
+import IsbnCompareModal, {
+  fetchIsbnLookup,
+  type IsbnLookupResponse,
+  type LookupFieldKey,
+} from '@/components/IsbnCompareModal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
-import { isValidIsbn13 } from '@/lib/isbn';
+import { isValidIsbn13, looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 
 import CameraScanner from './CameraScanner';
+
+const LOOKUP_FIELDS: LookupFieldKey[] = [
+  'title',
+  'author',
+  'publisher',
+  'page',
+  'price',
+  'pubDate',
+  'volume',
+  'coverUrl',
+  'description',
+];
 
 export interface ScannedBook {
   id: string;
@@ -24,6 +41,9 @@ export interface ScannedBook {
   page?: string;
   price?: string;
   pubDate?: string;
+  volume?: string;
+  seriesTitle?: string;
+  aladinItemId?: number;
   category: string;
   categoryMain: string;
   authorCode: string;
@@ -43,15 +63,6 @@ export interface BookCategory {
   label: string;
   main_code: string;
   main_label: string;
-}
-
-async function fetchIsbnLookup(isbn: string): Promise<ScannedBook> {
-  const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(isbn)}`);
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
-  }
-  return body as ScannedBook;
 }
 
 export default function ManualBookEntryForm({
@@ -78,6 +89,10 @@ export default function ManualBookEntryForm({
   const [manualPage, setManualPage] = useState('');
   const [manualPrice, setManualPrice] = useState('');
   const [manualPubDate, setManualPubDate] = useState('');
+  const [manualVolume, setManualVolume] = useState('');
+  const [manualAladinItemId, setManualAladinItemId] = useState<number | null>(
+    null,
+  );
   const [manualCoverUrl, setManualCoverUrl] = useState('');
   const [manualCoverFile, setManualCoverFile] = useState<File | null>(null);
   const [manualCoverPreview, setManualCoverPreview] = useState('');
@@ -96,6 +111,9 @@ export default function ManualBookEntryForm({
   const [donorSearchTerm, setDonorSearchTerm] = useState('');
   const [manualFormError, setManualFormError] = useState<string | null>(null);
   const [manualIsbnError, setManualIsbnError] = useState<string | null>(null);
+  const [lookupResult, setLookupResult] = useState<IsbnLookupResponse | null>(
+    null,
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -144,18 +162,34 @@ export default function ManualBookEntryForm({
     error: manualLookupError,
   } = useMutation({
     mutationFn: fetchIsbnLookup,
-    onSuccess: (book) => {
-      setManualTitle(book.title);
-      setManualAuthor(book.author);
-      setManualPublisher(book.publisher);
-      setManualPage(book.page ?? '');
-      setManualPrice(book.price ?? '');
-      setManualPubDate(book.pubDate ?? '');
-      setManualCoverUrl(book.coverUrl ?? '');
-      setManualDescription(book.description);
-      setManualAuthorCode(generateAuthorCode(book.author, book.title) ?? '');
-    },
+    onSuccess: (result) => setLookupResult(result),
   });
+
+  const handleApplyLookup = (
+    values: Partial<Record<LookupFieldKey, string>>,
+    aladinItemId?: number,
+  ) => {
+    const title = values.title ?? manualTitle;
+    const author = values.author ?? manualAuthor;
+
+    if (values.title !== undefined) setManualTitle(title);
+    if (values.author !== undefined) setManualAuthor(author);
+    if (values.publisher !== undefined) setManualPublisher(values.publisher);
+    if (values.page !== undefined) setManualPage(values.page);
+    if (values.price !== undefined) setManualPrice(values.price);
+    if (values.pubDate !== undefined) setManualPubDate(values.pubDate);
+    if (values.volume !== undefined) setManualVolume(values.volume);
+    if (values.coverUrl !== undefined) setManualCoverUrl(values.coverUrl);
+    if (values.description !== undefined)
+      setManualDescription(values.description);
+    if (values.title !== undefined || values.author !== undefined) {
+      setManualAuthorCode(generateAuthorCode(author, title) ?? '');
+    }
+    // 알라딘 오픈API 약관상, 알라딘에서 가져온 항목이 하나라도 있으면
+    // 상품페이지 링크를 표시해야 해서 itemId를 같이 들고 있는다.
+    if (aladinItemId !== undefined) setManualAladinItemId(aladinItemId);
+    setLookupResult(null);
+  };
 
   const applyCoverFile = (file: File) => {
     // 실제 업로드는 "등록하기"(진짜 DB 저장) 시점에만 한다. 여기서는
@@ -177,7 +211,7 @@ export default function ManualBookEntryForm({
     if (!isbn || isManualLookingUp) return;
     if (scannedIsbn) setManualIsbn(scannedIsbn);
 
-    if (!isValidIsbn13(isbn)) {
+    if (!looksLikeIsbn(isbn)) {
       setManualIsbnError(`"${isbn}"은(는) ISBN 형식이 아닙니다.`);
       return;
     }
@@ -197,6 +231,8 @@ export default function ManualBookEntryForm({
       page: manualPage.trim() || undefined,
       price: manualPrice.trim() || undefined,
       pubDate: manualPubDate.trim() || undefined,
+      volume: manualVolume.trim() || undefined,
+      aladinItemId: manualAladinItemId ?? undefined,
       // 실제 업로드 전이라 blob 미리보기 URL을 임시로 들고 있다가,
       // 실제 등록 시점에 실제 URL로 교체한다.
       coverUrl: manualCoverPreview || manualCoverUrl.trim() || undefined,
@@ -220,6 +256,8 @@ export default function ManualBookEntryForm({
     setManualPage('');
     setManualPrice('');
     setManualPubDate('');
+    setManualVolume('');
+    setManualAladinItemId(null);
     setManualCoverUrl('');
     // blob 미리보기는 revoke하지 않는다 — 방금 만든 항목이 그 URL을
     // 계속 표시용으로 쓰고 있어서, 여기서 지우면 표에서 깨져 보인다.
@@ -303,8 +341,8 @@ export default function ManualBookEntryForm({
           </button>
         </div>
         <p className="mt-1.5 text-sm text-amber-800">
-          조회하면 아래 제목/저자/출판사/페이지/정가가 자동으로 채워집니다.
-          채워진 내용은 계속 수정할 수 있어요.
+          조회하면 조회된 항목을 팝업으로 보여드려요. 가져올 항목만 골라서 채워
+          넣을 수 있어요.
         </p>
         {manualIsbnError && (
           <p className="mt-1.5 text-sm text-red-600">{manualIsbnError}</p>
@@ -411,6 +449,18 @@ export default function ManualBookEntryForm({
             value={manualPubDate}
             onChange={(e) => setManualPubDate(e.target.value)}
             placeholder="예: 2017년 3월 31일"
+            className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-base font-medium text-amber-950">
+            권차
+          </label>
+          <input
+            type="text"
+            value={manualVolume}
+            onChange={(e) => setManualVolume(e.target.value)}
+            placeholder="예: 2"
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
         </div>
@@ -624,6 +674,25 @@ export default function ManualBookEntryForm({
           {submitLabel}
         </button>
       </div>
+      {lookupResult && (
+        <IsbnCompareModal
+          result={lookupResult}
+          fields={LOOKUP_FIELDS}
+          currentValues={{
+            title: manualTitle,
+            author: manualAuthor,
+            publisher: manualPublisher,
+            page: manualPage,
+            price: manualPrice,
+            pubDate: manualPubDate,
+            volume: manualVolume,
+            coverUrl: manualCoverPreview || manualCoverUrl.trim(),
+            description: manualDescription,
+          }}
+          onApply={handleApplyLookup}
+          onClose={() => setLookupResult(null)}
+        />
+      )}
     </div>
   );
 }

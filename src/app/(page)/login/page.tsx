@@ -111,22 +111,22 @@ export default function Page1Login() {
               {isPending ? '로그인 중...' : '로그인'}
             </button>
 
-            <div className="flex justify-center gap-4 text-base text-amber-800">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-base text-amber-800">
               <Link
                 href="/register"
-                className="hover:text-amber-950 hover:underline">
+                className="whitespace-nowrap hover:text-amber-950 hover:underline">
                 회원가입
               </Link>
               <span>|</span>
               <Link
                 href="/find?tab=id"
-                className="hover:text-amber-950 hover:underline">
+                className="whitespace-nowrap hover:text-amber-950 hover:underline">
                 아이디 찾기
               </Link>
               <span>|</span>
               <Link
                 href="/find?tab=password"
-                className="hover:text-amber-950 hover:underline">
+                className="whitespace-nowrap hover:text-amber-950 hover:underline">
                 비밀번호 찾기
               </Link>
             </div>

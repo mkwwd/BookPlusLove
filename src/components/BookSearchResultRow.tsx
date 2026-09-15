@@ -1,13 +1,7 @@
+import Link from 'next/link';
+
 import { BookShape } from '@/components/BookCard';
-
-const LIBRARY_NAME = '광주가톨릭평생교육원';
-
-const STATUS_STYLE: Record<string, string> = {
-  대여가능: 'bg-green-100 text-green-800',
-  대여중: 'bg-yellow-100 text-yellow-800',
-  분실: 'bg-gray-200 text-gray-700',
-  폐기: 'bg-gray-200 text-gray-700',
-};
+import { BOOK_COPY_STATUS_STYLE, LIBRARY_NAME } from '@/lib/bookCopy';
 
 export interface BookSearchResultCopy {
   id: number;
@@ -46,20 +40,18 @@ function BookThumbnail({
   coverUrl: string | null;
 }) {
   return (
-    <div className="mx-auto w-24 shrink-0 sm:mx-0">
-      <BookShape>
-        {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={coverUrl}
-            alt={`${title} 표지`}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
-        )}
-      </BookShape>
-    </div>
+    <BookShape>
+      {coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={coverUrl}
+          alt={`${title} 표지`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="h-full w-full bg-gradient-to-br from-amber-950 to-amber-950" />
+      )}
+    </BookShape>
   );
 }
 
@@ -69,11 +61,17 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
 
   return (
     <article className="flex flex-col gap-6 p-6 sm:flex-row sm:gap-8 sm:p-8">
-      <BookThumbnail title={book.title} coverUrl={book.coverUrl} />
+      <Link
+        href={`/books/${book.id}`}
+        className="mx-auto w-24 shrink-0 sm:mx-0">
+        <BookThumbnail title={book.title} coverUrl={book.coverUrl} />
+      </Link>
 
       <div className="min-w-0 flex-1">
         <h2 className="text-2xl leading-tight font-bold break-keep text-red-900 sm:text-3xl">
-          {book.title}
+          <Link href={`/books/${book.id}`} className="hover:underline">
+            {book.title}
+          </Link>
         </h2>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-base text-amber-950/70 sm:text-lg">
           {book.author && <span>{book.author} 지음</span>}
@@ -116,7 +114,7 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
                     <td className="py-3">
                       <span
                         className={`rounded-md px-3 py-1.5 text-base font-semibold ${
-                          STATUS_STYLE[copy.status] ??
+                          BOOK_COPY_STATUS_STYLE[copy.status] ??
                           'bg-gray-200 text-gray-700'
                         }`}>
                         {copy.status}

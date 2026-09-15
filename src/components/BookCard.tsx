@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import Link from 'next/link';
+
 export interface BookCardData {
   id: number;
   title: string;
@@ -116,7 +118,9 @@ function BookMeta({
 
 export function BookCard({ book }: { book: BookCardData }) {
   return (
-    <div className="flex flex-col items-center text-center">
+    <Link
+      href={`/books/${book.id}`}
+      className="flex flex-col items-center text-center">
       <BookShape>
         {book.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -131,7 +135,7 @@ export function BookCard({ book }: { book: BookCardData }) {
       </BookShape>
 
       <BookMeta title={book.title} author={book.author} />
-    </div>
+    </Link>
   );
 }
 

@@ -83,6 +83,7 @@ header[data-home='true'][data-scrolled='false'] .home-hero-nav a:hover {
 }
 
 .scrollbar-visible::-webkit-scrollbar {
+  width: 36px;
   height: 12px;
 }
 

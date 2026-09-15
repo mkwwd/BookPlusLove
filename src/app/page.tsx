@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { connection } from 'next/server';
 
 import {
   BookCard,
@@ -14,7 +15,7 @@ const SECTION_SIZE = 6;
 async function getRecommendedBooks(): Promise<BookCardData[]> {
   const { data } = await supabaseServer
     .from('books')
-    .select('id, title, author, cover_url')
+    .select('id, title, author, cover_url, book_copies!inner(id)')
     .eq('is_recommended', true)
     .order('created_at', { ascending: false })
     .limit(SECTION_SIZE);
@@ -30,7 +31,7 @@ async function getRecommendedBooks(): Promise<BookCardData[]> {
 async function getNewBooks(): Promise<BookCardData[]> {
   const { data } = await supabaseServer
     .from('books')
-    .select('id, title, author, cover_url')
+    .select('id, title, author, cover_url, book_copies!inner(id)')
     .order('created_at', { ascending: false })
     .limit(SECTION_SIZE);
 
@@ -97,6 +98,8 @@ function BookSection({
 }
 
 export default async function Home() {
+  await connection();
+
   const [recommended, newBooks] = await Promise.all([
     getRecommendedBooks(),
     getNewBooks(),

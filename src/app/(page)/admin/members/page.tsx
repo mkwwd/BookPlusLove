@@ -3,8 +3,9 @@
 import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 
+import MemberRegisterForm from '@/components/MemberRegisterForm';
 import Modal from '@/components/Modal';
 
 const ROLE_STYLE: Record<string, string> = {
@@ -150,6 +151,7 @@ export default function AdminMembersPage() {
   const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['admin-members'],
@@ -172,7 +174,16 @@ export default function AdminMembersPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-3xl text-amber-950">회원 관리</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-serif text-3xl text-amber-950">회원 관리</h2>
+        <button
+          type="button"
+          onClick={() => setIsAddMemberOpen(true)}
+          className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+          <UserPlus className="h-4 w-4" />
+          회원 추가하기
+        </button>
+      </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
@@ -250,6 +261,20 @@ export default function AdminMembersPage() {
             member={selectedMember}
             onClose={() => setSelectedMember(null)}
             onChanged={() => {
+              void queryClient.invalidateQueries({
+                queryKey: ['admin-members'],
+              });
+            }}
+          />
+        </Modal>
+      )}
+
+      {isAddMemberOpen && (
+        <Modal title="회원 추가" onClose={() => setIsAddMemberOpen(false)}>
+          <MemberRegisterForm
+            submitLabel="회원 등록"
+            onSuccess={() => {
+              setIsAddMemberOpen(false);
               void queryClient.invalidateQueries({
                 queryKey: ['admin-members'],
               });

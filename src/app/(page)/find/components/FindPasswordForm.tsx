@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import EmailFields, { inputClass } from '@/components/EmailFields';
-import { supabase } from '@/utils/supabase/client';
 
 export default function FindPasswordForm() {
   const [userId, setUserId] = useState('');
@@ -21,20 +20,15 @@ export default function FindPasswordForm() {
     error,
   } = useMutation({
     mutationFn: async () => {
-      const verifyRes = await fetch('/api/users/verify-reset', {
+      const res = await fetch('/api/users/verify-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, name, email }),
       });
-      const verifyBody = await verifyRes.json();
-      if (!verifyRes.ok) {
-        throw new Error(verifyBody.error ?? '확인에 실패했습니다.');
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error ?? '확인에 실패했습니다.');
       }
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw new Error('재설정 메일 발송에 실패했습니다.');
     },
   });
 

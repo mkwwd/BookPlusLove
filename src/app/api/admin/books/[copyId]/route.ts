@@ -20,7 +20,7 @@ async function requireAdmin() {
   const { data: profile } = await supabaseServer
     .from('users')
     .select('role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle();
 
   if (profile?.role !== 'ADMIN') {
@@ -116,6 +116,8 @@ export async function PATCH(
         typeof body?.category === 'string' ? body.category || null : null,
       is_recommended:
         typeof body?.isRecommended === 'boolean' ? body.isRecommended : false,
+      aladin_item_id:
+        typeof body?.aladinItemId === 'number' ? body.aladinItemId : null,
     })
     .eq('id', existingCopy.book_id);
 

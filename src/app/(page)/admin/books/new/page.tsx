@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -12,8 +12,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import * as XLSX from 'xlsx';
 
+import IsbnCompareModal, {
+  fetchIsbnLookup,
+  type IsbnLookupResponse,
+  type LookupFieldKey,
+} from '@/components/IsbnCompareModal';
 import { generateAuthorCode } from '@/lib/authorCode';
+import { looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -24,44 +31,75 @@ import ManualBookEntryForm, {
 
 type Method = 'manual' | 'excel';
 
-const MOCK_EXCEL_SOURCE: Omit<
-  ScannedBook,
-  'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
->[] = [
-  {
-    isbn: '9791190090018',
-    title: '고백록',
-    author: '아우구스티노',
-    publisher: '분도출판사',
-  },
-  {
-    isbn: '9788934940042',
-    title: '사랑의 기술',
-    author: '에리히 프롬',
-    publisher: '문예출판사',
-  },
-  {
-    isbn: '9788937460081',
-    title: '작은 것들의 신',
-    author: '아룬다티 로이',
-    publisher: '문학동네',
-  },
+// globals.css의 .scrollbar-visible 세로 스크롤바 두께와 맞춰야 한다.
+const SCROLLBAR_WIDTH = 36;
+
+const LOOKUP_FIELDS: LookupFieldKey[] = [
+  'title',
+  'author',
+  'publisher',
+  'page',
+  'price',
+  'pubDate',
+  'volume',
+  'coverUrl',
+  'description',
 ];
 
-function toScannedBook(
-  book: Omit<
-    ScannedBook,
-    'id' | 'category' | 'categoryMain' | 'authorCode' | 'donorName' | 'regNo'
-  >,
+// 열 순서(헤더 없음): 등록번호, 제목, 분류코드, 저자기호, 권차, 시리즈명,
+// 저자, 출판사, 출판일, 정가, ISBN, 기증자명
+function excelCell(row: string[], index: number): string {
+  return (row[index] ?? '').trim();
+}
+
+function normalizeExcelRegNo(raw: string): string {
+  const match = raw.match(/(\d+)/);
+  if (!match) return '';
+  return `MB${match[1].slice(-6).padStart(6, '0')}`;
+}
+
+function normalizeExcelPrice(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, '');
+  return digits;
+}
+
+function normalizeExcelPubDate(raw: string): string {
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (!match) return raw;
+  const [, month, day, yy] = match;
+  const currentTwoDigitYear = new Date().getFullYear() % 100;
+  const yyyy =
+    Number(yy) <= currentTwoDigitYear ? 2000 + Number(yy) : 1900 + Number(yy);
+  return `${yyyy}년 ${Number(month)}월 ${Number(day)}일`;
+}
+
+function rowToScannedBook(
+  row: string[],
+  categories: BookCategory[],
 ): ScannedBook {
+  const author = excelCell(row, 6);
+  const title = excelCell(row, 1);
+  const rawCategoryCode = excelCell(row, 2);
+  const paddedCategoryCode = /^\d+$/.test(rawCategoryCode)
+    ? rawCategoryCode.padStart(3, '0')
+    : rawCategoryCode;
+  const matchedCategory = categories.find((c) => c.code === paddedCategoryCode);
+
   return {
-    ...book,
     id: crypto.randomUUID(),
-    category: '',
-    categoryMain: '',
-    authorCode: generateAuthorCode(book.author, book.title) ?? '',
-    donorName: '',
-    regNo: '',
+    isbn: excelCell(row, 10),
+    title,
+    author,
+    publisher: excelCell(row, 7),
+    price: normalizeExcelPrice(excelCell(row, 9)) || undefined,
+    pubDate: normalizeExcelPubDate(excelCell(row, 8)) || undefined,
+    volume: excelCell(row, 4) || undefined,
+    seriesTitle: excelCell(row, 5) || undefined,
+    category: matchedCategory?.code ?? '',
+    categoryMain: matchedCategory?.main_code ?? '',
+    authorCode: excelCell(row, 3) || generateAuthorCode(author, title) || '',
+    donorName: excelCell(row, 11),
+    regNo: normalizeExcelRegNo(excelCell(row, 0)),
   };
 }
 
@@ -69,21 +107,13 @@ function ScannedBookTable({
   books,
   categories,
   onRemove,
-  onCategoryMainChange,
-  onCategoryChange,
-  onAuthorCodeChange,
-  onDonorNameChange,
-  onRegNoChange,
+  onUpdate,
   emptyText,
 }: {
   books: ScannedBook[];
   categories: BookCategory[];
   onRemove: (id: string) => void;
-  onCategoryMainChange: (id: string, mainCode: string) => void;
-  onCategoryChange: (id: string, category: string) => void;
-  onAuthorCodeChange: (id: string, authorCode: string) => void;
-  onDonorNameChange: (id: string, donorName: string) => void;
-  onRegNoChange: (id: string, regNo: string) => void;
+  onUpdate: (id: string, patch: Partial<ScannedBook>) => void;
   emptyText: string;
 }) {
   const mainOptions = Array.from(
@@ -92,14 +122,63 @@ function ScannedBookTable({
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  useEffect(() => {
     const el = scrollRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth) return;
-    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게)
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      el.scrollLeft += e.deltaY;
-      e.preventDefault();
+    if (!el) return;
+    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게).
+    // React의 onWheel은 패시브 리스너로 붙어서 preventDefault가 무시되니,
+    // 직접 { passive: false }로 등록해야 실제로 페이지 스크롤이 막힌다.
+    const handleWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      // 세로 스크롤바(오른쪽 끝, globals.css 두께와 맞춤) 위에서는 원래
+      // 세로 스크롤 동작을 그대로 둔다.
+      const rect = el.getBoundingClientRect();
+      if (e.clientX >= rect.right - SCROLLBAR_WIDTH) return;
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const [lookupBookId, setLookupBookId] = useState<string | null>(null);
+  const [lookupResult, setLookupResult] = useState<IsbnLookupResponse | null>(
+    null,
+  );
+  const [lookupErrors, setLookupErrors] = useState<Record<string, string>>({});
+
+  const {
+    mutate: lookupIsbn,
+    isPending: isLookingUp,
+    variables: lookupVariables,
+  } = useMutation({
+    mutationFn: (vars: { isbn: string; bookId: string }) =>
+      fetchIsbnLookup(vars.isbn),
+    onSuccess: (result) => setLookupResult(result),
+    onError: (err: Error, vars) => {
+      setLookupErrors((prev) => ({ ...prev, [vars.bookId]: err.message }));
+    },
+  });
+
+  const handleLookup = (book: ScannedBook) => {
+    const trimmed = book.isbn.trim();
+    if (!trimmed || isLookingUp) return;
+    if (!looksLikeIsbn(trimmed)) {
+      setLookupErrors((prev) => ({
+        ...prev,
+        [book.id]: `"${trimmed}"은(는) ISBN 형식이 아닙니다.`,
+      }));
+      return;
     }
+    setLookupErrors((prev) => {
+      const next = { ...prev };
+      delete next[book.id];
+      return next;
+    });
+    setLookupBookId(book.id);
+    lookupIsbn({ isbn: trimmed, bookId: book.id });
   };
 
   return (
@@ -107,12 +186,12 @@ function ScannedBookTable({
       {books.length > 0 && (
         <p className="mb-1.5 text-sm text-amber-800">
           → 표를 옆으로 스크롤하면 삭제 버튼 등 나머지 항목을 볼 수 있어요.
+          <br />→ 세로 스크롤바 위에서 휠을 돌리면 아래로 스크롤돼요.
         </p>
       )}
       <div
         ref={scrollRef}
-        onWheel={handleWheel}
-        className="scrollbar-visible max-w-full overflow-x-scroll rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
+        className="scrollbar-visible max-h-[70vh] max-w-full overflow-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
         <table className="w-full min-w-max text-left text-base whitespace-nowrap">
           <thead className="border-b border-amber-900/20 text-amber-800">
             <tr>
@@ -127,6 +206,8 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">등록번호</th>
               <th className="px-5 py-3 font-medium">분류코드</th>
               <th className="px-5 py-3 font-medium">저자기호</th>
+              <th className="px-5 py-3 font-medium">권차</th>
+              <th className="px-5 py-3 font-medium">시리즈명</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
               <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
@@ -135,7 +216,7 @@ function ScannedBookTable({
             {books.length === 0 ? (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={15}
                   className="px-5 py-8 text-center text-amber-900/50">
                   {emptyText}
                 </td>
@@ -164,22 +245,106 @@ function ScannedBookTable({
                         <div className="h-14 w-10 rounded-sm bg-amber-100" />
                       )}
                     </td>
-                    <td className="px-5 py-3 text-amber-950">{book.title}</td>
-                    <td className="px-5 py-3 text-amber-800">{book.author}</td>
-                    <td className="px-5 py-3 text-amber-800">
-                      {book.publisher}
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.title}
+                        onChange={(e) =>
+                          onUpdate(book.id, { title: e.target.value })
+                        }
+                        placeholder="제목 입력 필요"
+                        className={`w-40 rounded border bg-white/50 px-2 py-1.5 text-sm placeholder:text-red-400 focus:ring-2 focus:outline-none ${
+                          book.title.trim() === ''
+                            ? 'border-red-400 focus:ring-red-300'
+                            : 'border-amber-900/20 focus:ring-amber-900/30'
+                        }`}
+                      />
                     </td>
-                    <td className="px-5 py-3 text-amber-800">
-                      {book.pubDate ?? '-'}
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.author}
+                        onChange={(e) =>
+                          onUpdate(book.id, { author: e.target.value })
+                        }
+                        className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
                     </td>
-                    <td className="px-5 py-3 font-mono text-sm text-amber-800">
-                      {book.isbn || '-'}
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.publisher}
+                        onChange={(e) =>
+                          onUpdate(book.id, { publisher: e.target.value })
+                        }
+                        className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
                     </td>
-                    <td className="px-5 py-3 text-amber-800">
-                      {book.page ?? '-'}
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.pubDate ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { pubDate: e.target.value })
+                        }
+                        placeholder="예: 2017년 3월 31일"
+                        className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
                     </td>
-                    <td className="px-5 py-3 text-amber-800">
-                      {book.price ?? '-'}
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={book.isbn}
+                          onChange={(e) => {
+                            onUpdate(book.id, { isbn: e.target.value });
+                            setLookupErrors((prev) => {
+                              if (!(book.id in prev)) return prev;
+                              const next = { ...prev };
+                              delete next[book.id];
+                              return next;
+                            });
+                          }}
+                          placeholder="ISBN"
+                          className="w-28 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 font-mono text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={
+                            isLookingUp && lookupVariables?.bookId === book.id
+                          }
+                          onClick={() => handleLookup(book)}
+                          className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-2 py-1.5 text-xs whitespace-nowrap text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
+                          {isLookingUp && lookupVariables?.bookId === book.id
+                            ? '조회중'
+                            : '조회'}
+                        </button>
+                      </div>
+                      {lookupErrors[book.id] && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {lookupErrors[book.id]}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.page ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { page: e.target.value })
+                        }
+                        className="w-16 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.price ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { price: e.target.value })
+                        }
+                        className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
                     </td>
                     <td className="px-5 py-3">
                       <input
@@ -191,19 +356,17 @@ function ScannedBookTable({
                           // 중복 커밋되는 문제가 있다. 조합이 끝난 뒤
                           // onCompositionEnd에서만 보정한다.
                           if ((e.nativeEvent as InputEvent).isComposing) {
-                            onRegNoChange(book.id, e.target.value);
+                            onUpdate(book.id, { regNo: e.target.value });
                             return;
                           }
-                          onRegNoChange(
-                            book.id,
-                            normalizeRegNoInput(e.target.value),
-                          );
+                          onUpdate(book.id, {
+                            regNo: normalizeRegNoInput(e.target.value),
+                          });
                         }}
                         onCompositionEnd={(e) =>
-                          onRegNoChange(
-                            book.id,
-                            normalizeRegNoInput(e.currentTarget.value),
-                          )
+                          onUpdate(book.id, {
+                            regNo: normalizeRegNoInput(e.currentTarget.value),
+                          })
                         }
                         placeholder="예: MB123456"
                         className={`w-32 rounded border bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:outline-none ${
@@ -227,7 +390,10 @@ function ScannedBookTable({
                         <select
                           value={book.categoryMain}
                           onChange={(e) =>
-                            onCategoryMainChange(book.id, e.target.value)
+                            onUpdate(book.id, {
+                              categoryMain: e.target.value,
+                              category: '',
+                            })
                           }
                           className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none">
                           <option value="">대분류</option>
@@ -241,7 +407,7 @@ function ScannedBookTable({
                           value={book.category}
                           disabled={!book.categoryMain}
                           onChange={(e) =>
-                            onCategoryChange(book.id, e.target.value)
+                            onUpdate(book.id, { category: e.target.value })
                           }
                           className="rounded border border-amber-900/20 bg-white/50 px-1.5 py-1.5 text-sm text-amber-950 focus:ring-2 focus:ring-amber-900/30 focus:outline-none disabled:opacity-50">
                           <option value="">세부분류</option>
@@ -260,7 +426,7 @@ function ScannedBookTable({
                         type="text"
                         value={book.authorCode}
                         onChange={(e) =>
-                          onAuthorCodeChange(book.id, e.target.value)
+                          onUpdate(book.id, { authorCode: e.target.value })
                         }
                         placeholder="예: 게68ㄴ"
                         className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
@@ -269,9 +435,34 @@ function ScannedBookTable({
                     <td className="px-5 py-3">
                       <input
                         type="text"
+                        value={book.volume ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { volume: e.target.value })
+                        }
+                        placeholder="선택"
+                        className="w-16 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.seriesTitle ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { seriesTitle: e.target.value })
+                        }
+                        placeholder="선택"
+                        className="w-28 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
                         value={book.donorName}
                         onChange={(e) =>
-                          onDonorNameChange(book.id, e.target.value)
+                          onUpdate(book.id, {
+                            donorName: e.target.value,
+                            donorUserId: null,
+                          })
                         }
                         placeholder="선택"
                         className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
@@ -293,6 +484,39 @@ function ScannedBookTable({
           </tbody>
         </table>
       </div>
+      {lookupResult && lookupBookId && (
+        <IsbnCompareModal
+          result={lookupResult}
+          fields={LOOKUP_FIELDS}
+          currentValues={(() => {
+            const current = books.find((b) => b.id === lookupBookId);
+            if (!current) return undefined;
+            return {
+              title: current.title,
+              author: current.author,
+              publisher: current.publisher,
+              page: current.page,
+              price: current.price,
+              pubDate: current.pubDate,
+              volume: current.volume,
+              coverUrl: current.coverUrl,
+              description: current.description,
+            };
+          })()}
+          onApply={(values, aladinItemId) => {
+            onUpdate(lookupBookId, {
+              ...values,
+              ...(aladinItemId !== undefined ? { aladinItemId } : {}),
+            });
+            setLookupResult(null);
+            setLookupBookId(null);
+          }}
+          onClose={() => {
+            setLookupResult(null);
+            setLookupBookId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -331,14 +555,36 @@ function BookRegisterContent() {
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [excelParseError, setExcelParseError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
-    // TODO: parse the actual file once bulk upload is wired to Supabase;
-    // this is a placeholder preview so the flow can be reviewed as UI.
-    setEntries((prev) => [...prev, ...MOCK_EXCEL_SOURCE.map(toScannedBook)]);
+    setExcelParseError(null);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+
+      const parsedBooks = rows
+        .filter((row) => row.some((cell) => String(cell ?? '').trim() !== ''))
+        .map((row) => rowToScannedBook(row, categories));
+
+      setEntries((prev) => [...prev, ...parsedBooks]);
+    } catch {
+      setExcelParseError(
+        '엑셀 파일을 읽는 데 실패했습니다. 파일 형식을 확인해주세요.',
+      );
+    }
     setJustSubmitted(false);
+    e.target.value = '';
   };
 
   const [submitResult, setSubmitResult] = useState<{
@@ -438,6 +684,8 @@ function BookRegisterContent() {
     return !isValidRegNo(trimmed) || isDuplicate;
   });
 
+  const hasEmptyTitle = entries.some((book) => book.title.trim() === '');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -534,13 +782,21 @@ function BookRegisterContent() {
             className="block w-full text-base text-amber-950 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
           />
           <p className="mt-2 text-sm text-amber-800">
-            열 순서: 제목, 저자, 출판사, ISBN, 카테고리, 수량
+            열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차,
+            시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명
           </p>
           {fileName && (
             <p className="mt-2 text-sm text-amber-950">
               선택된 파일: {fileName}
             </p>
           )}
+          {excelParseError && (
+            <p className="mt-2 text-sm text-red-600">{excelParseError}</p>
+          )}
+          <p className="mt-2 text-sm text-amber-800">
+            제목이 비어있거나 분류코드가 일치하지 않는 항목은 아래 표에서
+            빨간색으로 표시되니, 표에서 직접 입력해 채워주세요.
+          </p>
         </div>
       )}
 
@@ -556,15 +812,7 @@ function BookRegisterContent() {
             return prev.filter((b) => b.id !== id);
           })
         }
-        onCategoryMainChange={(id, mainCode) =>
-          updateEntry(id, { categoryMain: mainCode, category: '' })
-        }
-        onCategoryChange={(id, category) => updateEntry(id, { category })}
-        onAuthorCodeChange={(id, authorCode) => updateEntry(id, { authorCode })}
-        onDonorNameChange={(id, donorName) =>
-          updateEntry(id, { donorName, donorUserId: null })
-        }
-        onRegNoChange={(id, regNo) => updateEntry(id, { regNo })}
+        onUpdate={updateEntry}
         emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
       />
 
@@ -574,10 +822,21 @@ function BookRegisterContent() {
           표시된 등록번호를 확인해주세요.
         </p>
       )}
+      {hasEmptyTitle && (
+        <p className="text-sm text-red-600">
+          제목이 비어있는 항목이 있습니다. 표에서 빨간색으로 표시된 제목 칸을
+          채워주세요.
+        </p>
+      )}
 
       <button
         type="button"
-        disabled={entries.length === 0 || hasInvalidRegNo || isSubmitting}
+        disabled={
+          entries.length === 0 ||
+          hasInvalidRegNo ||
+          hasEmptyTitle ||
+          isSubmitting
+        }
         onClick={handleSubmit}
         className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
         {isSubmitting
