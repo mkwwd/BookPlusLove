@@ -1,4 +1,4 @@
-import { BookPlus, BookText, Handshake, Users } from 'lucide-react';
+import { BookPlus, BookText, Handshake, Megaphone, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabaseServer } from '@/utils/supabase/server';
@@ -55,6 +55,12 @@ const QUICK_LINKS = [
     description: '회원 정보를 조회하고 관리합니다',
     icon: Users,
   },
+  {
+    href: '/admin/notices',
+    label: '공지사항 관리',
+    description: '공지사항을 등록하고 공개 여부를 관리합니다',
+    icon: Megaphone,
+  },
 ];
 
 export default async function AdminDashboardPage() {
@@ -87,7 +93,7 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-4">
         {QUICK_LINKS.map(({ href, label, description, icon: Icon }) => (
           <Link
             key={href}
