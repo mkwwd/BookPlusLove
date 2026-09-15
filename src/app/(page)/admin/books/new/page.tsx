@@ -46,8 +46,8 @@ const LOOKUP_FIELDS: LookupFieldKey[] = [
   'description',
 ];
 
-// 열 순서(헤더 없음): 등록번호, 제목, 분류코드, 저자기호, 권차, 저자,
-// 출판사, 출판일, 정가, ISBN, 기증자명
+// 열 순서(헤더 없음): 등록번호, 제목, 분류코드, 저자기호, 권차, 시리즈명,
+// 저자, 출판사, 출판일, 정가, ISBN, 기증자명
 function excelCell(row: string[], index: number): string {
   return (row[index] ?? '').trim();
 }
@@ -77,7 +77,7 @@ function rowToScannedBook(
   row: string[],
   categories: BookCategory[],
 ): ScannedBook {
-  const author = excelCell(row, 5);
+  const author = excelCell(row, 6);
   const title = excelCell(row, 1);
   const rawCategoryCode = excelCell(row, 2);
   const paddedCategoryCode = /^\d+$/.test(rawCategoryCode)
@@ -87,17 +87,18 @@ function rowToScannedBook(
 
   return {
     id: crypto.randomUUID(),
-    isbn: excelCell(row, 9),
+    isbn: excelCell(row, 10),
     title,
     author,
-    publisher: excelCell(row, 6),
-    price: normalizeExcelPrice(excelCell(row, 8)) || undefined,
-    pubDate: normalizeExcelPubDate(excelCell(row, 7)) || undefined,
+    publisher: excelCell(row, 7),
+    price: normalizeExcelPrice(excelCell(row, 9)) || undefined,
+    pubDate: normalizeExcelPubDate(excelCell(row, 8)) || undefined,
     volume: excelCell(row, 4) || undefined,
+    seriesTitle: excelCell(row, 5) || undefined,
     category: matchedCategory?.code ?? '',
     categoryMain: matchedCategory?.main_code ?? '',
     authorCode: excelCell(row, 3) || generateAuthorCode(author, title) || '',
-    donorName: excelCell(row, 10),
+    donorName: excelCell(row, 11),
     regNo: normalizeExcelRegNo(excelCell(row, 0)),
   };
 }
@@ -206,6 +207,7 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">분류코드</th>
               <th className="px-5 py-3 font-medium">저자기호</th>
               <th className="px-5 py-3 font-medium">권차</th>
+              <th className="px-5 py-3 font-medium">시리즈명</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
               <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
@@ -214,7 +216,7 @@ function ScannedBookTable({
             {books.length === 0 ? (
               <tr>
                 <td
-                  colSpan={14}
+                  colSpan={15}
                   className="px-5 py-8 text-center text-amber-900/50">
                   {emptyText}
                 </td>
@@ -439,6 +441,17 @@ function ScannedBookTable({
                         }
                         placeholder="선택"
                         className="w-16 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={book.seriesTitle ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { seriesTitle: e.target.value })
+                        }
+                        placeholder="선택"
+                        className="w-28 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
                     </td>
                     <td className="px-5 py-3">
@@ -769,8 +782,8 @@ function BookRegisterContent() {
             className="block w-full text-base text-amber-950 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
           />
           <p className="mt-2 text-sm text-amber-800">
-            열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차, 저자,
-            출판사, 출판일, 정가, ISBN, 기증자명
+            열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차,
+            시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명
           </p>
           {fileName && (
             <p className="mt-2 text-sm text-amber-950">

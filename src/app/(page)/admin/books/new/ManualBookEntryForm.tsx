@@ -42,6 +42,7 @@ export interface ScannedBook {
   price?: string;
   pubDate?: string;
   volume?: string;
+  seriesTitle?: string;
   aladinItemId?: number;
   category: string;
   categoryMain: string;
