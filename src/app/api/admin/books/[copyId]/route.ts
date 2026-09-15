@@ -173,6 +173,23 @@ export async function DELETE(
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 
+  const { data: existingCopy, error: findCopyError } = await supabaseServer
+    .from('book_copies')
+    .select('book_id')
+    .eq('id', copyIdNum)
+    .maybeSingle();
+
+  if (findCopyError) {
+    return Response.json({ error: findCopyError.message }, { status: 500 });
+  }
+
+  if (!existingCopy) {
+    return Response.json(
+      { error: '해당 도서를 찾을 수 없습니다.' },
+      { status: 404 },
+    );
+  }
+
   const { error: deleteError } = await supabaseServer
     .from('book_copies')
     .delete()
@@ -190,5 +207,40 @@ export async function DELETE(
     );
   }
 
-  return Response.json({ ok: true });
+  const { count: remainingCopies, error: countError } = await supabaseServer
+    .from('book_copies')
+    .select('id', { count: 'exact', head: true })
+    .eq('book_id', existingCopy.book_id);
+
+  if (countError) {
+    return Response.json(
+      {
+        ok: true,
+        warning: `소장본은 삭제됐지만 책 종류 정리 확인에 실패했습니다: ${countError.message}`,
+      },
+      { status: 207 },
+    );
+  }
+
+  if (remainingCopies === 0) {
+    const { error: deleteBookError } = await supabaseServer
+      .from('books')
+      .delete()
+      .eq('id', existingCopy.book_id);
+
+    if (deleteBookError) {
+      return Response.json(
+        {
+          ok: true,
+          warning: `소장본은 삭제됐지만 책 종류 삭제에 실패했습니다: ${deleteBookError.message}`,
+        },
+        { status: 207 },
+      );
+    }
+  }
+
+  return Response.json({
+    ok: true,
+    deletedBook: remainingCopies === 0,
+  });
 }
