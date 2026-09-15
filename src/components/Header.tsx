@@ -30,7 +30,7 @@ export default async function Header() {
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-1">
           <HeaderBrand />
-          <nav className="order-3 flex w-full items-center gap-4 pb-4 text-base font-bold text-amber-900 sm:order-none sm:w-auto sm:self-stretch sm:pb-0">
+          <nav className="home-hero-nav order-3 flex w-full items-center gap-4 pb-4 font-serif text-lg font-black text-amber-900 sm:order-none sm:w-auto sm:self-stretch sm:pb-0">
             <a
               href="https://www.kccei.com/fro_end/html/main/index.php"
               target="_blank"
