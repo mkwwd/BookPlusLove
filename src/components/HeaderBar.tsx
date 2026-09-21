@@ -33,7 +33,10 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
     : 'header-bg sticky top-0 z-50 transition-all duration-300';
 
   return (
-    <header className={isHome ? homeClassName : pageClassName}>
+    <header
+      className={isHome ? homeClassName : pageClassName}
+      data-home={isHome}
+      data-scrolled={scrolled}>
       {children}
     </header>
   );

@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import {
   BookPlus,
+  Megaphone,
   Handshake,
   LayoutDashboard,
   Menu,
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/admin/loans', label: '대출/대여', icon: Handshake },
   { href: '/admin/books', label: '도서 관리', icon: BookPlus },
   { href: '/admin/members', label: '회원 관리', icon: Users },
+  { href: '/admin/notices', label: '공지사항', icon: Megaphone },
 ];
 
 export default function AdminNav() {
