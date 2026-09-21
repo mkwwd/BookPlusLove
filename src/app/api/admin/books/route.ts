@@ -13,6 +13,7 @@ interface IncomingBook {
   price?: string;
   pubDate?: string;
   volume?: string;
+  seriesTitle?: string;
   aladinItemId?: number;
   category: string;
   authorCode: string;
@@ -46,6 +47,7 @@ interface BookRow {
   author_code: string | null;
   category_code: string | null;
   is_recommended: boolean;
+  aladin_item_id: number | null;
   book_categories: BookCategoryRow | BookCategoryRow[] | null;
 }
 
@@ -102,7 +104,7 @@ export async function GET() {
       .from('book_copies')
       .select(
         `id, reg_no, status, donor_name, donor_user_id,
-        books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended,
+        books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
           book_categories(label, main_code, main_label))`,
       )
       .order('id', { ascending: false })
@@ -142,6 +144,7 @@ export async function GET() {
       pubDate: book?.pub_date ?? null,
       authorCode: book?.author_code ?? null,
       isRecommended: book?.is_recommended ?? false,
+      aladinItemId: book?.aladin_item_id ?? null,
       categoryCode: book?.category_code ?? null,
       categoryMain: category?.main_code ?? null,
       categoryLabel: category
@@ -240,6 +243,7 @@ export async function POST(request: Request) {
           price: book.price || null,
           pub_date: book.pubDate || null,
           volume: book.volume || null,
+          series_title: book.seriesTitle || null,
           aladin_item_id: book.aladinItemId ?? null,
           category_code: book.category || null,
           author_code: book.authorCode?.trim() || null,

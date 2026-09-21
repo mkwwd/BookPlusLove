@@ -116,6 +116,8 @@ export async function PATCH(
         typeof body?.category === 'string' ? body.category || null : null,
       is_recommended:
         typeof body?.isRecommended === 'boolean' ? body.isRecommended : false,
+      aladin_item_id:
+        typeof body?.aladinItemId === 'number' ? body.aladinItemId : null,
     })
     .eq('id', existingCopy.book_id);
 

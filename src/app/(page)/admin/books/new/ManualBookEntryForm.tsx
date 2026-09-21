@@ -3,76 +3,31 @@
 import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Barcode, ScanLine, X } from 'lucide-react';
+import { Barcode, ScanLine } from 'lucide-react';
 
-import Modal from '@/components/Modal';
+import IsbnCompareModal, {
+  fetchIsbnLookup,
+  type IsbnLookupResponse,
+  type LookupFieldKey,
+} from '@/components/IsbnCompareModal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
-import { isValidIsbn, isValidIsbn13 } from '@/lib/isbn';
+import { isValidIsbn13, looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 
 import CameraScanner from './CameraScanner';
 
-type LookupFieldKey =
-  | 'title'
-  | 'author'
-  | 'publisher'
-  | 'page'
-  | 'price'
-  | 'pubDate'
-  | 'volume'
-  | 'coverUrl'
-  | 'description';
-
-const LOOKUP_FIELD_KEYS = Object.keys({
-  title: '',
-  author: '',
-  publisher: '',
-  page: '',
-  price: '',
-  pubDate: '',
-  volume: '',
-  coverUrl: '',
-  description: '',
-} satisfies Record<LookupFieldKey, string>) as LookupFieldKey[];
-
-const LOOKUP_FIELD_LABELS: Record<LookupFieldKey, string> = {
-  title: '제목',
-  author: '저자',
-  publisher: '출판사',
-  page: '페이지',
-  price: '정가',
-  pubDate: '출판일',
-  volume: '권차',
-  coverUrl: '표지',
-  description: '설명',
-};
-
-type LookupSource = 'aladin' | 'nationalLibrary';
-
-const LOOKUP_SOURCE_LABELS: Record<LookupSource, string> = {
-  aladin: '알라딘',
-  nationalLibrary: '국립중앙도서관',
-};
-
-interface LookupBookResult {
-  isbn: string;
-  title: string;
-  author: string;
-  publisher: string;
-  coverUrl?: string;
-  description?: string;
-  page?: string;
-  price?: string;
-  pubDate?: string;
-  volume?: string;
-  aladinItemId?: number;
-}
-
-interface IsbnLookupResponse {
-  aladin: LookupBookResult | null;
-  nationalLibrary: LookupBookResult | null;
-}
+const LOOKUP_FIELDS: LookupFieldKey[] = [
+  'title',
+  'author',
+  'publisher',
+  'page',
+  'price',
+  'pubDate',
+  'volume',
+  'coverUrl',
+  'description',
+];
 
 export interface ScannedBook {
   id: string;
@@ -87,6 +42,7 @@ export interface ScannedBook {
   price?: string;
   pubDate?: string;
   volume?: string;
+  seriesTitle?: string;
   aladinItemId?: number;
   category: string;
   categoryMain: string;
@@ -107,15 +63,6 @@ export interface BookCategory {
   label: string;
   main_code: string;
   main_label: string;
-}
-
-async function fetchIsbnLookup(isbn: string): Promise<IsbnLookupResponse> {
-  const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(isbn)}`);
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
-  }
-  return body as IsbnLookupResponse;
 }
 
 export default function ManualBookEntryForm({
@@ -164,22 +111,9 @@ export default function ManualBookEntryForm({
   const [donorSearchTerm, setDonorSearchTerm] = useState('');
   const [manualFormError, setManualFormError] = useState<string | null>(null);
   const [manualIsbnError, setManualIsbnError] = useState<string | null>(null);
-  const [lookupPreview, setLookupPreview] = useState<IsbnLookupResponse | null>(
+  const [lookupResult, setLookupResult] = useState<IsbnLookupResponse | null>(
     null,
   );
-  const [fieldSelection, setFieldSelection] = useState<
-    Record<LookupFieldKey, LookupSource | 'none'>
-  >({
-    title: 'none',
-    author: 'none',
-    publisher: 'none',
-    page: 'none',
-    price: 'none',
-    pubDate: 'none',
-    volume: 'none',
-    coverUrl: 'none',
-    description: 'none',
-  });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -228,58 +162,33 @@ export default function ManualBookEntryForm({
     error: manualLookupError,
   } = useMutation({
     mutationFn: fetchIsbnLookup,
-    onSuccess: (result) => {
-      setLookupPreview(result);
-      // 아무것도 자동으로 고르지 않는다 — 관리자가 항목별로 직접
-      // 골라야만 실제로 가져와진다.
-      const nextSelection = {} as Record<LookupFieldKey, LookupSource | 'none'>;
-      for (const key of LOOKUP_FIELD_KEYS) {
-        nextSelection[key] = 'none';
-      }
-      setFieldSelection(nextSelection);
-    },
+    onSuccess: (result) => setLookupResult(result),
   });
 
-  const getSelectedLookupValue = (key: LookupFieldKey): string | undefined => {
-    if (!lookupPreview) return undefined;
-    const source = fieldSelection[key];
-    if (source === 'none') return undefined;
-    return lookupPreview[source]?.[key];
-  };
+  const handleApplyLookup = (
+    values: Partial<Record<LookupFieldKey, string>>,
+    aladinItemId?: number,
+  ) => {
+    const title = values.title ?? manualTitle;
+    const author = values.author ?? manualAuthor;
 
-  const handleApplyLookup = () => {
-    if (!lookupPreview) return;
-    const title = getSelectedLookupValue('title') ?? manualTitle;
-    const author = getSelectedLookupValue('author') ?? manualAuthor;
-
-    if (fieldSelection.title !== 'none') setManualTitle(title);
-    if (fieldSelection.author !== 'none') setManualAuthor(author);
-    if (fieldSelection.publisher !== 'none')
-      setManualPublisher(getSelectedLookupValue('publisher') ?? '');
-    if (fieldSelection.page !== 'none')
-      setManualPage(getSelectedLookupValue('page') ?? '');
-    if (fieldSelection.price !== 'none')
-      setManualPrice(getSelectedLookupValue('price') ?? '');
-    if (fieldSelection.pubDate !== 'none')
-      setManualPubDate(getSelectedLookupValue('pubDate') ?? '');
-    if (fieldSelection.volume !== 'none')
-      setManualVolume(getSelectedLookupValue('volume') ?? '');
-    if (fieldSelection.coverUrl !== 'none')
-      setManualCoverUrl(getSelectedLookupValue('coverUrl') ?? '');
-    if (fieldSelection.description !== 'none')
-      setManualDescription(getSelectedLookupValue('description'));
-    if (fieldSelection.title !== 'none' || fieldSelection.author !== 'none') {
+    if (values.title !== undefined) setManualTitle(title);
+    if (values.author !== undefined) setManualAuthor(author);
+    if (values.publisher !== undefined) setManualPublisher(values.publisher);
+    if (values.page !== undefined) setManualPage(values.page);
+    if (values.price !== undefined) setManualPrice(values.price);
+    if (values.pubDate !== undefined) setManualPubDate(values.pubDate);
+    if (values.volume !== undefined) setManualVolume(values.volume);
+    if (values.coverUrl !== undefined) setManualCoverUrl(values.coverUrl);
+    if (values.description !== undefined)
+      setManualDescription(values.description);
+    if (values.title !== undefined || values.author !== undefined) {
       setManualAuthorCode(generateAuthorCode(author, title) ?? '');
     }
     // 알라딘 오픈API 약관상, 알라딘에서 가져온 항목이 하나라도 있으면
     // 상품페이지 링크를 표시해야 해서 itemId를 같이 들고 있는다.
-    const usedAladin = Object.values(fieldSelection).some(
-      (source) => source === 'aladin',
-    );
-    if (usedAladin) {
-      setManualAladinItemId(lookupPreview.aladin?.aladinItemId ?? null);
-    }
-    setLookupPreview(null);
+    if (aladinItemId !== undefined) setManualAladinItemId(aladinItemId);
+    setLookupResult(null);
   };
 
   const applyCoverFile = (file: File) => {
@@ -302,7 +211,7 @@ export default function ManualBookEntryForm({
     if (!isbn || isManualLookingUp) return;
     if (scannedIsbn) setManualIsbn(scannedIsbn);
 
-    if (!isValidIsbn(isbn)) {
+    if (!looksLikeIsbn(isbn)) {
       setManualIsbnError(`"${isbn}"은(는) ISBN 형식이 아닙니다.`);
       return;
     }
@@ -765,117 +674,24 @@ export default function ManualBookEntryForm({
           {submitLabel}
         </button>
       </div>
-      {lookupPreview && (
-        <Modal title="가져올 항목 선택" onClose={() => setLookupPreview(null)}>
-          <p className="mb-3 text-sm text-amber-800">
-            출처별로 값을 비교해서 항목마다 하나만 고르거나, 가져오지 않을 수도
-            있어요.
-          </p>
-          <div className="space-y-3">
-            {LOOKUP_FIELD_KEYS.filter(
-              (key) =>
-                lookupPreview.aladin?.[key] ||
-                lookupPreview.nationalLibrary?.[key],
-            ).map((key) => (
-              <div key={key} className="rounded border border-amber-900/10 p-3">
-                <p className="mb-2 text-sm font-medium text-amber-950">
-                  {LOOKUP_FIELD_LABELS[key]}
-                </p>
-                <div className="flex gap-2">
-                  {(['aladin', 'nationalLibrary'] as LookupSource[]).map(
-                    (source) => {
-                      const value = lookupPreview[source]?.[key];
-                      if (!value) {
-                        return (
-                          <div
-                            key={source}
-                            className="min-w-0 flex-1 rounded border border-dashed border-amber-900/15 p-2 text-xs text-amber-900/40">
-                            {LOOKUP_SOURCE_LABELS[source]}: 정보 없음
-                          </div>
-                        );
-                      }
-                      const isSelected = fieldSelection[key] === source;
-                      return (
-                        <label
-                          key={source}
-                          className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
-                            isSelected
-                              ? 'border-red-900 bg-red-50'
-                              : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
-                          }`}>
-                          <input
-                            type="radio"
-                            name={`lookup-${key}`}
-                            checked={isSelected}
-                            onChange={() =>
-                              setFieldSelection((prev) => ({
-                                ...prev,
-                                [key]: source,
-                              }))
-                            }
-                            className="mt-1"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs text-amber-700">
-                              {LOOKUP_SOURCE_LABELS[source]}
-                            </p>
-                            {key === 'coverUrl' ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={value}
-                                alt=""
-                                className="mt-1 h-16 w-11 rounded-sm object-cover"
-                              />
-                            ) : (
-                              <p className="truncate text-sm text-amber-800">
-                                {value}
-                              </p>
-                            )}
-                          </div>
-                        </label>
-                      );
-                    },
-                  )}
-                  <label
-                    aria-label="가져오지 않음"
-                    className={`flex w-9 shrink-0 cursor-pointer items-center justify-center rounded border p-2 ${
-                      fieldSelection[key] === 'none'
-                        ? 'border-red-900 bg-red-50 text-red-800'
-                        : 'border-amber-900/20 bg-white/50 text-amber-700 hover:bg-amber-50'
-                    }`}>
-                    <input
-                      type="radio"
-                      name={`lookup-${key}`}
-                      checked={fieldSelection[key] === 'none'}
-                      onChange={() =>
-                        setFieldSelection((prev) => ({
-                          ...prev,
-                          [key]: 'none',
-                        }))
-                      }
-                      className="sr-only"
-                    />
-                    <X className="h-4 w-4" />
-                  </label>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setLookupPreview(null)}
-              className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50">
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={handleApplyLookup}
-              className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-              가져오기
-            </button>
-          </div>
-        </Modal>
+      {lookupResult && (
+        <IsbnCompareModal
+          result={lookupResult}
+          fields={LOOKUP_FIELDS}
+          currentValues={{
+            title: manualTitle,
+            author: manualAuthor,
+            publisher: manualPublisher,
+            page: manualPage,
+            price: manualPrice,
+            pubDate: manualPubDate,
+            volume: manualVolume,
+            coverUrl: manualCoverPreview || manualCoverUrl.trim(),
+            description: manualDescription,
+          }}
+          onApply={handleApplyLookup}
+          onClose={() => setLookupResult(null)}
+        />
       )}
     </div>
   );
