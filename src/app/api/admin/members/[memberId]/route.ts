@@ -1,6 +1,6 @@
 import { buildSyntheticEmail } from '@/lib/email';
 import { EMAIL_REGEX, isValidPassword, PHONE_REGEX } from '@/lib/validation';
-import { createRouteClient } from '@/utils/supabase/route';
+import { requireAdmin } from '@/utils/supabase/admin';
 import { supabaseServer } from '@/utils/supabase/server';
 
 const VALID_ROLES = ['USER', 'ADMIN'];
@@ -17,38 +17,6 @@ interface MemberRow {
   baptismal_name: string | null;
   parish_id: number | null;
   role: string;
-}
-
-async function requireAdmin() {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return {
-      email: null,
-      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
-    };
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return {
-      email: user.email,
-      error: Response.json(
-        { error: '관리자만 이용할 수 있습니다.' },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { email: user.email, error: null };
 }
 
 // Supabase Auth 쪽엔 public.users.id를 직접 가리키는 컬럼이 없어서,

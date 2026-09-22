@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const header = fs.readFileSync('src/components/Header.tsx', 'utf8');
+const header = fs.readFileSync('src/components/HeaderTopBar.tsx', 'utf8');
 const noticesPage = fs.readFileSync('src/app/(page)/notices/page.tsx', 'utf8');
 const noticeManager = fs.readFileSync(
   'src/components/NoticeManager.tsx',
@@ -19,10 +19,10 @@ const adminItemApi = fs.readFileSync(
 );
 const schema = fs.readFileSync('sql/notices.sql', 'utf8');
 
-assert.match(header, /href="\/notices"/, 'header links to the notices page');
+assert.match(header, /href: '\/notices'/, 'header links to the notices page');
 assert.match(
   header,
-  /href="https:\/\/www\.kccei\.com\/fro_end\/html\/main\/index\.php"/,
+  /href: 'https:\/\/www\.kccei\.com\/fro_end\/html\/main\/index\.php'/,
   'header links to the education center site',
 );
 assert.match(noticesPage, /공지사항/, 'notices page has the expected title');
@@ -38,9 +38,15 @@ assert.match(
 );
 assert.match(
   noticesPage,
-  /hideWhenForbidden/,
-  'public page hides notice management when admin API is forbidden',
+  /isAdmin &&/,
+  'public page restricts writing to admins',
 );
+assert.match(noticesPage, /href="\/notices\/new"/);
+assert.match(noticesPage, /fixed/);
+assert.match(noticesPage, /aria-label="글 작성하기"/);
+assert.match(noticesPage, /hidden sm:inline/);
+assert.doesNotMatch(noticesPage, /<NoticeManager/);
+assert.match(noticesPage, /href=\{`\/notices\/\$\{notice.id\}`\}/);
 assert.match(
   noticeManager,
   /res\.status === 401 \|\| res\.status === 403/,

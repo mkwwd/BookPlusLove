@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Barcode, ScanLine, Search, SquarePen } from 'lucide-react';
 
 import MemberRegisterForm from '@/components/MemberRegisterForm';
 import Modal from '@/components/Modal';
+import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -21,9 +22,6 @@ const STATUS_STYLE: Record<string, string> = {
   연체중: 'bg-red-100 text-red-800',
   반납완료: 'bg-green-100 text-green-800',
 };
-
-// globals.css의 .scrollbar-visible 세로 스크롤바 두께와 맞춰야 한다.
-const SCROLLBAR_WIDTH = 36;
 
 interface CopyInfo {
   id: number;
@@ -553,28 +551,7 @@ export default function AdminLoansPage() {
         loan.borrowerName.includes(trimmedSearch)),
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게).
-    // React의 onWheel은 패시브 리스너로 붙어서 preventDefault가 무시되니,
-    // 직접 { passive: false }로 등록해야 실제로 페이지 스크롤이 막힌다.
-    const handleWheel = (e: WheelEvent) => {
-      if (el.scrollWidth <= el.clientWidth) return;
-      // 세로 스크롤바(오른쪽 끝, globals.css 두께와 맞춤) 위에서는 원래
-      // 세로 스크롤 동작을 그대로 둔다.
-      const rect = el.getBoundingClientRect();
-      if (e.clientX >= rect.right - SCROLLBAR_WIDTH) return;
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        el.scrollLeft += e.deltaY;
-        e.preventDefault();
-      }
-    };
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, []);
+  const scrollRef = useHorizontalWheel();
 
   return (
     <div className="space-y-6">

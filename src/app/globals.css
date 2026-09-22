@@ -65,17 +65,6 @@ body {
   -webkit-backdrop-filter: blur(6px);
 }
 
-header[data-home='true'][data-scrolled='false'] .home-hero-nav {
-  color: rgb(255 251 235);
-  text-shadow:
-    0 2px 8px rgb(0 0 0 / 0.45),
-    0 0 18px rgb(120 53 15 / 0.4);
-}
-
-header[data-home='true'][data-scrolled='false'] .home-hero-nav a:hover {
-  color: white;
-}
-
 /* Keep horizontal scrollbars visible for wide tables. */
 .scrollbar-visible {
   scrollbar-width: auto;

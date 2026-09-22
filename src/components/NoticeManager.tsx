@@ -13,6 +13,7 @@ interface Notice {
   title: string;
   content: string;
   isPublished: boolean;
+  isPinned: boolean;
   publishedAt: string;
   createdAt: string;
 }
@@ -26,6 +27,7 @@ const emptyForm = {
   title: '',
   content: '',
   isPublished: true,
+  isPinned: false,
   publishedAt: new Date().toISOString().slice(0, 10),
 };
 
@@ -113,6 +115,7 @@ export default function NoticeManager({
       title: notice.title,
       content: notice.content,
       isPublished: notice.isPublished,
+      isPinned: notice.isPinned,
       publishedAt: toDateInputValue(notice.publishedAt),
     });
   };
@@ -221,6 +224,16 @@ export default function NoticeManager({
               className="h-4 w-4 accent-red-900"
             />
             공개
+          </label>
+
+          <label className="flex items-center gap-2 text-base text-amber-950">
+            <input
+              type="checkbox"
+              checked={form.isPinned}
+              onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
+              className="h-4 w-4 accent-red-900"
+            />
+            상단 고정
           </label>
 
           {saveNotice.error && (
