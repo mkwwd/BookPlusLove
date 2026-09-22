@@ -1,4 +1,5 @@
 import { isValidRegNo } from '@/lib/regNo';
+import { requireAdmin } from '@/utils/supabase/admin';
 import { createRouteClient } from '@/utils/supabase/route';
 import { supabaseServer } from '@/utils/supabase/server';
 
@@ -58,36 +59,6 @@ interface BookCopyRow {
   donor_name: string | null;
   donor_user_id: number | null;
   books: BookRow | BookRow[] | null;
-}
-
-async function requireAdmin() {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return {
-      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
-    };
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return {
-      error: Response.json(
-        { error: '관리자만 이용할 수 있습니다.' },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { error: null };
 }
 
 const FETCH_BATCH_SIZE = 1000;

@@ -21,7 +21,7 @@ export function BookShape({ children }: { children: ReactNode }) {
       />
 
       {/* 책 전체 */}
-      <div className="relative h-full w-full [transform:rotateY(-18deg)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [transform-style:preserve-3d] group-hover:[transform:rotateY(-11deg)_translateY(-4px)]">
+      <div className="relative h-full w-full [transform:rotateY(-15deg)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [transform-style:preserve-3d] group-hover:[transform:rotateY(-11deg)_translateY(-4px)]">
         {/* 뒷표지 */}
         <div
           aria-hidden="true"
@@ -54,7 +54,7 @@ export function BookShape({ children }: { children: ReactNode }) {
         />
 
         {/* 앞표지 */}
-        <div className="absolute inset-0 z-20 [transform-origin:left_center] overflow-hidden rounded-[3px_8px_8px_3px] shadow-[8px_8px_18px_rgba(70,35,15,0.22),16px_2px_24px_rgba(70,35,15,0.12)] ring-1 ring-black/10 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [backface-visibility:hidden] group-hover:[transform:translateX(-5px)_rotateY(-3deg)] group-hover:shadow-[14px_10px_24px_rgba(70,35,15,0.28),22px_4px_30px_rgba(70,35,15,0.16)]">
+        <div className="absolute inset-0 z-20 [transform-origin:left_center] overflow-hidden rounded-[3px_8px_8px_3px] shadow-[8px_8px_18px_rgba(70,35,15,0.22),16px_2px_24px_rgba(70,35,15,0.12)] ring-1 ring-black/10 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [backface-visibility:hidden] group-hover:[transform:translateX(-1px)_rotateY(-3deg)] group-hover:shadow-[14px_10px_24px_rgba(70,35,15,0.28),22px_4px_30px_rgba(70,35,15,0.16)]">
           {/* 표지 콘텐츠 */}
           <div className="absolute inset-0">{children}</div>
 

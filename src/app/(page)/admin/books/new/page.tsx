@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -19,6 +19,7 @@ import IsbnCompareModal, {
   type IsbnLookupResponse,
   type LookupFieldKey,
 } from '@/components/IsbnCompareModal';
+import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
@@ -30,9 +31,6 @@ import ManualBookEntryForm, {
 } from './ManualBookEntryForm';
 
 type Method = 'manual' | 'excel';
-
-// globals.css의 .scrollbar-visible 세로 스크롤바 두께와 맞춰야 한다.
-const SCROLLBAR_WIDTH = 36;
 
 const LOOKUP_FIELDS: LookupFieldKey[] = [
   'title',
@@ -120,28 +118,7 @@ function ScannedBookTable({
     new Map(categories.map((c) => [c.main_code, c.main_label])).entries(),
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // 세로 휠 스크롤을 가로 스크롤로 변환 (PC에서 Shift 없이도 옆으로 넘어가게).
-    // React의 onWheel은 패시브 리스너로 붙어서 preventDefault가 무시되니,
-    // 직접 { passive: false }로 등록해야 실제로 페이지 스크롤이 막힌다.
-    const handleWheel = (e: WheelEvent) => {
-      if (el.scrollWidth <= el.clientWidth) return;
-      // 세로 스크롤바(오른쪽 끝, globals.css 두께와 맞춤) 위에서는 원래
-      // 세로 스크롤 동작을 그대로 둔다.
-      const rect = el.getBoundingClientRect();
-      if (e.clientX >= rect.right - SCROLLBAR_WIDTH) return;
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        el.scrollLeft += e.deltaY;
-        e.preventDefault();
-      }
-    };
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, []);
+  const scrollRef = useHorizontalWheel();
 
   const [lookupBookId, setLookupBookId] = useState<string | null>(null);
   const [lookupResult, setLookupResult] = useState<IsbnLookupResponse | null>(

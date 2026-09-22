@@ -11,6 +11,8 @@ create table if not exists public.notices (
 create index if not exists notices_public_list_idx
   on public.notices (is_published, published_at desc);
 
+grant select, insert, update, delete on table public.notices to service_role;
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

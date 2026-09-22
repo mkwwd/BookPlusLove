@@ -2,7 +2,7 @@ import { createRouteClient } from '@/utils/supabase/route';
 import { supabaseServer } from '@/utils/supabase/server';
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ loanId: string }> },
 ) {
   const supabase = await createRouteClient();
