@@ -34,6 +34,23 @@ import ManualBookEntryForm, {
 
 type Method = 'manual' | 'excel';
 
+type RegistrationResult = {
+  registered: number;
+  failed: { title: string; regNo: string; error: string }[];
+  coverWarnings: string[];
+};
+
+type RegistrationProgress = {
+  total: number;
+  processed: number;
+  registered: number;
+  failed: number;
+  coversTotal: number;
+  coversProcessed: number;
+  coversFailed: number;
+  phase: 'covers' | 'books';
+};
+
 const LOOKUP_FIELDS: LookupFieldKey[] = [
   'title',
   'author',
@@ -649,89 +666,150 @@ function BookRegisterContent() {
     e.target.value = '';
   };
 
-  const [submitResult, setSubmitResult] = useState<{
-    registered: number;
-    failed: { title: string; regNo: string; error: string }[];
-    coverWarnings: string[];
-  } | null>(null);
+  const [submitResult, setSubmitResult] = useState<RegistrationResult | null>(
+    null,
+  );
+  const [progress, setProgress] = useState<RegistrationProgress | null>(null);
 
   const {
     mutate: submitEntries,
     isPending: isSubmitting,
     error: submitError,
   } = useMutation({
+    retry: false,
     mutationFn: async (books: ScannedBook[]) => {
-      // 표지 파일을 골라둔 항목은 여기, 실제 등록 시점에만 업로드한다.
-      const prepared: ScannedBook[] = [];
-      const coverWarnings: string[] = [];
-
-      for (const book of books) {
-        if (!book.coverFile) {
-          prepared.push(book);
-          continue;
-        }
-        try {
-          const formData = new FormData();
-          formData.append('file', book.coverFile);
-          const coverRes = await fetch('/api/admin/books/cover', {
-            method: 'POST',
-            body: formData,
-          });
-          const coverBody = await coverRes.json();
-          if (!coverRes.ok) {
-            throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
-          }
-          prepared.push({
-            ...book,
-            coverUrl: coverBody.url,
-            coverFile: undefined,
-          });
-        } catch {
-          coverWarnings.push(
-            `"${book.title}" 표지 업로드에 실패해 표지 없이 등록을 시도합니다.`,
-          );
-          prepared.push({ ...book, coverUrl: undefined, coverFile: undefined });
-        }
-      }
-
-      const res = await fetch('/api/admin/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ books: prepared }),
-      });
-      const body = await res.json();
-      coverWarnings.push(...(body.coverWarnings ?? []));
-      if (!res.ok) {
-        throw new Error(
-          [body.error ?? '등록에 실패했습니다.', ...coverWarnings].join('\n'),
-        );
-      }
-      return {
-        registered: body.registered as number,
-        failed: body.failed as {
-          title: string;
-          regNo: string;
-          error: string;
-        }[],
-        coverWarnings,
+      const result: RegistrationResult = {
+        registered: 0,
+        failed: [],
+        coverWarnings: [],
       };
-    },
-    onSuccess: ({ registered, failed, coverWarnings }, books) => {
-      const failedRegNos = new Set(failed.map((f) => f.regNo));
-      const savedIds = new Set<string>();
-      for (const book of books) {
-        if (failedRegNos.has(book.regNo.trim())) continue;
-        savedIds.add(book.id);
-        if (book.coverUrl?.startsWith('blob:')) {
-          URL.revokeObjectURL(book.coverUrl);
+      const current: RegistrationProgress = {
+        total: books.length,
+        processed: 0,
+        registered: 0,
+        failed: 0,
+        coversTotal: books.filter((book) => book.coverFile).length,
+        coversProcessed: 0,
+        coversFailed: 0,
+        phase: 'books',
+      };
+      setProgress({ ...current });
+
+      for (let offset = 0; offset < books.length; offset += 20) {
+        const batch = books.slice(offset, offset + 20);
+        const prepared: ScannedBook[] = [];
+
+        // Upload only this batch's files so an interruption leaves later covers untouched.
+        for (const book of batch) {
+          if (!book.coverFile) {
+            prepared.push(book);
+            continue;
+          }
+          current.phase = 'covers';
+          setProgress({ ...current });
+          try {
+            const formData = new FormData();
+            formData.append('file', book.coverFile);
+            const coverRes = await fetch('/api/admin/books/cover', {
+              method: 'POST',
+              body: formData,
+            });
+            const coverBody = await coverRes.json();
+            if (!coverRes.ok) {
+              throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
+            }
+            prepared.push({
+              ...book,
+              coverUrl: coverBody.url,
+              coverFile: undefined,
+            });
+          } catch {
+            current.coversFailed++;
+            result.coverWarnings.push(
+              `"${book.title}" 표지 업로드에 실패해 표지 없이 등록을 시도합니다.`,
+            );
+            prepared.push({
+              ...book,
+              coverUrl: undefined,
+              coverFile: undefined,
+            });
+          }
+          current.coversProcessed++;
+          setProgress({ ...current });
         }
+
+        current.phase = 'books';
+        setProgress({ ...current });
+        let body: RegistrationResult;
+        try {
+          const res = await fetch('/api/admin/books', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ books: prepared }),
+          });
+          const data = await res.json();
+          result.coverWarnings.push(...(data.coverWarnings ?? []));
+          if (!res.ok) {
+            throw new Error(data.error ?? '등록에 실패했습니다.');
+          }
+          if (
+            !Number.isInteger(data.registered) ||
+            data.registered < 0 ||
+            !Array.isArray(data.failed) ||
+            data.registered + data.failed.length !== batch.length
+          ) {
+            throw new Error('등록 결과를 확인하지 못했습니다.');
+          }
+          body = data;
+        } catch (error) {
+          setSubmitResult({
+            ...result,
+            failed: [...result.failed],
+            coverWarnings: [...result.coverWarnings],
+          });
+          throw new Error(
+            [
+              error instanceof Error
+                ? error.message
+                : '등록 요청이 중단되었습니다.',
+              ...result.coverWarnings,
+              `${offset + 1}~${offset + batch.length}번째 도서는 저장 여부를 확인하지 못했습니다. 도서 목록에서 등록번호를 확인한 뒤 다시 시도해주세요. 이후 항목은 전송하지 않았습니다.`,
+            ].join('\n'),
+            { cause: error },
+          );
+        }
+
+        const failedRegNos = new Set(
+          body.failed.map((item) => item.regNo.trim()),
+        );
+        const savedIds = new Set<string>();
+        for (const book of batch) {
+          if (failedRegNos.has(book.regNo.trim())) continue;
+          savedIds.add(book.id);
+          if (book.coverUrl?.startsWith('blob:'))
+            URL.revokeObjectURL(book.coverUrl);
+        }
+        // Commit confirmed batches immediately; retain original failed/unsent drafts for retry.
+        setEntries((prev) => prev.filter((book) => !savedIds.has(book.id)));
+        result.registered += body.registered;
+        result.failed.push(...body.failed);
+        current.processed += batch.length;
+        current.registered = result.registered;
+        current.failed = result.failed.length;
+        setProgress({ ...current });
+        setSubmitResult({
+          ...result,
+          failed: [...result.failed],
+          coverWarnings: [...result.coverWarnings],
+        });
       }
-      // Keep original files/previews for retries, not URLs cleaned up by the server.
-      setEntries((prev) => prev.filter((book) => !savedIds.has(book.id)));
+      return result;
+    },
+    onSuccess: ({ failed }) => {
       if (failed.length === 0) setFileName(null);
       setJustSubmitted(true);
-      setSubmitResult({ registered, failed, coverWarnings });
     },
+    onError: () => setJustSubmitted(true),
   });
 
   const handleSubmit = () => {
@@ -820,7 +898,9 @@ function BookRegisterContent() {
         </div>
       )}
       {submitError && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base whitespace-pre-line text-red-700">
           {submitError.message}
         </div>
       )}
@@ -892,6 +972,49 @@ function BookRegisterContent() {
             제목이 비어있는 항목이 있습니다. 표에서 빨간색으로 표시된 제목 칸을
             채워주세요.
           </p>
+        )}
+
+        {progress && (
+          <section
+            aria-label="등록 진행 상황"
+            className={`space-y-3 border-t border-amber-900/20 bg-white px-4 py-4 text-base text-amber-950 ${isSubmitting ? 'sticky bottom-0 z-20' : ''}`}>
+            <div
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <p className="font-medium">
+                {isSubmitting
+                  ? progress.phase === 'covers'
+                    ? '표지 업로드 중'
+                    : '도서 등록 중'
+                  : submitError
+                    ? '등록 중단'
+                    : '등록 처리 완료'}
+              </p>
+              <p className="tabular-nums">
+                {progress.processed.toLocaleString()} /{' '}
+                {progress.total.toLocaleString()}권 처리 ·{' '}
+                {Math.floor((progress.processed / progress.total) * 100)}%
+              </p>
+            </div>
+            <progress
+              aria-label="도서 등록 진행률"
+              value={progress.processed}
+              max={progress.total}
+              className="block h-3 w-full overflow-hidden rounded-full accent-red-900 [&::-moz-progress-bar]:bg-red-900 [&::-webkit-progress-bar]:bg-red-100 [&::-webkit-progress-value]:bg-red-900"
+            />
+            <div className="flex flex-wrap gap-x-5 gap-y-1 tabular-nums">
+              <p>등록 성공 {progress.registered.toLocaleString()}권</p>
+              <p>등록 실패 {progress.failed.toLocaleString()}권</p>
+              {progress.coversTotal > 0 && (
+                <p>
+                  표지 {progress.coversProcessed.toLocaleString()} /{' '}
+                  {progress.coversTotal.toLocaleString()}장 처리
+                  {progress.coversFailed > 0 &&
+                    ` (실패 ${progress.coversFailed.toLocaleString()}장)`}
+                </p>
+              )}
+            </div>
+          </section>
         )}
 
         <button
