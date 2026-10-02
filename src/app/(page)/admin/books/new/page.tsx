@@ -45,7 +45,7 @@ const LOOKUP_FIELDS: LookupFieldKey[] = [
 ];
 
 // 열 순서(헤더 없음): 등록번호, 제목, 분류코드, 저자기호, 권차, 시리즈명,
-// 저자, 출판사, 출판일, 정가, ISBN, 기증자명
+// 저자, 출판사, 출판일, 정가, ISBN, 기증자명, 줄거리(선택)
 function excelCell(row: string[], index: number): string {
   return (row[index] ?? '').trim();
 }
@@ -97,6 +97,7 @@ function rowToScannedBook(
     categoryMain: matchedCategory?.main_code ?? '',
     authorCode: excelCell(row, 3) || generateAuthorCode(author, title) || '',
     donorName: excelCell(row, 11),
+    description: excelCell(row, 12) || undefined,
     regNo: normalizeExcelRegNo(excelCell(row, 0)),
   };
 }
@@ -186,6 +187,7 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">권차</th>
               <th className="px-5 py-3 font-medium">시리즈명</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
+              <th className="px-5 py-3 font-medium">줄거리</th>
               <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
           </thead>
@@ -193,7 +195,7 @@ function ScannedBookTable({
             {books.length === 0 ? (
               <tr>
                 <td
-                  colSpan={15}
+                  colSpan={16}
                   className="px-5 py-8 text-center text-amber-900/50">
                   {emptyText}
                 </td>
@@ -443,6 +445,17 @@ function ScannedBookTable({
                         }
                         placeholder="선택"
                         className="w-20 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <textarea
+                        aria-label={`${book.title || '도서'} 줄거리`}
+                        rows={3}
+                        value={book.description ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { description: e.target.value })
+                        }
+                        className="block w-72 resize-y rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm leading-relaxed whitespace-pre-wrap focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
                     </td>
                     <td className="px-5 py-3">
@@ -763,7 +776,7 @@ function BookRegisterContent() {
             />
             <p className="mt-2 text-sm text-amber-800">
               열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차,
-              시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명
+              시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명, 줄거리(선택)
             </p>
             {fileName && (
               <p className="mt-2 text-sm text-amber-950">
