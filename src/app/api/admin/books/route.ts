@@ -1,5 +1,6 @@
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
+import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
 import { supabaseServer } from '@/utils/supabase/server';
 
 interface IncomingBook {
@@ -137,6 +138,14 @@ export async function POST(request: Request) {
     ? (body.books as IncomingBook[])
     : [];
 
+  const response = await registerBooks(books);
+  return withBookCoverCleanup(
+    books.map((book) => book?.coverUrl),
+    response,
+  );
+}
+
+async function registerBooks(books: IncomingBook[]) {
   if (books.length === 0) {
     return Response.json({ error: '등록할 도서가 없습니다.' }, { status: 400 });
   }
