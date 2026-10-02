@@ -1,7 +1,12 @@
 import Link from 'next/link';
 
 import { BookShape } from '@/components/BookCard';
-import { BOOK_COPY_STATUS_STYLE, LIBRARY_NAME } from '@/lib/bookCopy';
+import {
+  BOOK_COPY_STATUS_STYLE,
+  buildCallNumber,
+  extractYear,
+  LIBRARY_NAME,
+} from '@/lib/bookCopy';
 
 export interface BookSearchResultCopy {
   id: number;
@@ -19,17 +24,6 @@ export interface BookSearchResultData {
   categoryCode: string | null;
   authorCode: string | null;
   copies: BookSearchResultCopy[];
-}
-
-function extractYear(pubDate: string | null): string | null {
-  return pubDate?.match(/\d{4}/)?.[0] ?? null;
-}
-
-function buildCallNumber(
-  categoryCode: string | null,
-  authorCode: string | null,
-) {
-  return [categoryCode, authorCode].filter(Boolean).join(' ');
 }
 
 function BookThumbnail({
