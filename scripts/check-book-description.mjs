@@ -12,6 +12,7 @@ function load(file, dependencies, extra = '') {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, {
     exports, Response, crypto: { randomUUID: () => 'draft-id' },
+    URL: { createObjectURL: () => 'blob:selected' },
     require: (name) => dependencies[name] ?? {},
   });
   return exports;
@@ -25,7 +26,7 @@ function componentRuntime() {
       useState(initial) {
         const index = cursor++;
         if (!(index in states)) states[index] = initial;
-        return [states[index], (value) => { states[index] = value; }];
+        return [states[index], (value) => { states[index] = typeof value === 'function' ? value(states[index]) : value; }];
       },
       useEffect() {},
     },
@@ -106,4 +107,32 @@ test('registration API writes the description to books', async () => {
   const response = await POST({ json: async () => ({ books: [{ title: 'Book', regNo: 'MB000001', description: 'Saved\nsummary' }] }) });
   assert.equal(response.status, 200);
   assert.equal(saved.description, 'Saved\nsummary');
+});
+
+test('table cover picker validates files, preserves the current cover on errors and supports removal', () => {
+  const runtime = componentRuntime();
+  const { ScannedBookTable } = load(`${directory}page.tsx`, runtime.dependencies, '\nexport { ScannedBookTable };');
+  const updates = [];
+  const props = {
+    books: [{ id: '1', regNo: 'MB000001', title: 'Book', isbn: '', coverUrl: 'https://api.example/cover.jpg' }],
+    categories: [], onRemove() {}, onUpdate: (id, patch) => updates.push({ id, ...patch }), emptyText: 'empty',
+  };
+  const render = () => nodes(runtime.render(ScannedBookTable, props));
+  const input = render().find((node) => node.type === 'input' && node.props.type === 'file');
+  assert.ok(input, 'each book row needs a file picker');
+  assert.equal(input.props.accept, 'image/*');
+  for (const file of [{ type: 'text/plain', size: 10 }, { type: 'image/jpeg', size: 5 * 1024 * 1024 + 1 }]) {
+    input.props.onChange({ currentTarget: { files: [file], value: 'file' } });
+    assert.ok(render().some((node) => node.props.role === 'alert'));
+    assert.equal(updates.length, 0);
+  }
+  const file = { type: 'image/jpeg', size: 1024, name: 'cover.jpg' };
+  const target = { files: [file], value: 'cover.jpg' };
+  input.props.onChange({ currentTarget: target });
+  assert.equal(target.value, '');
+  assert.equal(updates[0].coverFile, file);
+  assert.equal(updates[0].coverUrl, 'blob:selected');
+  assert.ok(!render().some((node) => node.props.role === 'alert'));
+  render().find((node) => node.type === 'button' && node.props.title === '표지 제거').props.onClick();
+  assert.equal(updates[1].coverUrl, '');
 });

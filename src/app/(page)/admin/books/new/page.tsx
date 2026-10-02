@@ -7,8 +7,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileSpreadsheet,
+  ImagePlus,
   PencilLine,
   Trash2,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -126,6 +128,21 @@ function ScannedBookTable({
     null,
   );
   const [lookupErrors, setLookupErrors] = useState<Record<string, string>>({});
+  const [coverErrors, setCoverErrors] = useState<Record<string, string>>({});
+
+  const selectCover = (bookId: string, file: File) => {
+    const error = !file.type.startsWith('image/')
+      ? '이미지 파일만 선택할 수 있습니다.'
+      : file.size > 5 * 1024 * 1024
+        ? '파일 크기는 5MB 이하여야 합니다.'
+        : '';
+    setCoverErrors((prev) => ({ ...prev, [bookId]: error }));
+    if (error) return;
+    onUpdate(bookId, {
+      coverUrl: URL.createObjectURL(file),
+      coverFile: file,
+    });
+  };
 
   const {
     mutate: lookupIsbn,
@@ -213,15 +230,59 @@ function ScannedBookTable({
                 return (
                   <tr key={book.id}>
                     <td className="px-5 py-3">
-                      {book.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={book.coverUrl}
-                          alt=""
-                          className="h-14 w-10 rounded-sm object-cover"
-                        />
-                      ) : (
-                        <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                      <div className="flex w-44 items-start gap-3">
+                        <div className="h-14 w-10 shrink-0">
+                          {book.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={book.coverUrl}
+                              alt=""
+                              className="h-14 w-10 rounded-sm object-cover"
+                            />
+                          ) : (
+                            <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                          )}
+                        </div>
+                        <div className="flex flex-col items-start gap-2">
+                          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm text-amber-950 focus-within:ring-2 focus-within:ring-amber-900/30 hover:bg-amber-50">
+                            <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                            표지 선택
+                            <input
+                              type="file"
+                              accept="image/*"
+                              aria-label={`${book.title || '도서'} 표지 선택`}
+                              className="sr-only"
+                              onChange={(event) => {
+                                const file = event.currentTarget.files?.[0];
+                                event.currentTarget.value = '';
+                                if (file) selectCover(book.id, file);
+                              }}
+                            />
+                          </label>
+                          {book.coverUrl && (
+                            <button
+                              type="button"
+                              title="표지 제거"
+                              aria-label={`${book.title || '도서'} 표지 제거`}
+                              onClick={() => {
+                                setCoverErrors((prev) => ({
+                                  ...prev,
+                                  [book.id]: '',
+                                }));
+                                onUpdate(book.id, { coverUrl: '' });
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded text-amber-800 hover:bg-red-50 hover:text-red-800">
+                              <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {coverErrors[book.id] && (
+                        <p
+                          role="alert"
+                          className="mt-2 w-44 text-sm whitespace-normal text-red-600">
+                          {coverErrors[book.id]}
+                        </p>
                       )}
                     </td>
                     <td className="px-5 py-3">
@@ -494,6 +555,9 @@ function ScannedBookTable({
             };
           })()}
           onApply={(values, aladinItemId) => {
+            if (values.coverUrl !== undefined) {
+              setCoverErrors((prev) => ({ ...prev, [lookupBookId]: '' }));
+            }
             onUpdate(lookupBookId, {
               ...values,
               ...(aladinItemId !== undefined ? { aladinItemId } : {}),
@@ -540,6 +604,14 @@ function BookRegisterContent() {
   };
 
   const updateEntry = (id: string, patch: Partial<ScannedBook>) => {
+    if (patch.coverUrl !== undefined) {
+      const previousUrl = entries.find((book) => book.id === id)?.coverUrl;
+      if (previousUrl?.startsWith('blob:') && previousUrl !== patch.coverUrl) {
+        URL.revokeObjectURL(previousUrl);
+      }
+      // API cover selection must also clear any previously selected local file.
+      patch = { ...patch, coverFile: patch.coverFile };
+    }
     setEntries((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
     );
