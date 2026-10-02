@@ -1,30 +1,12 @@
-import { createRouteClient } from '@/utils/supabase/route';
+import { requireAdmin } from '@/utils/supabase/admin';
 import { supabaseServer } from '@/utils/supabase/server';
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return Response.json(
-      { error: '관리자만 업로드할 수 있습니다.' },
-      { status: 403 },
-    );
-  }
+  const { error: authError } =
+    await requireAdmin('관리자만 업로드할 수 있습니다.');
+  if (authError) return authError;
 
   const formData = await request.formData().catch(() => null);
   const file = formData?.get('file');
