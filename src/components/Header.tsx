@@ -27,7 +27,7 @@ export default async function Header() {
   return (
     <HeaderBar>
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12">
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 sm:gap-x-6">
           <HeaderBrand />
           <HeaderTopBar isLoggedIn={!!user} isAdmin={isAdmin} />
         </div>
