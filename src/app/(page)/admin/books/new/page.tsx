@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -50,6 +50,119 @@ type RegistrationProgress = {
   coversFailed: number;
   phase: 'covers' | 'books';
 };
+
+function RegistrationProgressDialog({
+  progress,
+  isSubmitting,
+  error,
+  coverWarnings,
+  onConfirm,
+}: {
+  progress: RegistrationProgress;
+  isSubmitting: boolean;
+  error?: string;
+  coverWarnings: string[];
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSubmitting) confirmRef.current?.focus();
+  }, [isSubmitting]);
+
+  const title = isSubmitting
+    ? progress.phase === 'covers'
+      ? '표지 업로드 중'
+      : '도서 등록 중'
+    : error
+      ? '등록 중단'
+      : '등록 처리 완료';
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="registration-progress-title"
+      onCancel={(event) => event.preventDefault()}
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-lg border border-amber-900/20 bg-white p-0 text-amber-950 shadow-lg backdrop:bg-black/40">
+      <div className="border-b border-amber-900/10 px-6 py-4 sm:px-8">
+        <h3
+          id="registration-progress-title"
+          className="font-serif text-2xl"
+          role="status">
+          {title}
+        </h3>
+      </div>
+      <div className="space-y-5 p-6 text-base sm:p-8">
+        <div className="space-y-3">
+          <p role="status" className="tabular-nums">
+            {progress.processed.toLocaleString()} /{' '}
+            {progress.total.toLocaleString()}권 처리 ·{' '}
+            {Math.floor((progress.processed / progress.total) * 100)}%
+          </p>
+          <progress
+            aria-label="도서 등록 진행률"
+            value={progress.processed}
+            max={progress.total}
+            className="block h-3 w-full overflow-hidden rounded-full accent-red-900 [&::-moz-progress-bar]:bg-red-900 [&::-webkit-progress-bar]:bg-red-100 [&::-webkit-progress-value]:bg-red-900"
+          />
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 tabular-nums">
+          <p>등록 성공 {progress.registered.toLocaleString()}권</p>
+          <p>등록 실패 {progress.failed.toLocaleString()}권</p>
+          {progress.coversTotal > 0 && (
+            <p>
+              표지 {progress.coversProcessed.toLocaleString()} /{' '}
+              {progress.coversTotal.toLocaleString()}장 처리
+              {progress.coversFailed > 0 &&
+                ` (실패 ${progress.coversFailed.toLocaleString()}장)`}
+            </p>
+          )}
+        </div>
+        {!isSubmitting && (
+          <>
+            {error && (
+              <p
+                role="alert"
+                className="wrap-anywhere whitespace-pre-line text-red-700">
+                {error}
+              </p>
+            )}
+            {progress.failed > 0 && <p>실패한 도서는 목록에 남아 있습니다.</p>}
+            {!error && coverWarnings.length > 0 && (
+              <ul className="list-disc space-y-1 pl-5 text-sm wrap-anywhere text-amber-800">
+                {coverWarnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end">
+              <button
+                ref={confirmRef}
+                type="button"
+                onClick={onConfirm}
+                className="min-h-11 w-full rounded bg-red-900 px-8 py-3 text-base font-medium text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900 sm:w-auto">
+                확인
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </dialog>
+  );
+}
 
 const LOOKUP_FIELDS: LookupFieldKey[] = [
   'title',
@@ -974,49 +1087,6 @@ function BookRegisterContent() {
           </p>
         )}
 
-        {progress && (
-          <section
-            aria-label="등록 진행 상황"
-            className={`space-y-3 border-t border-amber-900/20 bg-white px-4 py-4 text-base text-amber-950 ${isSubmitting ? 'sticky bottom-0 z-20' : ''}`}>
-            <div
-              role="status"
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <p className="font-medium">
-                {isSubmitting
-                  ? progress.phase === 'covers'
-                    ? '표지 업로드 중'
-                    : '도서 등록 중'
-                  : submitError
-                    ? '등록 중단'
-                    : '등록 처리 완료'}
-              </p>
-              <p className="tabular-nums">
-                {progress.processed.toLocaleString()} /{' '}
-                {progress.total.toLocaleString()}권 처리 ·{' '}
-                {Math.floor((progress.processed / progress.total) * 100)}%
-              </p>
-            </div>
-            <progress
-              aria-label="도서 등록 진행률"
-              value={progress.processed}
-              max={progress.total}
-              className="block h-3 w-full overflow-hidden rounded-full accent-red-900 [&::-moz-progress-bar]:bg-red-900 [&::-webkit-progress-bar]:bg-red-100 [&::-webkit-progress-value]:bg-red-900"
-            />
-            <div className="flex flex-wrap gap-x-5 gap-y-1 tabular-nums">
-              <p>등록 성공 {progress.registered.toLocaleString()}권</p>
-              <p>등록 실패 {progress.failed.toLocaleString()}권</p>
-              {progress.coversTotal > 0 && (
-                <p>
-                  표지 {progress.coversProcessed.toLocaleString()} /{' '}
-                  {progress.coversTotal.toLocaleString()}장 처리
-                  {progress.coversFailed > 0 &&
-                    ` (실패 ${progress.coversFailed.toLocaleString()}장)`}
-                </p>
-              )}
-            </div>
-          </section>
-        )}
-
         <button
           type="button"
           disabled={
@@ -1034,6 +1104,15 @@ function BookRegisterContent() {
               : '등록하기'}
         </button>
       </fieldset>
+      {progress && (
+        <RegistrationProgressDialog
+          progress={progress}
+          isSubmitting={isSubmitting}
+          error={submitError?.message}
+          coverWarnings={submitResult?.coverWarnings ?? []}
+          onConfirm={() => setProgress(null)}
+        />
+      )}
     </div>
   );
 }

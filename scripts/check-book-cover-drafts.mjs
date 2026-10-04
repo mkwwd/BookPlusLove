@@ -14,12 +14,15 @@ function loadDrafts(entries, response) {
   const revoked = [];
   const calls = [];
   let tableProps;
+  const mutationState = {};
   const source = fs.readFileSync(
     'src/app/(page)/admin/books/new/page.tsx',
     'utf8',
   );
   const dependencies = {
     react: {
+      useRef: () => ({ current: null }),
+      useEffect: () => {},
       useState(initial) {
         const index = stateIndex++;
         if (!(index in states)) states[index] = index === 2 ? current : initial;
@@ -39,7 +42,7 @@ function loadDrafts(entries, response) {
       useQuery: () => ({ data: [] }),
       useMutation: (options) => {
         mutation = options;
-        return {};
+        return mutationState;
       },
     },
     'next/navigation': { useSearchParams: () => ({ get: () => null }) },
@@ -47,6 +50,7 @@ function loadDrafts(entries, response) {
     'react/jsx-runtime': {
       jsx(type, props) {
         if (type?.name === 'ScannedBookTable') tableProps = props;
+        if (type?.name === 'RegistrationProgressDialog') return type(props);
         return { type, props };
       },
       jsxs: (type, props) => ({ type, props }),
@@ -92,6 +96,7 @@ function loadDrafts(entries, response) {
     tableProps,
     progressUpdates,
     render,
+    mutationState,
     current: () => current,
   };
 }
@@ -330,4 +335,108 @@ test('the rendered native progress bar exposes the confirmed count and total', a
   assert.ok(progress);
   assert.equal(progress.props.value, 3);
   assert.equal(progress.props.max, 3);
+});
+
+function renderedNodes(tree) {
+  const nodes = [];
+  const visit = (node) => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (!node?.props) return;
+    nodes.push(node);
+    visit(node.props.children);
+  };
+  visit(tree);
+  return nodes;
+}
+
+test('pending registration opens a dialog outside the disabled fieldset and cannot be dismissed', async () => {
+  const entries = manyBooks(1);
+  const draft = loadDrafts(entries, responseFor(1));
+  await draft.mutation.mutationFn(entries);
+  draft.mutationState.isPending = true;
+  const nodes = renderedNodes(draft.render());
+  const dialog = nodes.find((node) => node.type === 'dialog');
+  assert.ok(dialog, 'progress must be displayed in a modal dialog');
+  assert.ok(dialog.props['aria-labelledby']);
+  assert.equal(
+    renderedNodes(nodes.find((node) => node.type === 'fieldset')).some(
+      (node) => node.type === 'dialog',
+    ),
+    false,
+  );
+  assert.equal(
+    renderedNodes(dialog).some((node) => node.type === 'button'),
+    false,
+  );
+  let prevented = false;
+  dialog.props.onCancel({
+    preventDefault() {
+      prevented = true;
+    },
+  });
+  assert.equal(prevented, true);
+  assert.ok(
+    renderedNodes(draft.render()).find((node) => node.type === 'dialog'),
+  );
+});
+
+test('completed registration stays visible until confirm, then can open again', async () => {
+  const entries = manyBooks(2);
+  const draft = loadDrafts(entries, responseFor(2));
+  const result = await draft.mutation.mutationFn(entries);
+  draft.mutation.onSuccess(result);
+  const dialog = renderedNodes(draft.render()).find(
+    (node) => node.type === 'dialog',
+  );
+  assert.ok(dialog);
+  const confirm = renderedNodes(dialog).find(
+    (node) => node.type === 'button' && node.props.children === '확인',
+  );
+  assert.ok(confirm);
+  confirm.props.onClick();
+  assert.equal(
+    renderedNodes(draft.render()).some(
+      (node) => node.type === 'dialog' || node.type === 'progress',
+    ),
+    false,
+  );
+  await draft.mutation.mutationFn(entries);
+  assert.ok(
+    renderedNodes(draft.render()).find((node) => node.type === 'dialog'),
+  );
+});
+
+test('interrupted registration shows the error inside the dialog and confirm retains drafts', async () => {
+  const entries = manyBooks(1);
+  const draft = loadDrafts(entries, {
+    ok: false,
+    json: async () => ({ error: 'save failed' }),
+  });
+  let failure;
+  try {
+    await draft.mutation.mutationFn(entries);
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure);
+  draft.mutationState.error = failure;
+  draft.mutation.onError(failure);
+  const dialog = renderedNodes(draft.render()).find(
+    (node) => node.type === 'dialog',
+  );
+  assert.ok(dialog);
+  assert.ok(
+    renderedNodes(dialog).some(
+      (node) =>
+        node.props.role === 'alert' && node.props.children === failure.message,
+    ),
+  );
+  renderedNodes(dialog)
+    .find((node) => node.type === 'button')
+    .props.onClick();
+  assert.equal(
+    renderedNodes(draft.render()).some((node) => node.type === 'dialog'),
+    false,
+  );
+  assert.equal(draft.current(), entries);
 });
