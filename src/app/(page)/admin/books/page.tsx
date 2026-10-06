@@ -197,7 +197,17 @@ function EditBookForm({
         }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? '수정에 실패했습니다.');
+      if (!res.ok) {
+        throw new Error(
+          [
+            body.error ?? '수정에 실패했습니다.',
+            ...(body.coverWarnings ?? []),
+          ].join('\n'),
+        );
+      }
+      if (body.coverWarnings?.length) {
+        window.alert(body.coverWarnings.join('\n'));
+      }
     },
     onSuccess: onSaved,
   });

@@ -1,6 +1,7 @@
 import { isValidIsbn13 } from '@/lib/isbn';
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
+import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
 import { supabaseServer } from '@/utils/supabase/server';
 
 const VALID_STATUSES = ['대여가능', '대여중', '분실', '폐기'];
@@ -13,16 +14,31 @@ export async function PATCH(
   if (authError) return authError;
 
   const { copyId } = await params;
+  const body = await request.json().catch(() => null);
+  const covers: unknown[] = [body?.coverUrl];
+  const response = await updateBook(copyId, body, covers);
+  return withBookCoverCleanup(covers, response);
+}
+
+async function updateBook(
+  copyId: string,
+  body: Record<string, unknown> | null,
+  covers: unknown[],
+) {
   const copyIdNum = Number(copyId);
   if (!Number.isInteger(copyIdNum) || copyIdNum < 0) {
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const { data: existingCopy } = await supabaseServer
+  const { data: existingCopy, error: findError } = await supabaseServer
     .from('book_copies')
-    .select('id, book_id')
+    .select('id, book_id, books(cover_url)')
     .eq('id', copyIdNum)
     .maybeSingle();
+
+  if (findError) {
+    return Response.json({ error: findError.message }, { status: 500 });
+  }
 
   if (!existingCopy) {
     return Response.json(
@@ -31,7 +47,10 @@ export async function PATCH(
     );
   }
 
-  const body = await request.json().catch(() => null);
+  const existingBook = Array.isArray(existingCopy.books)
+    ? existingCopy.books[0]
+    : existingCopy.books;
+  covers.push(existingBook?.cover_url);
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
   const isbn = typeof body?.isbn === 'string' ? body.isbn.trim() : '';
   const regNo = typeof body?.regNo === 'string' ? body.regNo.trim() : '';

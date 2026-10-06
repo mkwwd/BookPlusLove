@@ -1,6 +1,6 @@
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
-import { createRouteClient } from '@/utils/supabase/route';
+import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
 import { supabaseServer } from '@/utils/supabase/server';
 
 interface IncomingBook {
@@ -128,33 +128,24 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return Response.json(
-      { error: '관리자만 도서를 등록할 수 있습니다.' },
-      { status: 403 },
-    );
-  }
+  const { error: authError } = await requireAdmin(
+    '관리자만 도서를 등록할 수 있습니다.',
+  );
+  if (authError) return authError;
 
   const body = await request.json().catch(() => null);
   const books = Array.isArray(body?.books)
     ? (body.books as IncomingBook[])
     : [];
 
+  const response = await registerBooks(books);
+  return withBookCoverCleanup(
+    books.map((book) => book?.coverUrl),
+    response,
+  );
+}
+
+async function registerBooks(books: IncomingBook[]) {
   if (books.length === 0) {
     return Response.json({ error: '등록할 도서가 없습니다.' }, { status: 400 });
   }

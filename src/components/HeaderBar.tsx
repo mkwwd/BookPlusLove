@@ -12,11 +12,7 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setScrolled(window.scrollY > 20);
     };
 
     handleScroll();
@@ -24,17 +20,17 @@ export default function HeaderBar({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const homeClassName = scrolled
-    ? 'fixed inset-x-0 top-0 z-50 bg-[#fffdfa] shadow-md transition-all duration-300'
-    : 'fixed inset-x-0 top-0 z-50 bg-[#fffdfa] shadow-md sm:bg-transparent sm:shadow-none sm:backdrop-blur-xs transition-all duration-300';
-
-  const pageClassName = scrolled
-    ? 'sticky top-0 z-50 bg-[#fffdfa] shadow-md transition-all duration-300'
-    : 'header-bg sticky top-0 z-50 transition-all duration-300';
+  const positionClass = isHome ? 'fixed inset-x-0' : 'sticky';
+  const backgroundClass =
+    isHome || scrolled ? 'bg-[#fffdfa] shadow-md' : 'header-bg';
+  const transparentClass =
+    isHome && !scrolled
+      ? 'sm:bg-transparent sm:shadow-none sm:backdrop-blur-xs'
+      : '';
 
   return (
     <header
-      className={isHome ? homeClassName : pageClassName}
+      className={`${positionClass} top-0 z-50 ${backgroundClass} ${transparentClass} transition-all duration-300`.trim()}
       data-home={isHome}
       data-scrolled={scrolled}>
       {children}

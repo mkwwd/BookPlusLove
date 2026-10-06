@@ -1,14 +1,16 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CheckCircle2,
   FileSpreadsheet,
+  ImagePlus,
   PencilLine,
   Trash2,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -32,6 +34,136 @@ import ManualBookEntryForm, {
 
 type Method = 'manual' | 'excel';
 
+type RegistrationResult = {
+  registered: number;
+  failed: { title: string; regNo: string; error: string }[];
+  coverWarnings: string[];
+};
+
+type RegistrationProgress = {
+  total: number;
+  processed: number;
+  registered: number;
+  failed: number;
+  coversTotal: number;
+  coversProcessed: number;
+  coversFailed: number;
+  phase: 'covers' | 'books';
+};
+
+function RegistrationProgressDialog({
+  progress,
+  isSubmitting,
+  error,
+  coverWarnings,
+  onConfirm,
+}: {
+  progress: RegistrationProgress;
+  isSubmitting: boolean;
+  error?: string;
+  coverWarnings: string[];
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSubmitting) confirmRef.current?.focus();
+  }, [isSubmitting]);
+
+  const title = isSubmitting
+    ? progress.phase === 'covers'
+      ? '표지 업로드 중'
+      : '도서 등록 중'
+    : error
+      ? '등록 중단'
+      : '등록 처리 완료';
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="registration-progress-title"
+      onCancel={(event) => event.preventDefault()}
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-lg border border-amber-900/20 bg-white p-0 text-amber-950 shadow-lg backdrop:bg-black/40">
+      <div className="border-b border-amber-900/10 px-6 py-4 sm:px-8">
+        <h3
+          id="registration-progress-title"
+          className="font-serif text-2xl"
+          role="status">
+          {title}
+        </h3>
+      </div>
+      <div className="space-y-5 p-6 text-base sm:p-8">
+        <div className="space-y-3">
+          <p role="status" className="tabular-nums">
+            {progress.processed.toLocaleString()} /{' '}
+            {progress.total.toLocaleString()}권 처리 ·{' '}
+            {Math.floor((progress.processed / progress.total) * 100)}%
+          </p>
+          <progress
+            aria-label="도서 등록 진행률"
+            value={progress.processed}
+            max={progress.total}
+            className="block h-3 w-full overflow-hidden rounded-full accent-red-900 [&::-moz-progress-bar]:bg-red-900 [&::-webkit-progress-bar]:bg-red-100 [&::-webkit-progress-value]:bg-red-900"
+          />
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 tabular-nums">
+          <p>등록 성공 {progress.registered.toLocaleString()}권</p>
+          <p>등록 실패 {progress.failed.toLocaleString()}권</p>
+          {progress.coversTotal > 0 && (
+            <p>
+              표지 {progress.coversProcessed.toLocaleString()} /{' '}
+              {progress.coversTotal.toLocaleString()}장 처리
+              {progress.coversFailed > 0 &&
+                ` (실패 ${progress.coversFailed.toLocaleString()}장)`}
+            </p>
+          )}
+        </div>
+        {!isSubmitting && (
+          <>
+            {error && (
+              <p
+                role="alert"
+                className="wrap-anywhere whitespace-pre-line text-red-700">
+                {error}
+              </p>
+            )}
+            {progress.failed > 0 && <p>실패한 도서는 목록에 남아 있습니다.</p>}
+            {!error && coverWarnings.length > 0 && (
+              <ul className="list-disc space-y-1 pl-5 text-sm wrap-anywhere text-amber-800">
+                {coverWarnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end">
+              <button
+                ref={confirmRef}
+                type="button"
+                onClick={onConfirm}
+                className="min-h-11 w-full rounded bg-red-900 px-8 py-3 text-base font-medium text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900 sm:w-auto">
+                확인
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </dialog>
+  );
+}
+
 const LOOKUP_FIELDS: LookupFieldKey[] = [
   'title',
   'author',
@@ -45,7 +177,7 @@ const LOOKUP_FIELDS: LookupFieldKey[] = [
 ];
 
 // 열 순서(헤더 없음): 등록번호, 제목, 분류코드, 저자기호, 권차, 시리즈명,
-// 저자, 출판사, 출판일, 정가, ISBN, 기증자명
+// 저자, 출판사, 출판일, 정가, ISBN, 기증자명, 줄거리(선택)
 function excelCell(row: string[], index: number): string {
   return (row[index] ?? '').trim();
 }
@@ -97,6 +229,7 @@ function rowToScannedBook(
     categoryMain: matchedCategory?.main_code ?? '',
     authorCode: excelCell(row, 3) || generateAuthorCode(author, title) || '',
     donorName: excelCell(row, 11),
+    description: excelCell(row, 12) || undefined,
     regNo: normalizeExcelRegNo(excelCell(row, 0)),
   };
 }
@@ -125,6 +258,21 @@ function ScannedBookTable({
     null,
   );
   const [lookupErrors, setLookupErrors] = useState<Record<string, string>>({});
+  const [coverErrors, setCoverErrors] = useState<Record<string, string>>({});
+
+  const selectCover = (bookId: string, file: File) => {
+    const error = !file.type.startsWith('image/')
+      ? '이미지 파일만 선택할 수 있습니다.'
+      : file.size > 5 * 1024 * 1024
+        ? '파일 크기는 5MB 이하여야 합니다.'
+        : '';
+    setCoverErrors((prev) => ({ ...prev, [bookId]: error }));
+    if (error) return;
+    onUpdate(bookId, {
+      coverUrl: URL.createObjectURL(file),
+      coverFile: file,
+    });
+  };
 
   const {
     mutate: lookupIsbn,
@@ -186,6 +334,7 @@ function ScannedBookTable({
               <th className="px-5 py-3 font-medium">권차</th>
               <th className="px-5 py-3 font-medium">시리즈명</th>
               <th className="px-5 py-3 font-medium">기증자명</th>
+              <th className="px-5 py-3 font-medium">줄거리</th>
               <th className="px-5 py-3 font-medium">삭제</th>
             </tr>
           </thead>
@@ -193,7 +342,7 @@ function ScannedBookTable({
             {books.length === 0 ? (
               <tr>
                 <td
-                  colSpan={15}
+                  colSpan={16}
                   className="px-5 py-8 text-center text-amber-900/50">
                   {emptyText}
                 </td>
@@ -211,15 +360,59 @@ function ScannedBookTable({
                 return (
                   <tr key={book.id}>
                     <td className="px-5 py-3">
-                      {book.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={book.coverUrl}
-                          alt=""
-                          className="h-14 w-10 rounded-sm object-cover"
-                        />
-                      ) : (
-                        <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                      <div className="flex w-44 items-start gap-3">
+                        <div className="h-14 w-10 shrink-0">
+                          {book.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={book.coverUrl}
+                              alt=""
+                              className="h-14 w-10 rounded-sm object-cover"
+                            />
+                          ) : (
+                            <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                          )}
+                        </div>
+                        <div className="flex flex-col items-start gap-2">
+                          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm text-amber-950 focus-within:ring-2 focus-within:ring-amber-900/30 hover:bg-amber-50">
+                            <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                            표지 선택
+                            <input
+                              type="file"
+                              accept="image/*"
+                              aria-label={`${book.title || '도서'} 표지 선택`}
+                              className="sr-only"
+                              onChange={(event) => {
+                                const file = event.currentTarget.files?.[0];
+                                event.currentTarget.value = '';
+                                if (file) selectCover(book.id, file);
+                              }}
+                            />
+                          </label>
+                          {book.coverUrl && (
+                            <button
+                              type="button"
+                              title="표지 제거"
+                              aria-label={`${book.title || '도서'} 표지 제거`}
+                              onClick={() => {
+                                setCoverErrors((prev) => ({
+                                  ...prev,
+                                  [book.id]: '',
+                                }));
+                                onUpdate(book.id, { coverUrl: '' });
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded text-amber-800 hover:bg-red-50 hover:text-red-800">
+                              <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {coverErrors[book.id] && (
+                        <p
+                          role="alert"
+                          className="mt-2 w-44 text-sm whitespace-normal text-red-600">
+                          {coverErrors[book.id]}
+                        </p>
                       )}
                     </td>
                     <td className="px-5 py-3">
@@ -446,6 +639,17 @@ function ScannedBookTable({
                       />
                     </td>
                     <td className="px-5 py-3">
+                      <textarea
+                        aria-label={`${book.title || '도서'} 줄거리`}
+                        rows={3}
+                        value={book.description ?? ''}
+                        onChange={(e) =>
+                          onUpdate(book.id, { description: e.target.value })
+                        }
+                        className="block w-72 resize-y rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm leading-relaxed whitespace-pre-wrap focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-5 py-3">
                       <button
                         type="button"
                         aria-label="목록에서 삭제"
@@ -481,6 +685,9 @@ function ScannedBookTable({
             };
           })()}
           onApply={(values, aladinItemId) => {
+            if (values.coverUrl !== undefined) {
+              setCoverErrors((prev) => ({ ...prev, [lookupBookId]: '' }));
+            }
             onUpdate(lookupBookId, {
               ...values,
               ...(aladinItemId !== undefined ? { aladinItemId } : {}),
@@ -527,6 +734,14 @@ function BookRegisterContent() {
   };
 
   const updateEntry = (id: string, patch: Partial<ScannedBook>) => {
+    if (patch.coverUrl !== undefined) {
+      const previousUrl = entries.find((book) => book.id === id)?.coverUrl;
+      if (previousUrl?.startsWith('blob:') && previousUrl !== patch.coverUrl) {
+        URL.revokeObjectURL(previousUrl);
+      }
+      // API cover selection must also clear any previously selected local file.
+      patch = { ...patch, coverFile: patch.coverFile };
+    }
     setEntries((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
     );
@@ -564,87 +779,150 @@ function BookRegisterContent() {
     e.target.value = '';
   };
 
-  const [submitResult, setSubmitResult] = useState<{
-    registered: number;
-    failed: { title: string; regNo: string; error: string }[];
-    coverWarnings: string[];
-  } | null>(null);
+  const [submitResult, setSubmitResult] = useState<RegistrationResult | null>(
+    null,
+  );
+  const [progress, setProgress] = useState<RegistrationProgress | null>(null);
 
   const {
     mutate: submitEntries,
     isPending: isSubmitting,
     error: submitError,
   } = useMutation({
+    retry: false,
     mutationFn: async (books: ScannedBook[]) => {
-      // 표지 파일을 골라둔 항목은 여기, 실제 등록 시점에만 업로드한다.
-      const prepared: ScannedBook[] = [];
-      const coverWarnings: string[] = [];
-
-      for (const book of books) {
-        if (!book.coverFile) {
-          prepared.push(book);
-          continue;
-        }
-        try {
-          const formData = new FormData();
-          formData.append('file', book.coverFile);
-          const coverRes = await fetch('/api/admin/books/cover', {
-            method: 'POST',
-            body: formData,
-          });
-          const coverBody = await coverRes.json();
-          if (!coverRes.ok) {
-            throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
-          }
-          if (book.coverUrl?.startsWith('blob:')) {
-            URL.revokeObjectURL(book.coverUrl);
-          }
-          prepared.push({
-            ...book,
-            coverUrl: coverBody.url,
-            coverFile: undefined,
-          });
-        } catch {
-          coverWarnings.push(
-            `"${book.title}" 표지 업로드에 실패해 표지 없이 등록을 시도합니다.`,
-          );
-          prepared.push({ ...book, coverUrl: undefined, coverFile: undefined });
-        }
-      }
-
-      const res = await fetch('/api/admin/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ books: prepared }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error ?? '등록에 실패했습니다.');
-      }
-      return {
-        registered: body.registered as number,
-        failed: body.failed as {
-          title: string;
-          regNo: string;
-          error: string;
-        }[],
-        coverWarnings,
-        prepared,
+      const result: RegistrationResult = {
+        registered: 0,
+        failed: [],
+        coverWarnings: [],
       };
-    },
-    onSuccess: ({ registered, failed, coverWarnings, prepared }) => {
-      if (failed.length === 0) {
-        setEntries([]);
-        setFileName(null);
-      } else {
-        // 실패한 항목만 남겨서 고치고 다시 등록할 수 있게 한다. 표지가 이미
-        // 실제로 업로드된 경우 그 URL을 유지해서 재시도할 때 다시 안 올린다.
-        const failedRegNos = new Set(failed.map((f) => f.regNo));
-        setEntries(prepared.filter((b) => failedRegNos.has(b.regNo.trim())));
+      const current: RegistrationProgress = {
+        total: books.length,
+        processed: 0,
+        registered: 0,
+        failed: 0,
+        coversTotal: books.filter((book) => book.coverFile).length,
+        coversProcessed: 0,
+        coversFailed: 0,
+        phase: 'books',
+      };
+      setProgress({ ...current });
+
+      for (let offset = 0; offset < books.length; offset += 20) {
+        const batch = books.slice(offset, offset + 20);
+        const prepared: ScannedBook[] = [];
+
+        // Upload only this batch's files so an interruption leaves later covers untouched.
+        for (const book of batch) {
+          if (!book.coverFile) {
+            prepared.push(book);
+            continue;
+          }
+          current.phase = 'covers';
+          setProgress({ ...current });
+          try {
+            const formData = new FormData();
+            formData.append('file', book.coverFile);
+            const coverRes = await fetch('/api/admin/books/cover', {
+              method: 'POST',
+              body: formData,
+            });
+            const coverBody = await coverRes.json();
+            if (!coverRes.ok) {
+              throw new Error(coverBody.error ?? '표지 업로드에 실패했습니다.');
+            }
+            prepared.push({
+              ...book,
+              coverUrl: coverBody.url,
+              coverFile: undefined,
+            });
+          } catch {
+            current.coversFailed++;
+            result.coverWarnings.push(
+              `"${book.title}" 표지 업로드에 실패해 표지 없이 등록을 시도합니다.`,
+            );
+            prepared.push({
+              ...book,
+              coverUrl: undefined,
+              coverFile: undefined,
+            });
+          }
+          current.coversProcessed++;
+          setProgress({ ...current });
+        }
+
+        current.phase = 'books';
+        setProgress({ ...current });
+        let body: RegistrationResult;
+        try {
+          const res = await fetch('/api/admin/books', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ books: prepared }),
+          });
+          const data = await res.json();
+          result.coverWarnings.push(...(data.coverWarnings ?? []));
+          if (!res.ok) {
+            throw new Error(data.error ?? '등록에 실패했습니다.');
+          }
+          if (
+            !Number.isInteger(data.registered) ||
+            data.registered < 0 ||
+            !Array.isArray(data.failed) ||
+            data.registered + data.failed.length !== batch.length
+          ) {
+            throw new Error('등록 결과를 확인하지 못했습니다.');
+          }
+          body = data;
+        } catch (error) {
+          setSubmitResult({
+            ...result,
+            failed: [...result.failed],
+            coverWarnings: [...result.coverWarnings],
+          });
+          throw new Error(
+            [
+              error instanceof Error
+                ? error.message
+                : '등록 요청이 중단되었습니다.',
+              ...result.coverWarnings,
+              `${offset + 1}~${offset + batch.length}번째 도서는 저장 여부를 확인하지 못했습니다. 도서 목록에서 등록번호를 확인한 뒤 다시 시도해주세요. 이후 항목은 전송하지 않았습니다.`,
+            ].join('\n'),
+            { cause: error },
+          );
+        }
+
+        const failedRegNos = new Set(
+          body.failed.map((item) => item.regNo.trim()),
+        );
+        const savedIds = new Set<string>();
+        for (const book of batch) {
+          if (failedRegNos.has(book.regNo.trim())) continue;
+          savedIds.add(book.id);
+          if (book.coverUrl?.startsWith('blob:'))
+            URL.revokeObjectURL(book.coverUrl);
+        }
+        // Commit confirmed batches immediately; retain original failed/unsent drafts for retry.
+        setEntries((prev) => prev.filter((book) => !savedIds.has(book.id)));
+        result.registered += body.registered;
+        result.failed.push(...body.failed);
+        current.processed += batch.length;
+        current.registered = result.registered;
+        current.failed = result.failed.length;
+        setProgress({ ...current });
+        setSubmitResult({
+          ...result,
+          failed: [...result.failed],
+          coverWarnings: [...result.coverWarnings],
+        });
       }
-      setJustSubmitted(true);
-      setSubmitResult({ registered, failed, coverWarnings });
+      return result;
     },
+    onSuccess: ({ failed }) => {
+      if (failed.length === 0) setFileName(null);
+      setJustSubmitted(true);
+    },
+    onError: () => setJustSubmitted(true),
   });
 
   const handleSubmit = () => {
@@ -733,95 +1011,108 @@ function BookRegisterContent() {
         </div>
       )}
       {submitError && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base whitespace-pre-line text-red-700">
           {submitError.message}
         </div>
       )}
 
-      {method === 'manual' && (
-        <ManualBookEntryForm
+      <fieldset disabled={isSubmitting} className="contents">
+        {method === 'manual' && (
+          <ManualBookEntryForm
+            categories={categories}
+            existingRegNos={entries.map((e) => e.regNo)}
+            onSubmit={(book) => setEntries((prev) => [...prev, book])}
+            onReset={() => setJustSubmitted(false)}
+          />
+        )}
+
+        {method === 'excel' && (
+          <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
+            <label className="mb-2 block text-base font-medium text-amber-950">
+              엑셀 파일
+            </label>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileChange}
+              className="block w-full text-base text-amber-950 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
+            />
+            <p className="mt-2 text-sm text-amber-800">
+              열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차,
+              시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명, 줄거리(선택)
+            </p>
+            {fileName && (
+              <p className="mt-2 text-sm text-amber-950">
+                선택된 파일: {fileName}
+              </p>
+            )}
+            {excelParseError && (
+              <p className="mt-2 text-sm text-red-600">{excelParseError}</p>
+            )}
+            <p className="mt-2 text-sm text-amber-800">
+              제목이 비어있거나 분류코드가 일치하지 않는 항목은 아래 표에서
+              빨간색으로 표시되니, 표에서 직접 입력해 채워주세요.
+            </p>
+          </div>
+        )}
+
+        <ScannedBookTable
+          books={entries}
           categories={categories}
-          existingRegNos={entries.map((e) => e.regNo)}
-          onSubmit={(book) => setEntries((prev) => [...prev, book])}
-          onReset={() => setJustSubmitted(false)}
+          onRemove={(id) =>
+            setEntries((prev) => {
+              const removed = prev.find((b) => b.id === id);
+              if (removed?.coverUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(removed.coverUrl);
+              }
+              return prev.filter((b) => b.id !== id);
+            })
+          }
+          onUpdate={updateEntry}
+          emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
+        />
+
+        {hasInvalidRegNo && (
+          <p className="text-sm text-red-600">
+            등록번호 형식이 잘못되었거나 중복된 항목이 있습니다. 표에서
+            빨간색으로 표시된 등록번호를 확인해주세요.
+          </p>
+        )}
+        {hasEmptyTitle && (
+          <p className="text-sm text-red-600">
+            제목이 비어있는 항목이 있습니다. 표에서 빨간색으로 표시된 제목 칸을
+            채워주세요.
+          </p>
+        )}
+
+        <button
+          type="button"
+          disabled={
+            entries.length === 0 ||
+            hasInvalidRegNo ||
+            hasEmptyTitle ||
+            isSubmitting
+          }
+          onClick={handleSubmit}
+          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
+          {isSubmitting
+            ? '등록 중...'
+            : entries.length > 0
+              ? `${entries.length}권 등록하기`
+              : '등록하기'}
+        </button>
+      </fieldset>
+      {progress && (
+        <RegistrationProgressDialog
+          progress={progress}
+          isSubmitting={isSubmitting}
+          error={submitError?.message}
+          coverWarnings={submitResult?.coverWarnings ?? []}
+          onConfirm={() => setProgress(null)}
         />
       )}
-
-      {method === 'excel' && (
-        <div className="rounded-lg border border-amber-900/20 bg-white/40 p-6 shadow-sm backdrop-blur-sm">
-          <label className="mb-2 block text-base font-medium text-amber-950">
-            엑셀 파일
-          </label>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleFileChange}
-            className="block w-full text-base text-amber-950 file:mr-4 file:rounded file:border-0 file:bg-amber-100 file:px-4 file:py-2.5 file:text-base file:font-medium file:text-amber-900 hover:file:bg-amber-200"
-          />
-          <p className="mt-2 text-sm text-amber-800">
-            열 순서(헤더 없이): 등록번호, 제목, 분류코드, 저자기호, 권차,
-            시리즈명, 저자, 출판사, 출판일, 정가, ISBN, 기증자명
-          </p>
-          {fileName && (
-            <p className="mt-2 text-sm text-amber-950">
-              선택된 파일: {fileName}
-            </p>
-          )}
-          {excelParseError && (
-            <p className="mt-2 text-sm text-red-600">{excelParseError}</p>
-          )}
-          <p className="mt-2 text-sm text-amber-800">
-            제목이 비어있거나 분류코드가 일치하지 않는 항목은 아래 표에서
-            빨간색으로 표시되니, 표에서 직접 입력해 채워주세요.
-          </p>
-        </div>
-      )}
-
-      <ScannedBookTable
-        books={entries}
-        categories={categories}
-        onRemove={(id) =>
-          setEntries((prev) => {
-            const removed = prev.find((b) => b.id === id);
-            if (removed?.coverUrl?.startsWith('blob:')) {
-              URL.revokeObjectURL(removed.coverUrl);
-            }
-            return prev.filter((b) => b.id !== id);
-          })
-        }
-        onUpdate={updateEntry}
-        emptyText="등록할 도서가 없습니다. 위에서 조회/직접 입력 또는 엑셀 업로드로 추가해주세요."
-      />
-
-      {hasInvalidRegNo && (
-        <p className="text-sm text-red-600">
-          등록번호 형식이 잘못되었거나 중복된 항목이 있습니다. 표에서 빨간색으로
-          표시된 등록번호를 확인해주세요.
-        </p>
-      )}
-      {hasEmptyTitle && (
-        <p className="text-sm text-red-600">
-          제목이 비어있는 항목이 있습니다. 표에서 빨간색으로 표시된 제목 칸을
-          채워주세요.
-        </p>
-      )}
-
-      <button
-        type="button"
-        disabled={
-          entries.length === 0 ||
-          hasInvalidRegNo ||
-          hasEmptyTitle ||
-          isSubmitting
-        }
-        onClick={handleSubmit}
-        className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-        {isSubmitting
-          ? '등록 중...'
-          : entries.length > 0
-            ? `${entries.length}권 등록하기`
-            : '등록하기'}
-      </button>
     </div>
   );
 }

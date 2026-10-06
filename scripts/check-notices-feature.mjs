@@ -47,11 +47,9 @@ assert.match(noticesPage, /aria-label="글 작성하기"/);
 assert.match(noticesPage, /hidden sm:inline/);
 assert.doesNotMatch(noticesPage, /<NoticeManager/);
 assert.match(noticesPage, /href=\{`\/notices\/\$\{notice.id\}`\}/);
-assert.match(
-  noticeManager,
-  /res\.status === 401 \|\| res\.status === 403/,
-  'notice manager hides itself for non-admin visitors',
-);
+const adminLayout = fs.readFileSync('src/app/(page)/admin/layout.tsx', 'utf8');
+assert.match(adminLayout, /data\?\.role !== 'ADMIN'/);
+assert.match(adminLayout, /redirect\('\/'\)/);
 assert.match(
   adminNav,
   /href: '\/admin\/notices'/,
