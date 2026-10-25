@@ -23,14 +23,20 @@ const NAV_ITEMS = [
 export default function AdminNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const activeSection =
+    pathname === '/admin/parishes'
+      ? '/admin/members'
+      : pathname === '/admin/categories'
+        ? '/admin/books'
+        : pathname;
 
   const isItemActive = (href: string) =>
-    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+    activeSection === href || activeSection.startsWith(`${href}/`);
 
   return (
     <nav className="relative z-40 border-b border-amber-900/20 bg-white/40 backdrop-blur-sm">
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12">
-        <div className="hidden items-center justify-between gap-4 sm:flex">
+        <div className="hidden flex-wrap items-center justify-between gap-x-4 xl:flex">
           <Link
             href="/admin"
             className="flex items-center gap-2 py-4 font-serif text-lg text-amber-950">
@@ -38,7 +44,7 @@ export default function AdminNav() {
             관리자 대시보드
           </Link>
 
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
@@ -55,7 +61,7 @@ export default function AdminNav() {
           </div>
         </div>
 
-        <div className="sm:hidden">
+        <div className="xl:hidden">
           <div className="flex items-center justify-between py-3">
             <Link
               href="/admin"

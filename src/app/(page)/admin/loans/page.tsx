@@ -8,6 +8,7 @@ import { Barcode, ScanLine, Search, SquarePen } from 'lucide-react';
 import MemberRegisterForm from '@/components/MemberRegisterForm';
 import Modal from '@/components/Modal';
 import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
+import { categoryGroupLabel } from '@/lib/bookCategory';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -381,10 +382,13 @@ export default function AdminLoansPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('book_categories')
-        .select('code, label, main_code, main_label')
+        .select('code, label, main_code, book_category_groups(label)')
         .order('code');
       if (error) throw error;
-      return data as BookCategory[];
+      return data.map((row) => ({
+        ...row,
+        main_label: categoryGroupLabel(row),
+      })) as BookCategory[];
     },
   });
 

@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 
 import { BookShape } from '@/components/BookCard';
 import {
+  categoryGroupLabel,
+  type CategoryGroupRelation,
+} from '@/lib/bookCategory';
+import {
   BOOK_COPY_STATUS_STYLE,
   buildCallNumber,
   extractYear,
@@ -10,10 +14,9 @@ import {
 } from '@/lib/bookCopy';
 import { supabaseServer } from '@/utils/supabase/server';
 
-interface BookCategoryRow {
+interface BookCategoryRow extends CategoryGroupRelation {
   label: string;
   main_code: string;
-  main_label: string;
 }
 
 interface BookCopyRow {
@@ -63,7 +66,7 @@ async function getBook(id: number): Promise<BookDetail | null> {
     .from('books')
     .select(
       `id, isbn, title, author, publisher, cover_url, description, page, price, pub_date, category_code, author_code, aladin_item_id,
-      book_categories(label, main_code, main_label),
+      book_categories(label, main_code, book_category_groups(label)),
       book_copies(id, reg_no, status)`,
     )
     .eq('id', id)
@@ -91,7 +94,7 @@ async function getBook(id: number): Promise<BookDetail | null> {
     categoryCode: data.category_code,
     authorCode: data.author_code,
     categoryLabel: category
-      ? `${category.main_label} > ${category.label}`
+      ? `${categoryGroupLabel(category)} > ${category.label}`
       : null,
     aladinItemId: data.aladin_item_id,
     copies: data.book_copies ?? [],

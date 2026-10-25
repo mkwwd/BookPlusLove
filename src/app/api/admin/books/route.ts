@@ -1,3 +1,7 @@
+import {
+  categoryGroupLabel,
+  type CategoryGroupRelation,
+} from '@/lib/bookCategory';
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
 import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
@@ -29,10 +33,9 @@ interface FailedItem {
   error: string;
 }
 
-interface BookCategoryRow {
+interface BookCategoryRow extends CategoryGroupRelation {
   label: string;
   main_code: string;
-  main_label: string;
 }
 
 interface BookRow {
@@ -76,7 +79,7 @@ export async function GET() {
       .select(
         `id, reg_no, status, donor_name, donor_user_id,
         books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
-          book_categories(label, main_code, main_label))`,
+          book_categories(label, main_code, book_category_groups(label)))`,
       )
       .order('id', { ascending: false })
       .range(offset, offset + FETCH_BATCH_SIZE - 1)
@@ -119,7 +122,7 @@ export async function GET() {
       categoryCode: book?.category_code ?? null,
       categoryMain: category?.main_code ?? null,
       categoryLabel: category
-        ? `${category.main_label} > ${category.label}`
+        ? `${categoryGroupLabel(category)} > ${category.label}`
         : null,
     };
   });
