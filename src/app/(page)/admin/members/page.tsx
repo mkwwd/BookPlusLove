@@ -3,7 +3,8 @@
 import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Search, UserPlus } from 'lucide-react';
+import { Church, Eye, EyeOff, Search, UserPlus } from 'lucide-react';
+import Link from 'next/link';
 
 import EmailFields from '@/components/EmailFields';
 import MemberRegisterForm from '@/components/MemberRegisterForm';
@@ -604,13 +605,21 @@ export default function AdminMembersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-serif text-3xl text-amber-950">회원 관리</h2>
-        <button
-          type="button"
-          onClick={() => setIsAddMemberOpen(true)}
-          className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-          <UserPlus className="h-4 w-4" />
-          회원 추가하기
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/parishes"
+            className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+            <Church aria-hidden="true" className="h-4 w-4 shrink-0" />
+            본당 관리
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsAddMemberOpen(true)}
+            className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            <UserPlus className="h-4 w-4" />
+            회원 추가하기
+          </button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">

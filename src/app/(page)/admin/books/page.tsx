@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Plus, Search, SquarePen, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  ListTree,
+  Plus,
+  Search,
+  SquarePen,
+  Trash2,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import IsbnCompareModal, {
@@ -701,8 +709,8 @@ export default function AdminBooksPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
 
-        {activeTab === 'all' && (
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
+          {activeTab === 'all' && (
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
               <input
@@ -716,14 +724,22 @@ export default function AdminBooksPage() {
                 className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
               />
             </div>
+          )}
+          <Link
+            href="/admin/categories"
+            className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+            <ListTree aria-hidden="true" className="h-4 w-4 shrink-0" />
+            분류코드 관리
+          </Link>
+          {activeTab === 'all' && (
             <Link
               href="/admin/books/new"
               className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
               <Plus className="h-4 w-4" />
               도서 등록
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
