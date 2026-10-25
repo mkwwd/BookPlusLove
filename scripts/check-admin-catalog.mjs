@@ -307,7 +307,7 @@ test('groups with children cannot be deleted or renumbered', async () => {
   }
 });
 
-test('group labels can change without rewriting children or books', async () => {
+test('group API updates only the parent; database handles legacy label synchronization', async () => {
   const { handlers, calls } = setup(routes[5][0], [
     { data: group, error: null },
   ]);
@@ -333,6 +333,7 @@ test('empty group renumber and deletion succeed; FK races remain conflicts', asy
       [{ data: group, error: null }, 200],
       [{ data: null, error: null }, 404],
       [{ error: { code: '23503', message: 'foreign key' } }, 409],
+      [{ error: { code: '23001', message: 'restrict violation' } }, 409],
     ]) {
       const { handlers } = setup(routes[5][0], [
         { count: 0, error: null },

@@ -6,7 +6,7 @@ export function catalogError(error: { code?: string; message: string }) {
       { error: '동일한 이름 또는 코드가 이미 등록되어 있습니다.' },
       { status: 409 },
     );
-  if (error.code === '23503')
+  if (error.code === '23503' || error.code === '23001')
     return Response.json(
       {
         error:
