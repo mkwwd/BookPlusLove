@@ -6,7 +6,12 @@ import {
   categoryGroupLabel,
   type CategoryGroupRelation,
 } from '@/lib/bookCategory';
-import { BOOK_COPY_STATUS_STYLE, LIBRARY_NAME } from '@/lib/bookCopy';
+import {
+  BOOK_COPY_STATUS_STYLE,
+  buildCallNumber,
+  extractYear,
+  LIBRARY_NAME,
+} from '@/lib/bookCopy';
 import { supabaseServer } from '@/utils/supabase/server';
 
 interface BookCategoryRow extends CategoryGroupRelation {
@@ -94,17 +99,6 @@ async function getBook(id: number): Promise<BookDetail | null> {
     aladinItemId: data.aladin_item_id,
     copies: data.book_copies ?? [],
   };
-}
-
-function extractYear(pubDate: string | null): string | null {
-  return pubDate?.match(/\d{4}/)?.[0] ?? null;
-}
-
-function buildCallNumber(
-  categoryCode: string | null,
-  authorCode: string | null,
-) {
-  return [categoryCode, authorCode].filter(Boolean).join(' ');
 }
 
 export default async function BookDetailPage({

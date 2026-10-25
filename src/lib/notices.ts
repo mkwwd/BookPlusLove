@@ -2,6 +2,7 @@ export interface NoticeInput {
   title: string;
   content: string;
   isPublished: boolean;
+  isPinned?: boolean;
   publishedAt: string;
 }
 
@@ -28,6 +29,7 @@ export function normalizeNoticeInput(
       title,
       content,
       isPublished,
+      isPinned: typeof data?.isPinned === 'boolean' ? data.isPinned : undefined,
       publishedAt: publishedAt || new Date().toISOString(),
     },
   };

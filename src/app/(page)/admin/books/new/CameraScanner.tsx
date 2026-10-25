@@ -32,7 +32,7 @@ export default function CameraScanner({
       .decodeFromConstraints(
         { video: { facingMode: 'environment' } },
         videoRef.current,
-        (result, err, activeControls) => {
+        (result, _error, activeControls) => {
           controls = activeControls;
           if (!result || cancelled) return;
 

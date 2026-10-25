@@ -1,36 +1,6 @@
 import { normalizeNoticeInput } from '@/lib/notices';
-import { createRouteClient } from '@/utils/supabase/route';
+import { requireAdmin } from '@/utils/supabase/admin';
 import { supabaseServer } from '@/utils/supabase/server';
-
-async function requireAdmin() {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return {
-      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
-    };
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return {
-      error: Response.json(
-        { error: '관리자만 이용할 수 있습니다.' },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { error: null };
-}
 
 export async function GET() {
   const { error: authError } = await requireAdmin();
@@ -38,7 +8,9 @@ export async function GET() {
 
   const { data, error } = await supabaseServer
     .from('notices')
-    .select('id, title, content, is_published, published_at, created_at')
+    .select(
+      'id, title, content, is_published, is_pinned, published_at, created_at',
+    )
     .order('published_at', { ascending: false });
 
   if (error) {
@@ -51,6 +23,7 @@ export async function GET() {
       title: notice.title,
       content: notice.content,
       isPublished: notice.is_published,
+      isPinned: notice.is_pinned,
       publishedAt: notice.published_at,
       createdAt: notice.created_at,
     })),
@@ -73,6 +46,7 @@ export async function POST(request: Request) {
       title: value.title,
       content: value.content,
       is_published: value.isPublished,
+      is_pinned: value.isPinned ?? false,
       published_at: value.publishedAt,
     })
     .select('id')

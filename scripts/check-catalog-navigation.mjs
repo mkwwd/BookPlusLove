@@ -31,6 +31,9 @@ function loadComponent(
     },
     'next/link': { default: 'a' },
     'next/navigation': { usePathname: () => pathname },
+    '@/hooks/useHorizontalWheel': {
+      useHorizontalWheel: () => ({ current: null }),
+    },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     ...overrides,
   };

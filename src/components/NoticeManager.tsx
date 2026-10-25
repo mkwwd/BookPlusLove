@@ -13,19 +13,16 @@ interface Notice {
   title: string;
   content: string;
   isPublished: boolean;
+  isPinned: boolean;
   publishedAt: string;
   createdAt: string;
-}
-
-interface NoticeManagerProps {
-  hideWhenForbidden?: boolean;
-  showHeading?: boolean;
 }
 
 const emptyForm = {
   title: '',
   content: '',
   isPublished: true,
+  isPinned: false,
   publishedAt: new Date().toISOString().slice(0, 10),
 };
 
@@ -33,10 +30,7 @@ function toDateInputValue(value: string) {
   return value ? new Date(value).toISOString().slice(0, 10) : '';
 }
 
-export default function NoticeManager({
-  hideWhenForbidden = false,
-  showHeading = false,
-}: NoticeManagerProps) {
+export default function NoticeManager() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [editing, setEditing] = useState<Notice | null>(null);
@@ -47,9 +41,6 @@ export default function NoticeManager({
     queryFn: async () => {
       const res = await fetch('/api/admin/notices');
       const body = await res.json();
-      if (hideWhenForbidden && (res.status === 401 || res.status === 403)) {
-        return null;
-      }
       if (!res.ok) {
         throw new Error(body.error ?? '공지사항을 불러오지 못했습니다.');
       }
@@ -113,6 +104,7 @@ export default function NoticeManager({
       title: notice.title,
       content: notice.content,
       isPublished: notice.isPublished,
+      isPinned: notice.isPinned,
       publishedAt: toDateInputValue(notice.publishedAt),
     });
   };
@@ -122,33 +114,8 @@ export default function NoticeManager({
     deleteNotice.mutate(notice.id);
   };
 
-  if (hideWhenForbidden && isLoading) {
-    return null;
-  }
-
-  if (hideWhenForbidden && data === null) {
-    return null;
-  }
-
   return (
-    <div
-      className={
-        showHeading
-          ? 'mt-10 space-y-6 border-t border-amber-900/15 pt-8'
-          : 'space-y-6'
-      }>
-      {showHeading && (
-        <div>
-          <h2 className="font-serif text-2xl font-bold text-amber-950">
-            공지사항 관리
-          </h2>
-          <p className="mt-2 text-base text-amber-900/70">
-            관리자 계정에서는 이 페이지에서 바로 공지사항을 등록하고 수정할 수
-            있습니다.
-          </p>
-        </div>
-      )}
-
+    <div className="space-y-6">
       <form
         className="space-y-4 rounded-lg border border-amber-900/20 bg-white/40 p-5 shadow-sm backdrop-blur-sm"
         onSubmit={(e) => {
@@ -221,6 +188,16 @@ export default function NoticeManager({
               className="h-4 w-4 accent-red-900"
             />
             공개
+          </label>
+
+          <label className="flex items-center gap-2 text-base text-amber-950">
+            <input
+              type="checkbox"
+              checked={form.isPinned}
+              onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
+              className="h-4 w-4 accent-red-900"
+            />
+            상단 고정
           </label>
 
           {saveNotice.error && (

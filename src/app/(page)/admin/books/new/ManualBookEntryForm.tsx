@@ -593,6 +593,20 @@ export default function ManualBookEntryForm({
           </div>
         </div>
         <div className="sm:col-span-2">
+          <label
+            htmlFor="manual-description"
+            className="mb-1.5 block text-base font-medium text-amber-950">
+            줄거리
+          </label>
+          <textarea
+            id="manual-description"
+            rows={5}
+            value={manualDescription ?? ''}
+            onChange={(e) => setManualDescription(e.target.value)}
+            className="block w-full resize-y rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base leading-relaxed focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
+          />
+        </div>
+        <div className="sm:col-span-2">
           <label className="mb-1.5 block text-base font-medium text-amber-950">
             표지 이미지
           </label>

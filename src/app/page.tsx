@@ -83,7 +83,7 @@ function BookSection({
   return (
     <div className="rounded-lg border border-amber-900/10 bg-[#fffdfa]/70 p-6 shadow-xl backdrop-blur-md transition-all">
       <h2 className="mt-5 mb-10 text-center font-serif text-4xl font-bold text-amber-950">
-        ✞ {title}
+        {title}
       </h2>
       <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
         {books.map((book) => (

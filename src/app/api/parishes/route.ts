@@ -19,10 +19,24 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    console.error('Parish registration failed', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
     if (error.code === '23505') {
       return Response.json(
         { error: '이미 등록된 본당입니다.' },
         { status: 409 },
+      );
+    }
+    if (error.code === '42501') {
+      return Response.json(
+        {
+          error:
+            '본당 등록 권한이 설정되지 않았습니다. 관리자에게 문의해주세요.',
+        },
+        { status: 500 },
       );
     }
     return Response.json({ error: '등록에 실패했습니다.' }, { status: 500 });

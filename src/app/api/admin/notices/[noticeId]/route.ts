@@ -1,36 +1,6 @@
 import { normalizeNoticeInput } from '@/lib/notices';
-import { createRouteClient } from '@/utils/supabase/route';
+import { requireAdmin } from '@/utils/supabase/admin';
 import { supabaseServer } from '@/utils/supabase/server';
-
-async function requireAdmin() {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
-    return {
-      error: Response.json({ error: '로그인이 필요합니다.' }, { status: 401 }),
-    };
-  }
-
-  const { data: profile } = await supabaseServer
-    .from('users')
-    .select('role')
-    .ilike('email', user.email)
-    .maybeSingle();
-
-  if (profile?.role !== 'ADMIN') {
-    return {
-      error: Response.json(
-        { error: '관리자만 이용할 수 있습니다.' },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { error: null };
-}
 
 function parseNoticeId(value: string) {
   const noticeId = Number(value);
@@ -62,6 +32,7 @@ export async function PATCH(
       title: value.title,
       content: value.content,
       is_published: value.isPublished,
+      is_pinned: value.isPinned,
       published_at: value.publishedAt,
     })
     .eq('id', id)

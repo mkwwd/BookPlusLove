@@ -1,7 +1,9 @@
 import { createRouteClient } from './route';
 import { supabaseServer } from './server';
 
-export async function requireAdmin() {
+export async function requireAdmin(
+  forbiddenMessage = '관리자만 이용할 수 있습니다.',
+) {
   const supabase = await createRouteClient();
   const {
     data: { user },
@@ -23,10 +25,7 @@ export async function requireAdmin() {
   if (profile?.role !== 'ADMIN') {
     return {
       email: user.email,
-      error: Response.json(
-        { error: '관리자만 이용할 수 있습니다.' },
-        { status: 403 },
-      ),
+      error: Response.json({ error: forbiddenMessage }, { status: 403 }),
     };
   }
 

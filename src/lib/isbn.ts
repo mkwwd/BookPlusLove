@@ -14,32 +14,10 @@ export function isValidIsbn13(value: string): boolean {
   return checkDigit === Number(digits[12]);
 }
 
-// 2007년 이전 도서는 10자리 ISBN(예: 89-7635-447-1)만 있는 경우가 많아,
-// 수동 입력으로는 이것도 받아준다. 마지막 체크숫자는 'X'일 수 있다.
-export function isValidIsbn10(value: string): boolean {
-  const cleaned = value.replace(/[^0-9Xx]/g, '').toUpperCase();
-  if (cleaned.length !== 10) return false;
-
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    if (!/[0-9]/.test(cleaned[i])) return false;
-    sum += Number(cleaned[i]) * (10 - i);
-  }
-  const last = cleaned[9];
-  if (last !== 'X' && !/[0-9]/.test(last)) return false;
-  sum += last === 'X' ? 10 : Number(last);
-
-  return sum % 11 === 0;
-}
-
-export function isValidIsbn(value: string): boolean {
-  return isValidIsbn13(value) || isValidIsbn10(value);
-}
-
 // 조회(검색) 목적으로는 체크섬까지 맞을 필요 없다 — 옛날 장서 데이터엔
 // 오타로 체크섬이 안 맞는 ISBN이 많아서, 자릿수만 맞으면 일단 API 조회를
 // 시도해보고 결과가 없으면 그때 안내하는 게 낫다. 체크섬 검증
-// (isValidIsbn13/10)은 카메라 바코드 스캔에서 노이즈를 거를 때만 쓴다.
+// 조회에는 looksLikeIsbn을 사용하고 저장/스캔의 검증은 호출부에서 결정한다.
 export function looksLikeIsbn(value: string): boolean {
   const cleaned = value.replace(/[^0-9Xx]/g, '').toUpperCase();
   if (cleaned.length === 13) return /^\d{13}$/.test(cleaned);
