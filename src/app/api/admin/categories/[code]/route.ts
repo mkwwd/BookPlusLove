@@ -35,10 +35,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const usageError = await usedCategoryError(code);
     if (usageError) return usageError;
   }
-  const groupError = await categoryGroupError(
-    value.main_code,
-    value.main_label,
-  );
+  const groupError = await categoryGroupError(value.main_code);
   if (groupError) return groupError;
   const { data, error } = await supabaseServer
     .from('book_categories')

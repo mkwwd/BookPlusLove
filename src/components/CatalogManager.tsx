@@ -16,18 +16,24 @@ import {
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
-import type { CategoryInput, ParishInput } from '@/lib/adminCatalog';
+import type {
+  CategoryGroupInput,
+  CategoryInput,
+  ParishInput,
+} from '@/lib/adminCatalog';
 
-type Kind = 'parishes' | 'categories';
+type Props =
+  | { kind: 'parishes' | 'category-groups' }
+  | { kind: 'categories'; group: CategoryGroupInput; onBack: () => void };
 type ParishRow = ParishInput & { id: number; usageCount: number };
 type CategoryRow = CategoryInput & { usageCount: number };
+type GroupRow = CategoryGroupInput & { usageCount: number };
 interface Entry {
   key: string;
   name: string;
   usageCount: number;
   approved?: boolean;
   mainCode?: string;
-  mainLabel?: string;
 }
 const inputClass =
   'w-full rounded border border-amber-900/25 bg-white px-3 py-2.5 text-base text-amber-950 disabled:bg-gray-100';
@@ -43,9 +49,26 @@ async function requestJson(url: string, init?: RequestInit) {
   return body;
 }
 
-export default function CatalogManager({ kind }: { kind: Kind }) {
+async function fetchCategoryGroups(): Promise<Entry[]> {
+  const body = await requestJson('/api/admin/category-groups');
+  return (body.items as GroupRow[]).map((row) => ({
+    key: row.code,
+    name: row.label,
+    usageCount: row.usageCount,
+  }));
+}
+
+export default function CatalogManager(props: Props) {
+  const { kind } = props;
   const isParish = kind === 'parishes';
-  const title = isParish ? '본당 관리' : '분류코드 관리';
+  const isGroup = kind === 'category-groups';
+  const group = props.kind === 'categories' ? props.group : null;
+  const itemName = isParish ? '본당' : isGroup ? '대분류' : '소분류';
+  const title = isParish
+    ? '본당 관리'
+    : isGroup
+      ? '분류코드 관리'
+      : `${group!.code} ${group!.label}`;
   const endpoint = `/api/admin/${kind}`;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -54,17 +77,20 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
   const [editing, setEditing] = useState<Entry | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<CategoryGroupInput | null>(
+    null,
+  );
   const [form, setForm] = useState({
     name: '',
     approved: true,
     code: '',
-    mainCode: '',
-    mainLabel: '',
+    mainCode: group?.code ?? '',
   });
 
   const list = useQuery<Entry[]>({
     queryKey: [`admin-${kind}`],
     queryFn: async () => {
+      if (isGroup) return fetchCategoryGroups();
       const body = await requestJson(endpoint);
       return isParish
         ? (body.items as ParishRow[]).map((row) => ({
@@ -77,23 +103,25 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
             key: row.code,
             name: row.label,
             mainCode: row.main_code,
-            mainLabel: row.main_label,
             usageCount: row.usageCount,
           }));
     },
   });
+  const needsGroups = !!group && showForm && !!editing;
+  const groups = useQuery({
+    queryKey: ['admin-category-groups'],
+    queryFn: fetchCategoryGroups,
+    enabled: needsGroups,
+  });
+  const groupsUnavailable = needsGroups && (groups.isPending || groups.isError);
   const entries = list.data ?? [];
-  const groups = new Map(
-    entries
-      .filter((row) => row.mainCode)
-      .map((row) => [row.mainCode!, row.mainLabel!]),
-  );
   const refresh = async () => {
     await Promise.all(
       [
         `admin-${kind}`,
         isParish ? 'parishes' : 'book-categories',
         isParish ? 'admin-members' : 'admin-books',
+        ...(group ? ['admin-category-groups'] : []),
       ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
     );
   };
@@ -110,8 +138,7 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
               : {
                   code: form.code,
                   label: form.name,
-                  main_code: form.mainCode,
-                  main_label: form.mainLabel,
+                  ...(group ? { main_code: form.mainCode } : {}),
                 },
           ),
         },
@@ -151,8 +178,7 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
       name: row?.name ?? '',
       approved: row?.approved ?? true,
       code: row?.key ?? '',
-      mainCode: row?.mainCode ?? '',
-      mainLabel: row?.mainLabel ?? '',
+      mainCode: row?.mainCode ?? group?.code ?? '',
     });
     save.reset();
     remove.reset();
@@ -161,16 +187,15 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
     setShowForm(true);
   };
   const filtered = entries.filter((row) => {
-    const matches =
-      `${row.key} ${row.name} ${row.mainCode ?? ''} ${row.mainLabel ?? ''}`
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
+    const matches = `${row.key} ${row.name}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
     return (
       matches &&
-      (filter === 'all' ||
-        (isParish
-          ? row.approved === (filter === 'approved')
-          : row.mainCode === filter))
+      (!group || row.mainCode === group.code) &&
+      (!isParish ||
+        filter === 'all' ||
+        row.approved === (filter === 'approved'))
     );
   });
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -180,23 +205,46 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
     currentPage * PAGE_SIZE,
   );
 
+  if (isGroup && selectedGroup) {
+    return (
+      <CatalogManager
+        kind="categories"
+        key={selectedGroup.code}
+        group={selectedGroup}
+        onBack={() => setSelectedGroup(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Link
-        href={isParish ? '/admin/members' : '/admin/books'}
-        className="inline-flex min-h-11 items-center gap-2 text-base text-amber-800 hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
-        <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
-        {isParish ? '회원 관리로 돌아가기' : '도서 관리로 돌아가기'}
-      </Link>
+      {props.kind === 'categories' ? (
+        <button
+          type="button"
+          onClick={props.onBack}
+          className="inline-flex min-h-11 items-center gap-2 text-base text-amber-800 hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+          대분류 목록으로 돌아가기
+        </button>
+      ) : (
+        <Link
+          href={isParish ? '/admin/members' : '/admin/books'}
+          className="inline-flex min-h-11 items-center gap-2 text-base text-amber-800 hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {isParish ? '회원 관리로 돌아가기' : '도서 관리로 돌아가기'}
+        </Link>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-serif text-3xl text-amber-950">{title}</h2>
+        <h2 className="max-w-full min-w-0 font-serif text-3xl break-words text-amber-950">
+          {title}
+        </h2>
         <button
           type="button"
           disabled={busy || list.isError || list.isLoading}
           onClick={() => openForm(null)}
           className="flex items-center gap-2 rounded bg-red-900 px-4 py-2.5 text-white disabled:opacity-50">
           <Plus size={18} />
-          {isParish ? '본당 추가' : '코드 추가'}
+          {itemName} 추가
         </button>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -217,28 +265,20 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
             className={`${inputClass} pl-10`}
           />
         </div>
-        <select
-          aria-label={isParish ? '승인 상태' : '대분류 필터'}
-          value={filter}
-          onChange={(event) => {
-            setFilter(event.target.value);
-            setPage(1);
-          }}
-          className={`${inputClass} sm:w-52`}>
-          <option value="all">전체</option>
-          {isParish ? (
-            <>
-              <option value="pending">승인 대기</option>
-              <option value="approved">승인 완료</option>
-            </>
-          ) : (
-            [...groups].map(([code, label]) => (
-              <option key={code} value={code}>
-                {code} {label}
-              </option>
-            ))
-          )}
-        </select>
+        {isParish && (
+          <select
+            aria-label="승인 상태"
+            value={filter}
+            onChange={(event) => {
+              setFilter(event.target.value);
+              setPage(1);
+            }}
+            className={`${inputClass} sm:w-52`}>
+            <option value="all">전체</option>
+            <option value="pending">승인 대기</option>
+            <option value="approved">승인 완료</option>
+          </select>
+        )}
       </div>
       <p aria-live="polite" className="text-green-800">
         {message}
@@ -269,16 +309,36 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
                 key={row.key}
                 className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <div className="min-w-0 flex-1 basis-48">
-                  <p className="text-lg font-medium break-words text-amber-950">
-                    {!isParish && (
-                      <span className="mr-3 font-mono">{row.key}</span>
-                    )}
-                    {row.name}
-                  </p>
+                  {isGroup ? (
+                    <button
+                      type="button"
+                      aria-label={`${row.key} ${row.name} 소분류 보기`}
+                      onClick={() =>
+                        setSelectedGroup({ code: row.key, label: row.name })
+                      }
+                      className="flex min-h-11 max-w-full items-center gap-3 text-left text-lg font-medium text-amber-950 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+                      <span className="shrink-0 font-mono">{row.key}</span>
+                      <span className="min-w-0 break-words">{row.name}</span>
+                      <ChevronRight
+                        aria-hidden="true"
+                        size={18}
+                        className="shrink-0"
+                      />
+                    </button>
+                  ) : (
+                    <p className="text-lg font-medium break-words text-amber-950">
+                      {!isParish && (
+                        <span className="mr-3 font-mono">{row.key}</span>
+                      )}
+                      {row.name}
+                    </p>
+                  )}
                   <p className="mt-1 text-base text-amber-800">
                     {isParish
                       ? `${row.approved ? '승인 완료' : '승인 대기'} · 회원 ${row.usageCount}명`
-                      : `${row.mainCode} ${row.mainLabel} · 도서 ${row.usageCount}종`}
+                      : isGroup
+                        ? `소분류 ${row.usageCount}개`
+                        : `도서 ${row.usageCount}종`}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -326,7 +386,9 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
           </ul>
           {!visible.length && (
             <p className="py-8 text-center text-amber-800">
-              검색 결과가 없습니다.
+              {search.trim()
+                ? '검색 결과가 없습니다.'
+                : `등록된 ${itemName}가 없습니다.`}
             </p>
           )}
           <div className="flex items-center justify-center gap-4">
@@ -356,7 +418,7 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
       )}
       {showForm && (
         <Modal
-          title={`${isParish ? '본당' : '분류코드'} ${editing ? '수정' : '추가'}`}
+          title={`${itemName} ${editing ? '수정' : '추가'}`}
           onClose={() => {
             if (!save.isPending) setShowForm(false);
           }}>
@@ -364,12 +426,31 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
             className="space-y-5"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!busy) save.mutate();
+              if (!busy && !groupsUnavailable) save.mutate();
             }}>
             <fieldset disabled={save.isPending} className="space-y-4">
+              {needsGroups && (
+                <label className="block space-y-2 text-amber-950">
+                  <span>대분류</span>
+                  <select
+                    required
+                    value={form.mainCode}
+                    disabled={groupsUnavailable}
+                    onChange={(event) =>
+                      setForm({ ...form, mainCode: event.target.value })
+                    }
+                    className={inputClass}>
+                    {(groups.data ?? []).map((row) => (
+                      <option key={row.key} value={row.key}>
+                        {row.key} {row.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {!isParish && (
                 <label className="block space-y-2 text-amber-950">
-                  <span>분류코드</span>
+                  <span>{itemName} 코드</span>
                   <input
                     required
                     pattern="[0-9]{3}"
@@ -384,13 +465,15 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
                   />
                   {editing?.usageCount ? (
                     <span className="block text-sm">
-                      도서가 사용 중인 코드 번호는 변경할 수 없습니다.
+                      {isGroup
+                        ? '소분류가 있는 대분류 코드 번호는 변경할 수 없습니다.'
+                        : '도서가 사용 중인 코드 번호는 변경할 수 없습니다.'}
                     </span>
                   ) : null}
                 </label>
               )}
               <label className="block space-y-2 text-amber-950">
-                <span>{isParish ? '본당명' : '분류명'}</span>
+                <span>{itemName}명</span>
                 <input
                   required
                   maxLength={isParish ? 50 : 100}
@@ -401,7 +484,7 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
                   className={inputClass}
                 />
               </label>
-              {isParish ? (
+              {isParish && (
                 <label className="flex items-center gap-3 text-amber-950">
                   <input
                     type="checkbox"
@@ -413,51 +496,19 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
                   />
                   승인 완료
                 </label>
-              ) : (
-                <>
-                  <label className="block space-y-2 text-amber-950">
-                    <span>대분류코드</span>
-                    <input
-                      required
-                      list="category-groups"
-                      pattern="[0-9]{3}"
-                      maxLength={3}
-                      inputMode="numeric"
-                      value={form.mainCode}
-                      onChange={(event) => {
-                        const code = event.target.value;
-                        setForm({
-                          ...form,
-                          mainCode: code,
-                          mainLabel: groups.get(code) ?? '',
-                        });
-                      }}
-                      className={inputClass}
-                    />
-                    <datalist id="category-groups">
-                      {[...groups].map(([code, label]) => (
-                        <option key={code} value={code}>
-                          {label}
-                        </option>
-                      ))}
-                    </datalist>
-                  </label>
-                  <label className="block space-y-2 text-amber-950">
-                    <span>대분류명</span>
-                    <input
-                      required
-                      maxLength={100}
-                      readOnly={groups.has(form.mainCode)}
-                      value={form.mainLabel}
-                      onChange={(event) =>
-                        setForm({ ...form, mainLabel: event.target.value })
-                      }
-                      className={inputClass}
-                    />
-                  </label>
-                </>
               )}
             </fieldset>
+            {needsGroups && groups.isError && (
+              <div role="alert" className="space-y-2 text-red-700">
+                <p>{groups.error.message}</p>
+                <button
+                  type="button"
+                  onClick={() => void groups.refetch()}
+                  className="underline">
+                  다시 시도
+                </button>
+              </div>
+            )}
             {save.error && (
               <p role="alert" className="text-red-700">
                 {save.error.message}
@@ -472,7 +523,7 @@ export default function CatalogManager({ kind }: { kind: Kind }) {
                 취소
               </button>
               <button
-                disabled={busy}
+                disabled={busy || groupsUnavailable}
                 className="rounded bg-red-900 px-5 py-2 text-white disabled:opacity-50">
                 {save.isPending ? '저장 중...' : '저장'}
               </button>

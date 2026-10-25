@@ -5,7 +5,10 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
-function loadComponent(path, { pathname = '/admin', tab, extra = '' } = {}) {
+function loadComponent(
+  path,
+  { pathname = '/admin', tab, extra = '', overrides = {}, globals = {} } = {},
+) {
   const source = fs.readFileSync(path, 'utf8');
   const jsx = (type, props) => ({ type, props });
   const dependencies = {
@@ -29,6 +32,7 @@ function loadComponent(path, { pathname = '/admin', tab, extra = '' } = {}) {
     'next/link': { default: 'a' },
     'next/navigation': { usePathname: () => pathname },
     'react/jsx-runtime': { jsx, jsxs: jsx },
+    ...overrides,
   };
   const exports = {};
   vm.runInNewContext(
@@ -39,10 +43,196 @@ function loadComponent(path, { pathname = '/admin', tab, extra = '' } = {}) {
         jsx: ts.JsxEmit.ReactJSX,
       },
     }).outputText,
-    { exports, require: (name) => dependencies[name] ?? {} },
+    { exports, require: (name) => dependencies[name] ?? {}, ...globals },
   );
   return exports;
 }
+
+function catalogHarness(props, entries, groupEntries = []) {
+  const states = [];
+  let cursor = 0;
+  const mutations = [];
+  const requests = [];
+  const invalidated = [];
+  const component = loadComponent('src/components/CatalogManager.tsx', {
+    overrides: {
+      react: {
+        useState(initial) {
+          const index = cursor++;
+          if (!(index in states)) states[index] = initial;
+          return [
+            states[index],
+            (value) => {
+              states[index] = value;
+            },
+          ];
+        },
+      },
+      '@tanstack/react-query': {
+        useQuery: ({ queryKey }) => ({
+          data:
+            props.kind === 'categories' &&
+            queryKey[0] === 'admin-category-groups'
+              ? groupEntries
+              : entries,
+        }),
+        useQueryClient: () => ({
+          invalidateQueries: async ({ queryKey }) =>
+            invalidated.push(queryKey[0]),
+        }),
+        useMutation: (options) => {
+          mutations.push(options);
+          return { reset() {} };
+        },
+      },
+    },
+    globals: {
+      fetch: async (url, options) => {
+        requests.push({ url, ...options });
+        return { ok: true, json: async () => ({}) };
+      },
+    },
+  }).default;
+  return {
+    mutations,
+    requests,
+    invalidated,
+    render() {
+      cursor = 0;
+      mutations.length = 0;
+      return component(props);
+    },
+  };
+}
+
+const textContent = (node) =>
+  typeof node === 'string' || typeof node === 'number'
+    ? String(node)
+    : Array.isArray(node)
+      ? node.map(textContent).join('')
+      : textContent(node?.props?.children ?? '');
+
+test('groups open their own child list and can return to the group list', () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, [
+    { key: '000', name: '성서', usageCount: 2 },
+    { key: '100', name: '빈 대분류', usageCount: 0 },
+  ]);
+  let tree = harness.render();
+  assert.ok(textContent(tree).includes('대분류 추가'));
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '100 빈 대분류 소분류 보기')
+    .props.onClick();
+  tree = harness.render();
+  assert.equal(tree.props.kind, 'categories');
+  assert.equal(tree.props.group.code, '100');
+  tree.props.onBack();
+  assert.ok(textContent(harness.render()).includes('대분류 추가'));
+});
+
+test('child list is scoped and creation uses only its selected parent code', async () => {
+  let returned = false;
+  const harness = catalogHarness(
+    {
+      kind: 'categories',
+      group: { code: '000', label: '성서' },
+      onBack: () => {
+        returned = true;
+      },
+    },
+    [
+      { key: '010', name: '성서일반', mainCode: '000', usageCount: 2 },
+      { key: '110', name: '다른 소분류', mainCode: '100', usageCount: 0 },
+    ],
+  );
+  let tree = harness.render();
+  assert.ok(textContent(tree).includes('성서일반'));
+  assert.ok(!textContent(tree).includes('다른 소분류'));
+  nodes(tree)
+    .find(
+      (node) =>
+        node.type === 'button' && textContent(node).includes('소분류 추가'),
+    )
+    .props.onClick();
+  tree = harness.render();
+  assert.ok(!nodes(tree).some((node) => node.type === 'datalist'));
+  await harness.mutations[0].mutationFn();
+  assert.equal(JSON.parse(harness.requests[0].body).main_code, '000');
+  assert.equal(JSON.parse(harness.requests[0].body).main_label, undefined);
+  await harness.mutations[0].onSuccess();
+  for (const key of [
+    'admin-categories',
+    'admin-category-groups',
+    'book-categories',
+    'admin-books',
+  ])
+    assert.ok(harness.invalidated.includes(key));
+  nodes(tree)
+    .find(
+      (node) =>
+        node.type === 'button' && textContent(node).includes('대분류 목록으로'),
+    )
+    .props.onClick();
+  assert.equal(returned, true);
+});
+
+test('group editing locks a used code but leaves its label editable', () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, [
+    { key: '000', name: '성서', usageCount: 2 },
+  ]);
+  let tree = harness.render();
+  assert.equal(
+    nodes(tree).find((node) => node.props['aria-label'] === '성서 삭제').props
+      .disabled,
+    true,
+  );
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '성서 수정')
+    .props.onClick();
+  tree = harness.render();
+  const inputs = nodes(tree).filter((node) => node.type === 'input');
+  assert.equal(
+    inputs.find((node) => node.props.value === '000').props.disabled,
+    true,
+  );
+  assert.ok(!inputs.find((node) => node.props.value === '성서').props.disabled);
+});
+
+test('a used subcategory can move to another parent without changing its code', async () => {
+  const harness = catalogHarness(
+    { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
+    [{ key: '010', name: '성서일반', mainCode: '000', usageCount: 2 }],
+    [
+      { key: '000', name: '성서', usageCount: 1 },
+      { key: '100', name: '새 대분류', usageCount: 0 },
+    ],
+  );
+  nodes(harness.render())
+    .find((node) => node.props['aria-label'] === '성서일반 수정')
+    .props.onClick();
+  let tree = harness.render();
+  const select = nodes(tree).find((node) => node.type === 'select');
+  assert.equal(
+    nodes(select).filter((node) => node.type === 'option').length,
+    2,
+  );
+  select.props.onChange({ target: { value: '100' } });
+  tree = harness.render();
+  assert.equal(
+    nodes(tree).find(
+      (node) => node.type === 'input' && node.props.value === '010',
+    ).props.disabled,
+    true,
+  );
+  await harness.mutations[0].mutationFn();
+  const sent = harness.requests[0];
+  assert.equal(sent.method, 'PATCH');
+  assert.equal(sent.url, '/api/admin/categories/010');
+  assert.deepEqual(JSON.parse(sent.body), {
+    code: '010',
+    label: '성서일반',
+    main_code: '100',
+  });
+});
 
 function nodes(tree) {
   if (Array.isArray(tree)) return tree.flatMap(nodes);
@@ -119,7 +309,7 @@ for (const tab of ['all', 'recommended']) {
 
 for (const [kind, href] of [
   ['parishes', '/admin/members'],
-  ['categories', '/admin/books'],
+  ['category-groups', '/admin/books'],
 ]) {
   test(`${kind} has a link back to its parent management page`, () => {
     const page = loadComponent('src/components/CatalogManager.tsx').default({

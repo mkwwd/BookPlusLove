@@ -27,8 +27,22 @@ const category = {
   code: '010',
   label: '성서일반',
   main_code: '000',
-  main_label: '성서',
 };
+const group = { code: '000', label: '성서' };
+
+test('category labels come from the parent relation, never the stale child column', () => {
+  const { categoryGroupLabel } = load('src/lib/bookCategory.ts');
+  for (const relation of [{ label: '새 이름' }, [{ label: '새 이름' }]]) {
+    assert.equal(
+      categoryGroupLabel({
+        book_category_groups: relation,
+        main_label: '옛 이름',
+      }),
+      '새 이름',
+    );
+  }
+  assert.equal(categoryGroupLabel({ book_category_groups: null }), '');
+});
 
 test('catalog input validation', () => {
   assert.equal(validation.parseParish(null).value, undefined);
@@ -56,6 +70,9 @@ test('catalog input validation', () => {
     undefined,
   );
   assert.equal(validation.parseCategory(category).value.code, '010');
+  assert.equal(validation.parseCategoryGroup(group).value.code, '000');
+  for (const input of [null, { ...group, code: '1' }, { ...group, label: ' ' }])
+    assert.equal(validation.parseCategoryGroup(input).value, undefined);
 });
 
 function setup(file, responses = [], authStatus = null) {
@@ -105,6 +122,8 @@ const routes = [
   ['src/app/api/admin/parishes/[parishId]/route.ts', ['PATCH', 'DELETE']],
   ['src/app/api/admin/categories/route.ts', ['GET', 'POST']],
   ['src/app/api/admin/categories/[code]/route.ts', ['PATCH', 'DELETE']],
+  ['src/app/api/admin/category-groups/route.ts', ['GET', 'POST']],
+  ['src/app/api/admin/category-groups/[code]/route.ts', ['PATCH', 'DELETE']],
 ];
 const request = (body) =>
   new Request('http://localhost/api/test', {
@@ -113,6 +132,7 @@ const request = (body) =>
   });
 const parishContext = { params: Promise.resolve({ parishId: '10' }) };
 const categoryContext = { params: Promise.resolve({ code: '010' }) };
+const groupContext = { params: Promise.resolve({ code: '000' }) };
 
 for (const [file, methods] of routes) {
   for (const method of methods) {
@@ -185,7 +205,7 @@ test('used category number cannot be changed', async () => {
 
 test('category label can be updated without changing its code', async () => {
   const { handlers, calls } = setup(routes[3][0], [
-    { data: [{ main_label: '성서' }], error: null },
+    { data: group, error: null },
     { data: { code: '010' }, error: null },
   ]);
   assert.equal(
@@ -203,19 +223,35 @@ test('category label can be updated without changing its code', async () => {
   );
 });
 
-test('conflicting main group name is rejected', async () => {
+test('a subcategory requires an existing parent group', async () => {
   const { handlers, calls } = setup(routes[2][0], [
-    { data: [{ main_label: '성서' }], error: null },
+    { data: null, error: null },
   ]);
-  assert.equal(
-    (await handlers.POST(request({ ...category, main_label: '다른 이름' })))
-      .status,
-    409,
-  );
+  assert.equal((await handlers.POST(request(category))).status, 400);
   assert.equal(
     calls.some((call) => call.method === 'insert'),
     false,
   );
+});
+
+test('moving a subcategory preserves its code and book connections', async () => {
+  const { handlers, calls } = setup(routes[3][0], [
+    { data: { code: '100' }, error: null },
+    { data: { code: '010' }, error: null },
+  ]);
+  assert.equal(
+    (
+      await handlers.PATCH(
+        request({ ...category, main_code: '100' }),
+        categoryContext,
+      )
+    ).status,
+    200,
+  );
+  assert.ok(calls.every((call) => call.table !== 'books'));
+  const value = calls.find((call) => call.method === 'update').args[0];
+  assert.equal(value.code, '010');
+  assert.equal(value.main_code, '100');
 });
 
 test('missing and concurrently referenced parish deletions are handled', async () => {
@@ -236,8 +272,95 @@ test('missing and concurrently referenced parish deletions are handled', async (
 
 test('duplicate categories return a conflict', async () => {
   const { handlers } = setup(routes[2][0], [
-    { data: [], error: null },
+    { data: group, error: null },
     { error: { code: '23505', message: 'duplicate' } },
   ]);
   assert.equal((await handlers.POST(request(category))).status, 409);
+});
+
+test('empty groups can be created independently and listed', async () => {
+  const created = setup(routes[4][0], [{ data: group, error: null }]);
+  assert.equal((await created.handlers.POST(request(group))).status, 201);
+  assert.equal(created.calls[0].table, 'book_category_groups');
+  const listed = setup(routes[4][0], [
+    { data: [{ ...group, book_categories: [{ count: 0 }] }], error: null },
+  ]);
+  const body = await (await listed.handlers.GET()).json();
+  assert.equal(body.items[0].usageCount, 0);
+  assert.equal(body.items[0].code, group.code);
+});
+
+test('groups with children cannot be deleted or renumbered', async () => {
+  for (const method of ['PATCH', 'DELETE']) {
+    const { handlers, calls } = setup(routes[5][0], [
+      { count: 1, error: null },
+    ]);
+    const result = await handlers[method](
+      request({ ...group, code: '001' }),
+      groupContext,
+    );
+    assert.equal(result.status, 409);
+    assert.ok(
+      calls.every((call) => !['update', 'delete'].includes(call.method)),
+    );
+    assert.equal(calls[0].table, 'book_categories');
+  }
+});
+
+test('group labels can change without rewriting children or books', async () => {
+  const { handlers, calls } = setup(routes[5][0], [
+    { data: group, error: null },
+  ]);
+  assert.equal(
+    (
+      await handlers.PATCH(
+        request({ ...group, label: '새 대분류' }),
+        groupContext,
+      )
+    ).status,
+    200,
+  );
+  assert.ok(calls.every((call) => call.table === 'book_category_groups'));
+  assert.equal(
+    calls.find((call) => call.method === 'update').args[0].label,
+    '새 대분류',
+  );
+});
+
+test('empty group renumber and deletion succeed; FK races remain conflicts', async () => {
+  for (const method of ['PATCH', 'DELETE']) {
+    for (const [result, status] of [
+      [{ data: group, error: null }, 200],
+      [{ data: null, error: null }, 404],
+      [{ error: { code: '23503', message: 'foreign key' } }, 409],
+    ]) {
+      const { handlers } = setup(routes[5][0], [
+        { count: 0, error: null },
+        result,
+      ]);
+      assert.equal(
+        (
+          await handlers[method](
+            request({ ...group, code: '001' }),
+            groupContext,
+          )
+        ).status,
+        status,
+      );
+    }
+  }
+});
+
+test('subcategory writes omit the redundant parent label', async () => {
+  const { handlers, calls } = setup(routes[2][0], [
+    { data: group, error: null },
+    { data: category, error: null },
+  ]);
+  assert.equal(
+    (await handlers.POST(request({ ...category, main_label: 'stale' }))).status,
+    201,
+  );
+  const value = calls.find((call) => call.method === 'insert').args[0];
+  assert.equal(value.main_label, undefined);
+  assert.equal(value.main_code, group.code);
 });

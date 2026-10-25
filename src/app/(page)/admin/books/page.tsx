@@ -22,6 +22,7 @@ import IsbnCompareModal, {
 import Modal from '@/components/Modal';
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
+import { categoryGroupLabel } from '@/lib/bookCategory';
 import { looksLikeIsbn } from '@/lib/isbn';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
@@ -676,10 +677,13 @@ export default function AdminBooksPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('book_categories')
-        .select('code, label, main_code, main_label')
+        .select('code, label, main_code, book_category_groups(label)')
         .order('code');
       if (error) throw error;
-      return data as BookCategory[];
+      return data.map((row) => ({
+        ...row,
+        main_label: categoryGroupLabel(row),
+      })) as BookCategory[];
     },
   });
 

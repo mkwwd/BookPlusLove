@@ -10,7 +10,7 @@ export async function GET() {
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabaseServer
       .from('book_categories')
-      .select('code, label, main_code, main_label, books(count)')
+      .select('code, label, main_code, books(count)')
       .order('code')
       .range(offset, offset + 999);
     if (error) return catalogError(error);
@@ -32,10 +32,7 @@ export async function POST(request: Request) {
   if (parsed.error)
     return Response.json({ error: parsed.error }, { status: 400 });
   const value = parsed.value!;
-  const groupError = await categoryGroupError(
-    value.main_code,
-    value.main_label,
-  );
+  const groupError = await categoryGroupError(value.main_code);
   if (groupError) return groupError;
   const { data, error } = await supabaseServer
     .from('book_categories')

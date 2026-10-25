@@ -10,7 +10,7 @@ export function catalogError(error: { code?: string; message: string }) {
     return Response.json(
       {
         error:
-          '회원 또는 도서가 사용 중인 항목입니다. 연결을 변경한 후 다시 시도해주세요.',
+          '연결된 회원·도서·분류가 있거나 연결 대상이 변경되었습니다. 목록을 새로고침해주세요.',
       },
       { status: 409 },
     );
@@ -29,17 +29,17 @@ export function catalogError(error: { code?: string; message: string }) {
   );
 }
 
-export async function categoryGroupError(code: string, label: string) {
+export async function categoryGroupError(code: string) {
   const { data, error } = await supabaseServer
-    .from('book_categories')
-    .select('main_label')
-    .eq('main_code', code)
-    .limit(1);
+    .from('book_category_groups')
+    .select('code')
+    .eq('code', code)
+    .maybeSingle();
   if (error) return catalogError(error);
-  if (data?.length && data[0].main_label !== label) {
+  if (!data) {
     return Response.json(
-      { error: '기존 대분류명과 일치하지 않습니다. 목록을 새로고침해주세요.' },
-      { status: 409 },
+      { error: '대분류를 찾을 수 없습니다. 목록을 새로고침해주세요.' },
+      { status: 400 },
     );
   }
   return null;

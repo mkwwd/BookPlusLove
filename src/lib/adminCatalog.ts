@@ -3,11 +3,13 @@ export interface ParishInput {
   is_verified: boolean;
 }
 
-export interface CategoryInput {
+export interface CategoryGroupInput {
   code: string;
   label: string;
+}
+
+export interface CategoryInput extends CategoryGroupInput {
   main_code: string;
-  main_label: string;
 }
 
 type Parsed<T> = { value: T; error?: never } | { error: string; value?: never };
@@ -23,26 +25,30 @@ export function parseParish(body: unknown): Parsed<ParishInput> {
   return { value: { parishname: name, is_verified: input.is_verified } };
 }
 
-export function parseCategory(body: unknown): Parsed<CategoryInput> {
-  const input = body as Partial<CategoryInput> | null;
-  const text = (key: keyof CategoryInput) =>
+export function parseCategoryGroup(body: unknown): Parsed<CategoryGroupInput> {
+  const input = body as Partial<CategoryGroupInput> | null;
+  const text = (key: keyof CategoryGroupInput) =>
     typeof input?.[key] === 'string' ? input[key].trim() : '';
   const value = {
     code: text('code'),
     label: text('label'),
-    main_code: text('main_code'),
-    main_label: text('main_label'),
   };
-  if (!/^\d{3}$/.test(value.code) || !/^\d{3}$/.test(value.main_code)) {
-    return { error: '분류코드와 대분류코드는 세 자리 숫자로 입력해주세요.' };
+  if (!/^\d{3}$/.test(value.code)) {
+    return { error: '분류코드는 세 자리 숫자로 입력해주세요.' };
   }
-  if (
-    !value.label ||
-    value.label.length > 100 ||
-    !value.main_label ||
-    value.main_label.length > 100
-  ) {
-    return { error: '분류명과 대분류명을 1~100자로 입력해주세요.' };
+  if (!value.label || value.label.length > 100) {
+    return { error: '분류명을 1~100자로 입력해주세요.' };
   }
   return { value };
+}
+
+export function parseCategory(body: unknown): Parsed<CategoryInput> {
+  const parsed = parseCategoryGroup(body);
+  if (parsed.error) return { error: parsed.error };
+  const input = body as Partial<CategoryInput> | null;
+  const mainCode =
+    typeof input?.main_code === 'string' ? input.main_code.trim() : '';
+  if (!/^\d{3}$/.test(mainCode))
+    return { error: '대분류코드는 세 자리 숫자로 입력해주세요.' };
+  return { value: { ...parsed.value!, main_code: mainCode } };
 }
