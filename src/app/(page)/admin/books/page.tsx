@@ -679,7 +679,8 @@ export default function AdminBooksPage() {
     (book) =>
       !trimmedSearch ||
       book.title.includes(trimmedSearch) ||
-      (book.author ?? '').includes(trimmedSearch),
+      (book.author ?? '').includes(trimmedSearch) ||
+      book.regNo.toUpperCase().includes(trimmedSearch.toUpperCase()),
   );
 
   const totalPages = Math.max(1, Math.ceil(visibleBooks.length / PAGE_SIZE));
@@ -711,7 +712,8 @@ export default function AdminBooksPage() {
                   setSearchText(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="제목 또는 저자 검색"
+                aria-label="제목, 저자 또는 등록번호 검색"
+                placeholder="제목 / 저자 / 등록번호 검색"
                 className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
               />
             </div>
