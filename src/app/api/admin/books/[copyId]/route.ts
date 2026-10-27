@@ -1,4 +1,4 @@
-import { isValidIsbn13 } from '@/lib/isbn';
+import { isValidIsbn } from '@/lib/isbn';
 import { normalizePublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
@@ -33,7 +33,7 @@ async function updateBook(
 
   const { data: existingCopy, error: findError } = await supabaseServer
     .from('book_copies')
-    .select('id, book_id, books(cover_url, pub_date)')
+    .select('id, book_id, books(cover_url, pub_date, isbn)')
     .eq('id', copyIdNum)
     .maybeSingle();
 
@@ -77,9 +77,9 @@ async function updateBook(
   if (!title) {
     return Response.json({ error: '제목은 필수입니다.' }, { status: 400 });
   }
-  if (isbn && !isValidIsbn13(isbn)) {
+  if (isbn && isbn !== existingBook?.isbn?.trim() && !isValidIsbn(isbn)) {
     return Response.json(
-      { error: 'ISBN 형식이 올바르지 않습니다.' },
+      { error: 'ISBN은 유효한 10자리 또는 13자리 번호로 입력해주세요.' },
       { status: 400 },
     );
   }

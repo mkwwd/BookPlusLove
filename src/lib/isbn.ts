@@ -14,6 +14,19 @@ export function isValidIsbn13(value: string): boolean {
   return checkDigit === Number(digits[12]);
 }
 
+export function isValidIsbn(value: string): boolean {
+  const cleaned = value.replace(/[\s-]/g, '').toUpperCase();
+  if (/^\d{13}$/.test(cleaned)) return isValidIsbn13(cleaned);
+  if (!/^\d{9}[0-9X]$/.test(cleaned)) return false;
+
+  const sum = Array.from(cleaned).reduce(
+    (total, digit, index) =>
+      total + (digit === 'X' ? 10 : Number(digit)) * (10 - index),
+    0,
+  );
+  return sum % 11 === 0;
+}
+
 // 조회(검색) 목적으로는 체크섬까지 맞을 필요 없다 — 옛날 장서 데이터엔
 // 오타로 체크섬이 안 맞는 ISBN이 많아서, 자릿수만 맞으면 일단 API 조회를
 // 시도해보고 결과가 없으면 그때 안내하는 게 낫다. 체크섬 검증

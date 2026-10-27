@@ -24,7 +24,7 @@ import PhotoCapture from '@/components/PhotoCapture';
 import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { categoryGroupLabel } from '@/lib/bookCategory';
-import { looksLikeIsbn } from '@/lib/isbn';
+import { isValidIsbn, looksLikeIsbn } from '@/lib/isbn';
 import { formatPublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
@@ -241,8 +241,12 @@ function EditBookForm({
       setFormError('제목은 필수입니다.');
       return;
     }
-    if (isbn.trim() && !looksLikeIsbn(isbn.trim())) {
-      setFormError('ISBN 형식이 올바르지 않습니다.');
+    if (
+      isbn.trim() &&
+      isbn.trim() !== book.isbn?.trim() &&
+      !isValidIsbn(isbn)
+    ) {
+      setFormError('ISBN은 유효한 10자리 또는 13자리 번호로 입력해주세요.');
       return;
     }
     if (!isValidRegNo(regNo.trim())) {
@@ -585,6 +589,7 @@ export default function AdminBooksPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'recommended'>('all');
   const [searchText, setSearchText] = useState('');
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
+  const [isSaveComplete, setIsSaveComplete] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useHorizontalWheel();
 
@@ -944,7 +949,10 @@ export default function AdminBooksPage() {
                           <button
                             type="button"
                             aria-label="수정"
-                            onClick={() => setEditingBook(book)}
+                            onClick={() => {
+                              setIsSaveComplete(false);
+                              setEditingBook(book);
+                            }}
                             className="text-amber-600 hover:text-amber-950">
                             <SquarePen className="h-4 w-4" />
                           </button>
@@ -991,6 +999,25 @@ export default function AdminBooksPage() {
         </>
       )}
 
+      {isSaveComplete && (
+        <div
+          role="status"
+          className="fixed right-4 bottom-6 left-4 z-50 flex items-center gap-3 rounded-lg border border-green-800/20 bg-white p-4 text-green-900 shadow-lg sm:left-auto sm:max-w-md">
+          <Check aria-hidden="true" className="h-5 w-5 shrink-0" />
+          <p className="min-w-0 flex-1 text-base break-keep">
+            도서 정보가 수정되었습니다.
+          </p>
+          <button
+            type="button"
+            aria-label="알림 닫기"
+            title="알림 닫기"
+            onClick={() => setIsSaveComplete(false)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800">
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       {editingBook && (
         <Modal title="도서 정보 수정" onClose={() => setEditingBook(null)}>
           <EditBookForm
@@ -998,6 +1025,7 @@ export default function AdminBooksPage() {
             categories={categories}
             onSaved={() => {
               setEditingBook(null);
+              setIsSaveComplete(true);
               void queryClient.invalidateQueries({ queryKey: ['admin-books'] });
             }}
             onDelete={() =>

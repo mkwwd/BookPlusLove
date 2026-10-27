@@ -1,0 +1,293 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+import vm from 'node:vm';
+
+import ts from 'typescript';
+
+function load(file, overrides = {}, extra = '', globals = {}) {
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(fs.readFileSync(file, 'utf8') + extra, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+        jsx: ts.JsxEmit.ReactJSX,
+      },
+    }).outputText,
+    {
+      exports,
+      Response,
+      URL,
+      require(name) {
+        if (name in overrides) return overrides[name];
+        if (name.startsWith('@/lib/')) return load(`src/${name.slice(2)}.ts`);
+        return {};
+      },
+      ...globals,
+    },
+  );
+  return exports;
+}
+
+test('save validator accepts ISBN-10 including X and ISBN-13, not malformed checksums or text', () => {
+  const { isValidIsbn } = load('src/lib/isbn.ts');
+  assert.equal(typeof isValidIsbn, 'function');
+  for (const value of [
+    '0-306-40615-2',
+    '0-8044-2957-X',
+    '080442957x',
+    '9780306406157',
+    '978-0-306-40615-7',
+  ]) {
+    assert.equal(isValidIsbn(value), true, value);
+  }
+  for (const value of [
+    '0306406153',
+    '0804429570',
+    '9780306406158',
+    'ISBN9780306406157',
+    '123',
+    '',
+  ]) {
+    assert.equal(isValidIsbn(value), false, value);
+  }
+});
+
+function patchFixture(existingIsbn = null, updateError = null) {
+  const writes = [];
+  const supabaseServer = {
+    from(table) {
+      let isWrite = false;
+      const query = new Proxy(
+        {},
+        {
+          get(_, property) {
+            if (property === 'then')
+              return (resolve, reject) =>
+                Promise.resolve({
+                  data: isWrite
+                    ? null
+                    : {
+                        id: 1,
+                        book_id: 2,
+                        books: {
+                          isbn: existingIsbn,
+                          cover_url: null,
+                          pub_date: null,
+                        },
+                      },
+                  error: isWrite ? updateError : null,
+                }).then(resolve, reject);
+            return (...args) => {
+              if (property === 'update') {
+                isWrite = true;
+                writes.push({ table, values: args[0] });
+              }
+              return query;
+            };
+          },
+        },
+      );
+      return query;
+    },
+  };
+  const { PATCH } = load('src/app/api/admin/books/[copyId]/route.ts', {
+    '@/utils/supabase/server': { supabaseServer },
+    '@/utils/supabase/admin': { requireAdmin: async () => ({ error: null }) },
+    '@/utils/supabase/bookCover': {
+      withBookCoverCleanup: async (_, response) => response,
+    },
+  });
+  return {
+    writes,
+    patch: (isbn) =>
+      PATCH(
+        {
+          json: async () => ({
+            title: 'Book',
+            regNo: 'MB000001',
+            status: '대여가능',
+            isbn,
+          }),
+        },
+        { params: Promise.resolve({ copyId: '1' }) },
+      ),
+  };
+}
+
+test('PATCH stores old ISBN without converting it, preserves unchanged legacy values and rejects new invalid values', async () => {
+  for (const [existing, input, status] of [
+    [null, '0-306-40615-2', 200],
+    [null, '0-8044-2957-X', 200],
+    [null, '9780306406157', 200],
+    ['old-typo', 'old-typo', 200],
+    ['old-typo', '9780306406158', 400],
+    [null, '0306406153', 400],
+    ['0-306-40615-2', '', 200],
+  ]) {
+    const fixture = patchFixture(existing);
+    const response = await fixture.patch(input);
+    assert.equal(response.status, status, input);
+    if (status === 200)
+      assert.equal(fixture.writes[0].values.isbn, input || null);
+    else assert.equal(fixture.writes.length, 0);
+  }
+  const fixture = patchFixture(null, { code: '23505' });
+  assert.equal((await fixture.patch('0-306-40615-2')).status, 500);
+});
+
+function nodes(tree) {
+  if (Array.isArray(tree)) return tree.flatMap(nodes);
+  if (!tree || typeof tree !== 'object') return [];
+  return [tree, ...nodes(tree.props?.children)];
+}
+
+test('successful edit closes the modal and leaves a dismissible success notice; opening another edit clears it', () => {
+  const states = [];
+  let cursor = 0;
+  let invalidations = 0;
+  const book = {
+    copyId: 1,
+    bookId: 2,
+    title: 'Book',
+    isbn: '0-306-40615-2',
+    regNo: 'MB000001',
+    status: '대여가능',
+    pubDate: null,
+  };
+  const { default: Page } = load('src/app/(page)/admin/books/page.tsx', {
+    react: {
+      useState(initial) {
+        const i = cursor++;
+        if (!(i in states)) states[i] = initial;
+        return [
+          states[i],
+          (value) => {
+            states[i] = value;
+          },
+        ];
+      },
+    },
+    '@tanstack/react-query': {
+      useQueryClient: () => ({
+        invalidateQueries: () => {
+          invalidations++;
+        },
+      }),
+      useQuery: ({ queryKey }) => ({
+        data: queryKey[0] === 'admin-books' ? [book] : [],
+      }),
+      useMutation: () => ({ mutate() {} }),
+    },
+    '@/hooks/useHorizontalWheel': {
+      useHorizontalWheel: () => ({ current: null }),
+    },
+    'react/jsx-runtime': {
+      jsx: (type, props) => ({ type, props }),
+      jsxs: (type, props) => ({ type, props }),
+    },
+  });
+  const render = () => {
+    cursor = 0;
+    return nodes(Page());
+  };
+  let tree = render();
+  assert.equal(
+    tree.some((n) => n.props?.role === 'status'),
+    false,
+  );
+  tree.find((n) => n.props?.['aria-label'] === '수정').props.onClick();
+  tree = render();
+  const form = tree.find((n) => n.type?.name === 'EditBookForm');
+  assert.ok(form);
+  form.props.onSaved();
+  tree = render();
+  assert.equal(
+    tree.some((n) => n.type?.name === 'EditBookForm'),
+    false,
+  );
+  assert.ok(tree.find((n) => n.props?.role === 'status'));
+  assert.equal(invalidations, 1);
+  tree.find((n) => n.props?.['aria-label'] === '알림 닫기').props.onClick();
+  assert.equal(
+    render().some((n) => n.props?.role === 'status'),
+    false,
+  );
+  tree.find((n) => n.props?.['aria-label'] === '수정').props.onClick();
+  render()
+    .find((n) => n.type?.name === 'EditBookForm')
+    .props.onSaved();
+  render()
+    .find((n) => n.props?.['aria-label'] === '수정')
+    .props.onClick();
+  assert.equal(
+    render().some((n) => n.props?.role === 'status'),
+    false,
+  );
+});
+
+test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds', async () => {
+  for (const ok of [true, false]) {
+    let saved = 0;
+    let sent;
+    let pending;
+    let error;
+    const { EditBookForm } = load(
+      'src/app/(page)/admin/books/page.tsx',
+      {
+        react: { useState: (initial) => [initial, () => {}] },
+        '@tanstack/react-query': {
+          useMutation: (options) => ({
+            mutate() {
+              pending = options
+                .mutationFn()
+                .then(() => options.onSuccess?.())
+                .catch((e) => {
+                  error = e;
+                });
+            },
+          }),
+        },
+        'react/jsx-runtime': {
+          jsx: (type, props) => ({ type, props }),
+          jsxs: (type, props) => ({ type, props }),
+        },
+      },
+      '\nexport { EditBookForm };',
+      {
+        fetch: async (_, options) => {
+          sent = JSON.parse(options.body);
+          return Response.json(ok ? { ok: true } : { error: 'Save failed' }, {
+            status: ok ? 200 : 500,
+          });
+        },
+      },
+    );
+    const tree = nodes(
+      EditBookForm({
+        book: {
+          copyId: 1,
+          title: 'Book',
+          isbn: '0-8044-2957-X',
+          regNo: 'MB000001',
+          status: '대여가능',
+        },
+        categories: [],
+        onSaved: () => {
+          saved++;
+        },
+        onDelete() {},
+        isDeleting: false,
+      }),
+    );
+    tree
+      .find((n) => n.type === 'button' && n.props.children === '저장')
+      .props.onClick();
+    assert.ok(pending, 'Save mutation must run for an ISBN-10 book');
+    await pending;
+    assert.equal(sent.isbn, '0-8044-2957-X');
+    assert.equal(saved, ok ? 1 : 0);
+    assert.equal(Boolean(error), !ok);
+  }
+});
