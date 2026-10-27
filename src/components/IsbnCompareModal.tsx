@@ -58,10 +58,23 @@ export interface IsbnLookupResponse {
 export async function fetchIsbnLookup(
   isbn: string,
 ): Promise<IsbnLookupResponse> {
-  const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(isbn)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
-  return body as IsbnLookupResponse;
+  const signal = AbortSignal.timeout(20_000);
+  try {
+    const res = await fetch(
+      `/api/books/isbn?isbn=${encodeURIComponent(isbn)}`,
+      { signal },
+    );
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
+    return body as IsbnLookupResponse;
+  } catch (error) {
+    if (signal.aborted)
+      throw new Error(
+        '조회 시간이 초과되었습니다. 잠시 후 다시 조회해주세요.',
+        { cause: error },
+      );
+    throw error;
+  }
 }
 
 export default function IsbnCompareModal({

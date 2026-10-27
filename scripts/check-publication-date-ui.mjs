@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 import ts from 'typescript';
 
-function runtime() {
+function runtime(mutation = {}) {
   const states = [];
   let cursor = 0;
   const dependencies = {
@@ -24,7 +24,10 @@ function runtime() {
       },
       useEffect() {},
     },
-    '@tanstack/react-query': { useQuery: () => ({}), useMutation: () => ({}) },
+    '@tanstack/react-query': {
+      useQuery: () => ({}),
+      useMutation: () => mutation,
+    },
     '@/hooks/useHorizontalWheel': {
       useHorizontalWheel: () => ({ current: null }),
     },
@@ -78,6 +81,33 @@ const book = {
   pubDate: '2000년 8월 8일',
   status: '대여가능',
 };
+
+test('a pending ISBN lookup can be released without changing the draft list', () => {
+  let reset = false;
+  const ui = runtime({
+    isPending: true,
+    variables: { bookId: book.id },
+    reset: () => {
+      reset = true;
+    },
+  });
+  const { ScannedBookTable } = ui.load(
+    entryFile,
+    '\nexport { ScannedBookTable };',
+  );
+  const tree = ui.render(ScannedBookTable, {
+    books: [book],
+    categories: [],
+    onUpdate: () => assert.fail('must not edit drafts'),
+    onRemove: () => assert.fail('must not remove drafts'),
+  });
+  const cancel = tree.find(
+    (node) => node.type === 'button' && node.props.children === '조회 취소',
+  );
+  assert.ok(cancel);
+  cancel.props.onClick();
+  assert.equal(reset, true);
+});
 
 test('Excel imports use ISO dates and the table blur keeps partial and malformed dates visible', () => {
   const ui = runtime();

@@ -143,6 +143,32 @@ function nodes(tree) {
   return [tree, ...nodes(tree.props?.children)];
 }
 
+test('ISBN lookup sends a bounded request and explains a timeout', async () => {
+  let duration;
+  const signal = AbortSignal.abort(
+    new DOMException('Timed out', 'TimeoutError'),
+  );
+  const { fetchIsbnLookup } = load(
+    'src/components/IsbnCompareModal.tsx',
+    {},
+    '',
+    {
+      AbortSignal: {
+        timeout: (ms) => {
+          duration = ms;
+          return signal;
+        },
+      },
+      fetch: async (_, options) => {
+        assert.equal(options?.signal, signal);
+        throw signal.reason;
+      },
+    },
+  );
+  await assert.rejects(fetchIsbnLookup('89-01-15084-0'), /조회 시간이 초과/);
+  assert.equal(duration, 20000);
+});
+
 test('ISBN comparison enlarges desktop covers without cropping and keeps compact side-by-side choices on mobile', () => {
   const { default: Compare } = load('src/components/IsbnCompareModal.tsx', {
     react: { useState: (initial) => [initial(), () => {}] },

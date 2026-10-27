@@ -306,13 +306,10 @@ function ScannedBookTable({
     mutate: lookupIsbn,
     isPending: isLookingUp,
     variables: lookupVariables,
+    reset: resetLookup,
   } = useMutation({
     mutationFn: (vars: { isbn: string; bookId: string }) =>
       fetchIsbnLookup(vars.isbn),
-    onSuccess: (result) => setLookupResult(result),
-    onError: (err: Error, vars) => {
-      setLookupErrors((prev) => ({ ...prev, [vars.bookId]: err.message }));
-    },
   });
 
   const handleLookup = (book: ScannedBook) => {
@@ -331,7 +328,15 @@ function ScannedBookTable({
       return next;
     });
     setLookupBookId(book.id);
-    lookupIsbn({ isbn: trimmed, bookId: book.id });
+    lookupIsbn(
+      { isbn: trimmed, bookId: book.id },
+      {
+        onSuccess: (result) => setLookupResult(result),
+        onError: (err: Error, vars) => {
+          setLookupErrors((prev) => ({ ...prev, [vars.bookId]: err.message }));
+        },
+      },
+    );
   };
 
   return (
@@ -522,6 +527,18 @@ function ScannedBookTable({
                             ? '조회중'
                             : '조회'}
                         </button>
+                        {isLookingUp && lookupVariables?.bookId === book.id && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetLookup();
+                              setLookupBookId(null);
+                              setLookupResult(null);
+                            }}
+                            className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-2 py-1.5 text-xs whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
+                            조회 취소
+                          </button>
+                        )}
                       </div>
                       {lookupErrors[book.id] && (
                         <p className="mt-1 text-xs text-red-600">
