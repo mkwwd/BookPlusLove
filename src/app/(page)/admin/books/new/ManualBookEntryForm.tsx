@@ -13,6 +13,7 @@ import IsbnCompareModal, {
 import PhotoCapture from '@/components/PhotoCapture';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { isValidIsbn13, looksLikeIsbn } from '@/lib/isbn';
+import { formatPublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 
 import CameraScanner from './CameraScanner';
@@ -177,7 +178,8 @@ export default function ManualBookEntryForm({
     if (values.publisher !== undefined) setManualPublisher(values.publisher);
     if (values.page !== undefined) setManualPage(values.page);
     if (values.price !== undefined) setManualPrice(values.price);
-    if (values.pubDate !== undefined) setManualPubDate(values.pubDate);
+    if (values.pubDate !== undefined)
+      setManualPubDate(formatPublicationDate(values.pubDate));
     if (values.volume !== undefined) setManualVolume(values.volume);
     if (values.coverUrl !== undefined) setManualCoverUrl(values.coverUrl);
     if (values.description !== undefined)
@@ -448,6 +450,9 @@ export default function ManualBookEntryForm({
             type="text"
             value={manualPubDate}
             onChange={(e) => setManualPubDate(e.target.value)}
+            onBlur={() =>
+              setManualPubDate(formatPublicationDate(manualPubDate))
+            }
             placeholder="예: 2017년 3월 31일"
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />

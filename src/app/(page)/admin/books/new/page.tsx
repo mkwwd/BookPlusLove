@@ -25,6 +25,10 @@ import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { categoryGroupLabel } from '@/lib/bookCategory';
 import { looksLikeIsbn } from '@/lib/isbn';
+import {
+  formatPublicationDate,
+  normalizePublicationDate,
+} from '@/lib/publicationDate';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -194,14 +198,36 @@ function normalizeExcelPrice(raw: string): string {
   return digits;
 }
 
-function normalizeExcelPubDate(raw: string): string {
-  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
-  if (!match) return raw;
-  const [, month, day, yy] = match;
-  const currentTwoDigitYear = new Date().getFullYear() % 100;
-  const yyyy =
-    Number(yy) <= currentTwoDigitYear ? 2000 + Number(yy) : 1900 + Number(yy);
-  return `${yyyy}년 ${Number(month)}월 ${Number(day)}일`;
+function readExcelRows(buffer: ArrayBuffer): string[][] {
+  const workbook = XLSX.read(buffer, { type: 'array', cellNF: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const range = XLSX.utils.decode_range(sheet['!ref'] ?? 'A1');
+  // Decode actual date cells using the workbook epoch, never a guessed century.
+  for (let row = range.s.r; row <= range.e.r; row++) {
+    const cell = sheet[XLSX.utils.encode_cell({ r: row, c: 8 })];
+    if (cell?.t !== 'n' || !cell.z || !XLSX.SSF.is_date(String(cell.z)))
+      continue;
+    const format = String(cell.z).replace(/"[^"]*"|\\.|_.|\*.|\[[^\]]*\]/g, '');
+    const invalidDate = `날짜 확인 필요 (Excel 값: ${cell.v})`;
+    if (format.includes(';') || !/[yd]/i.test(format)) {
+      cell.w = invalidDate;
+      continue;
+    }
+    const date = XLSX.SSF.parse_date_code(cell.v, {
+      date1904: !!workbook.Workbook?.WBProps?.date1904,
+    });
+    cell.w =
+      (date &&
+        normalizePublicationDate(
+          `${String(date.y).padStart(4, '0')}-${date.m}-${date.d}`,
+        )) ||
+      invalidDate;
+  }
+  return XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+  });
 }
 
 function rowToScannedBook(
@@ -223,7 +249,7 @@ function rowToScannedBook(
     author,
     publisher: excelCell(row, 7),
     price: normalizeExcelPrice(excelCell(row, 9)) || undefined,
-    pubDate: normalizeExcelPubDate(excelCell(row, 8)) || undefined,
+    pubDate: formatPublicationDate(excelCell(row, 8)) || undefined,
     volume: excelCell(row, 4) || undefined,
     seriesTitle: excelCell(row, 5) || undefined,
     category: matchedCategory?.code ?? '',
@@ -458,6 +484,11 @@ function ScannedBookTable({
                         onChange={(e) =>
                           onUpdate(book.id, { pubDate: e.target.value })
                         }
+                        onBlur={() =>
+                          onUpdate(book.id, {
+                            pubDate: formatPublicationDate(book.pubDate),
+                          })
+                        }
                         placeholder="예: 2017년 3월 31일"
                         className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
@@ -691,6 +722,9 @@ function ScannedBookTable({
             }
             onUpdate(lookupBookId, {
               ...values,
+              ...(values.pubDate !== undefined
+                ? { pubDate: formatPublicationDate(values.pubDate) }
+                : {}),
               ...(aladinItemId !== undefined ? { aladinItemId } : {}),
             });
             setLookupResult(null);
@@ -761,13 +795,7 @@ function BookRegisterContent() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, {
-        header: 1,
-        raw: false,
-        defval: '',
-      });
+      const rows = readExcelRows(buffer);
 
       const parsedBooks = rows
         .filter((row) => row.some((cell) => String(cell ?? '').trim() !== ''))

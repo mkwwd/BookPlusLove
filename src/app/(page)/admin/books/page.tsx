@@ -25,6 +25,7 @@ import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { categoryGroupLabel } from '@/lib/bookCategory';
 import { looksLikeIsbn } from '@/lib/isbn';
+import { formatPublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -101,7 +102,7 @@ function EditBookForm({
   const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [page, setPage] = useState(book.page ?? '');
   const [price, setPrice] = useState(book.price ?? '');
-  const [pubDate, setPubDate] = useState(book.pubDate ?? '');
+  const [pubDate, setPubDate] = useState(formatPublicationDate(book.pubDate));
   const [authorCode, setAuthorCode] = useState(book.authorCode ?? '');
   const [categoryMain, setCategoryMain] = useState(book.categoryMain ?? '');
   const [category, setCategory] = useState(book.categoryCode ?? '');
@@ -147,7 +148,8 @@ function EditBookForm({
     if (values.publisher !== undefined) setPublisher(values.publisher);
     if (values.page !== undefined) setPage(values.page);
     if (values.price !== undefined) setPrice(values.price);
-    if (values.pubDate !== undefined) setPubDate(values.pubDate);
+    if (values.pubDate !== undefined)
+      setPubDate(formatPublicationDate(values.pubDate));
     if (values.coverUrl !== undefined) {
       setCoverUrl(values.coverUrl);
       if (coverFile) {
@@ -321,6 +323,7 @@ function EditBookForm({
             type="text"
             value={pubDate}
             onChange={(e) => setPubDate(e.target.value)}
+            onBlur={() => setPubDate(formatPublicationDate(pubDate))}
             placeholder="예: 2017년 3월 31일"
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
@@ -911,7 +914,7 @@ export default function AdminBooksPage() {
                         {book.isbn ?? '-'}
                       </td>
                       <td className="px-5 py-3 text-amber-800">
-                        {book.pubDate ?? '-'}
+                        {formatPublicationDate(book.pubDate) || '-'}
                       </td>
                       <td className="px-5 py-3 text-amber-800">
                         {book.page ?? '-'}

@@ -1,4 +1,5 @@
 import { isValidIsbn13 } from '@/lib/isbn';
+import { normalizePublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
 import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
@@ -32,7 +33,7 @@ async function updateBook(
 
   const { data: existingCopy, error: findError } = await supabaseServer
     .from('book_copies')
-    .select('id, book_id, books(cover_url)')
+    .select('id, book_id, books(cover_url, pub_date)')
     .eq('id', copyIdNum)
     .maybeSingle();
 
@@ -55,6 +56,23 @@ async function updateBook(
   const isbn = typeof body?.isbn === 'string' ? body.isbn.trim() : '';
   const regNo = typeof body?.regNo === 'string' ? body.regNo.trim() : '';
   const status = typeof body?.status === 'string' ? body.status : '';
+  let pubDate =
+    body?.pubDate === undefined
+      ? (existingBook?.pub_date ?? null)
+      : normalizePublicationDate(body.pubDate);
+  // Existing uncertain dates may survive unrelated edits, but not be newly introduced.
+  if (pubDate === undefined && body?.pubDate === existingBook?.pub_date) {
+    pubDate = existingBook?.pub_date;
+  }
+  if (pubDate === undefined) {
+    return Response.json(
+      {
+        error:
+          '출판일을 확인해주세요. 연도, 연월 또는 전체 날짜를 정확히 입력해주세요.',
+      },
+      { status: 400 },
+    );
+  }
 
   if (!title) {
     return Response.json({ error: '제목은 필수입니다.' }, { status: 400 });
@@ -95,8 +113,7 @@ async function updateBook(
           : null,
       page: typeof body?.page === 'string' ? body.page.trim() || null : null,
       price: typeof body?.price === 'string' ? body.price.trim() || null : null,
-      pub_date:
-        typeof body?.pubDate === 'string' ? body.pubDate.trim() || null : null,
+      pub_date: pubDate,
       author_code:
         typeof body?.authorCode === 'string'
           ? body.authorCode.trim() || null

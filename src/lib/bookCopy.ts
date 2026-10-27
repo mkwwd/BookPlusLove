@@ -1,9 +1,5 @@
 export const LIBRARY_NAME = '광주가톨릭평생교육원';
 
-export function extractYear(pubDate: string | null): string | null {
-  return pubDate?.match(/\d{4}/)?.[0] ?? null;
-}
-
 export function buildCallNumber(
   categoryCode: string | null,
   authorCode: string | null,

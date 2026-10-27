@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { formatPublicationDate } from '@/lib/publicationDate';
+
 import Modal from './Modal';
 
 export type LookupFieldKey =
@@ -186,7 +188,9 @@ export default function IsbnCompareModal({
                           />
                         ) : (
                           <p className="text-sm break-words text-amber-800">
-                            {value}
+                            {key === 'pubDate'
+                              ? formatPublicationDate(value)
+                              : value}
                           </p>
                         )}
                       </div>
@@ -224,7 +228,9 @@ export default function IsbnCompareModal({
                     )
                   ) : (
                     <p className="text-sm break-words text-amber-800">
-                      {currentValues?.[key] || '(비어있음)'}
+                      {(key === 'pubDate'
+                        ? formatPublicationDate(currentValues?.[key])
+                        : currentValues?.[key]) || '(비어있음)'}
                     </p>
                   )}
                 </div>
