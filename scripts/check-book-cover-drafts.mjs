@@ -14,7 +14,12 @@ function loadDrafts(entries, response) {
   const revoked = [];
   const calls = [];
   let tableProps;
-  const mutationState = {};
+  const mutationState = {
+    reset: () => {
+      mutationState.error = null;
+    },
+  };
+  const confirmation = { accepted: true, messages: [] };
   const source = fs.readFileSync(
     'src/app/(page)/admin/books/new/page.tsx',
     'utf8',
@@ -69,6 +74,12 @@ function loadDrafts(entries, response) {
       exports,
       require: (name) => dependencies[name] ?? {},
       URL: { revokeObjectURL: (url) => revoked.push(url) },
+      window: {
+        confirm: (message) => {
+          confirmation.messages.push(message);
+          return confirmation.accepted;
+        },
+      },
       FormData: class {
         append() {}
       },
@@ -97,6 +108,7 @@ function loadDrafts(entries, response) {
     progressUpdates,
     render,
     mutationState,
+    confirmation,
     current: () => current,
   };
 }
@@ -348,6 +360,54 @@ function renderedNodes(tree) {
   visit(tree);
   return nodes;
 }
+
+const resetButton = (draft) =>
+  renderedNodes(draft.render()).find(
+    (node) =>
+      node.type === 'button' && node.props['aria-label'] === '목록 초기화',
+  );
+
+test('reset clears only confirmed drafts and local previews without server requests', () => {
+  const draft = loadDrafts([...books, ...manyBooks(1)], {});
+  draft.mutationState.error = new Error('previous error');
+  const button = resetButton(draft);
+  assert.ok(button, 'list reset button must exist');
+  const actions = renderedNodes(draft.render()).find(
+    (node) =>
+      node.type === 'div' &&
+      node.props.children?.[0]?.props?.['aria-label'] === '목록 초기화',
+  );
+  assert.match(actions.props.className, /justify-end/);
+  assert.match(actions.props.children[1].props.children, /등록하기/);
+  button.props.onClick();
+  assert.equal(draft.confirmation.messages.length, 1);
+  assert.equal(draft.current().length, 0);
+  assert.deepEqual(draft.revoked, ['blob:a', 'blob:b']);
+  assert.deepEqual(draft.calls, []);
+  assert.equal(draft.mutationState.error, null);
+  assert.equal(resetButton(draft).props.disabled, true);
+});
+
+test('canceling reset preserves the list and preview files', () => {
+  const draft = loadDrafts(books, {});
+  draft.confirmation.accepted = false;
+  const button = resetButton(draft);
+  assert.ok(button);
+  button.props.onClick();
+  assert.equal(draft.current(), books);
+  assert.deepEqual(draft.revoked, []);
+});
+
+test('reset is disabled and guarded during registration', () => {
+  const draft = loadDrafts(books, {});
+  draft.mutationState.isPending = true;
+  const button = resetButton(draft);
+  assert.ok(button);
+  assert.equal(button.props.disabled, true);
+  button.props.onClick();
+  assert.equal(draft.current(), books);
+  assert.equal(draft.confirmation.messages.length, 0);
+});
 
 test('pending registration opens a dialog outside the disabled fieldset and cannot be dismissed', async () => {
   const entries = manyBooks(1);
