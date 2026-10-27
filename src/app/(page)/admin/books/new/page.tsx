@@ -489,7 +489,7 @@ function ScannedBookTable({
                             pubDate: formatPublicationDate(book.pubDate),
                           })
                         }
-                        placeholder="예: 2017년 3월 31일"
+                        placeholder="예: 2017-03-31"
                         className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
                     </td>

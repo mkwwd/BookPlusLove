@@ -453,7 +453,7 @@ export default function ManualBookEntryForm({
             onBlur={() =>
               setManualPubDate(formatPublicationDate(manualPubDate))
             }
-            placeholder="예: 2017년 3월 31일"
+            placeholder="예: 2017-03-31"
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
         </div>

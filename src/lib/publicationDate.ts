@@ -36,6 +36,13 @@ export function formatPublicationDate(
   value: string | null | undefined,
 ): string {
   const normalized = normalizePublicationDate(value);
+  return normalized === undefined ? (value ?? '') : (normalized ?? '');
+}
+
+export function formatKoreanPublicationDate(
+  value: string | null | undefined,
+): string {
+  const normalized = normalizePublicationDate(value);
   if (normalized === undefined) return value ?? '';
   if (normalized === null) return '';
   const [year, month, day] = normalized.split('-');

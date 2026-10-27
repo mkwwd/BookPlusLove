@@ -11,7 +11,7 @@ import {
   buildCallNumber,
   LIBRARY_NAME,
 } from '@/lib/bookCopy';
-import { formatPublicationDate } from '@/lib/publicationDate';
+import { formatKoreanPublicationDate } from '@/lib/publicationDate';
 import { supabaseServer } from '@/utils/supabase/server';
 
 interface BookCategoryRow extends CategoryGroupRelation {
@@ -118,7 +118,7 @@ export default async function BookDetailPage({
     notFound();
   }
 
-  const publicationDate = formatPublicationDate(book.pubDate);
+  const publicationDate = formatKoreanPublicationDate(book.pubDate);
   const callNumber = buildCallNumber(book.categoryCode, book.authorCode);
 
   return (
