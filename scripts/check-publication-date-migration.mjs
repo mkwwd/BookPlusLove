@@ -12,6 +12,61 @@ if (!modulePath)
   );
 const { PGlite } = await import(pathToFileURL(modulePath).href);
 
+test('format-only SQL preserves unknown values and normalizes known precision', async (t) => {
+  const sql = fs.readFileSync('sql/format-publication-dates.sql', 'utf8');
+  const db = new PGlite();
+  t.after(() => db.close());
+  await db.exec(
+    'create table public.books (id integer primary key, title text, pub_date text); create table public.book_copies(book_id integer references public.books(id));',
+  );
+  const cases = [
+    ['2000-8-8', '2000-08-08'],
+    ['2000년 8월 8일', '2000-08-08'],
+    ['2000년 8월', '2000-08'],
+    ['2000년', '2000'],
+    [' 2000-8 ', '2000-08'],
+    ['2000-02-29', '2000-02-29'],
+    ...[
+      null,
+      '',
+      '   ',
+      '2001-02-29',
+      '0000-01-01',
+      '2000-13',
+      'typo',
+      '2000/8/8',
+    ].map((value) => [value, value]),
+  ];
+  for (const [index, [input]] of cases.entries()) {
+    await db.query('insert into public.books values ($1, $2, $3)', [
+      index,
+      'Book',
+      input,
+    ]);
+    await db.query('insert into public.book_copies values ($1)', [index]);
+  }
+  await db.exec(sql);
+  const after = (await db.query('select * from public.books order by id')).rows;
+  assert.deepEqual(
+    after,
+    cases.map(([, expected], id) => ({
+      id,
+      title: 'Book',
+      pub_date: expected,
+    })),
+  );
+  assert.equal(
+    (await db.query('select count(*)::int as n from public.book_copies'))
+      .rows[0].n,
+    cases.length,
+  );
+  await db.exec(sql);
+  assert.deepEqual(
+    (await db.query('select * from public.books order by id')).rows,
+    after,
+  );
+});
+
 test('SQL preview changes nothing; apply normalizes only valid dates and is repeatable', async (t) => {
   const file = 'sql/normalize-publication-dates.sql';
   assert.ok(
