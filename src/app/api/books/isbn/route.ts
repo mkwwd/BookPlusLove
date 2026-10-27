@@ -1,5 +1,6 @@
 import { extractAuthorName } from '@/lib/author';
 import { convertIsbn10To13 } from '@/lib/isbn';
+import { normalizePublicationDate } from '@/lib/publicationDate';
 
 const ALADIN_URL = 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx';
 const NL_SEOJI_URL = 'https://www.nl.go.kr/seoji/SearchApi.do';
@@ -45,17 +46,6 @@ interface SeojiDoc {
   BOOK_INTRODUCTION?: string;
 }
 
-// 알라딘은 "2017-03-31", 국립중앙도서관은 "20170331" 형태로 준다.
-// 둘 다 "2017년 3월 31일" 형식으로 통일한다.
-function formatPubDate(raw?: string): string | undefined {
-  const trimmed = raw?.trim();
-  if (!trimmed) return undefined;
-  const match = trimmed.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
-  if (!match) return trimmed;
-  const [, year, month, day] = match;
-  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
-}
-
 async function lookupFromAladin(
   isbn: string,
   itemIdType: 'ISBN' | 'ISBN13',
@@ -91,7 +81,7 @@ async function lookupFromAladin(
       coverUrl: item.cover?.trim() || undefined,
       description: item.description?.trim() || undefined,
       price: item.priceStandard ? String(item.priceStandard) : undefined,
-      pubDate: formatPubDate(item.pubDate),
+      pubDate: normalizePublicationDate(item.pubDate) ?? undefined,
       aladinItemId: item.itemId,
     };
   } catch {
@@ -130,8 +120,9 @@ async function lookupFromNationalLibrary(
       page: doc.PAGE?.trim() || undefined,
       price: doc.PRE_PRICE?.trim() || undefined,
       pubDate:
-        formatPubDate(doc.PUBLISH_PREDATE) ??
-        formatPubDate(doc.REAL_PUBLISH_DATE),
+        normalizePublicationDate(doc.PUBLISH_PREDATE) ??
+        normalizePublicationDate(doc.REAL_PUBLISH_DATE) ??
+        undefined,
       volume: doc.VOL?.trim() || doc.SERIES_NO?.trim() || undefined,
     };
   } catch {

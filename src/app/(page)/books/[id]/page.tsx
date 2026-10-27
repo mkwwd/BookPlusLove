@@ -9,9 +9,9 @@ import {
 import {
   BOOK_COPY_STATUS_STYLE,
   buildCallNumber,
-  extractYear,
   LIBRARY_NAME,
 } from '@/lib/bookCopy';
+import { formatPublicationDate } from '@/lib/publicationDate';
 import { supabaseServer } from '@/utils/supabase/server';
 
 interface BookCategoryRow extends CategoryGroupRelation {
@@ -118,7 +118,7 @@ export default async function BookDetailPage({
     notFound();
   }
 
-  const year = extractYear(book.pubDate);
+  const publicationDate = formatPublicationDate(book.pubDate);
   const callNumber = buildCallNumber(book.categoryCode, book.authorCode);
 
   return (
@@ -159,7 +159,7 @@ export default async function BookDetailPage({
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-base text-amber-950/70 sm:text-lg">
                 {book.author && <span>{book.author} 지음</span>}
                 {book.publisher && <span>{book.publisher}</span>}
-                {year && <span>{year}</span>}
+                {publicationDate && <span>{publicationDate}</span>}
               </div>
 
               <dl className="mt-6 grid grid-cols-1 gap-x-6 gap-y-2 text-base text-amber-950/80 sm:grid-cols-2">

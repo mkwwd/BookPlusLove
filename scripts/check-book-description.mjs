@@ -13,7 +13,11 @@ function load(file, dependencies, extra = '') {
   }).outputText, {
     exports, Response, crypto: { randomUUID: () => 'draft-id' },
     URL: { createObjectURL: () => 'blob:selected' },
-    require: (name) => dependencies[name] ?? {},
+    require: (name) => dependencies[name] ?? (
+      name === '@/lib/publicationDate'
+        ? load('src/lib/publicationDate.ts', {})
+        : {}
+    ),
   });
   return exports;
 }

@@ -2,6 +2,7 @@ import {
   categoryGroupLabel,
   type CategoryGroupRelation,
 } from '@/lib/bookCategory';
+import { normalizePublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo } from '@/lib/regNo';
 import { requireAdmin } from '@/utils/supabase/admin';
 import { withBookCoverCleanup } from '@/utils/supabase/bookCover';
@@ -154,6 +155,16 @@ async function registerBooks(books: IncomingBook[]) {
   }
 
   for (const book of books) {
+    const pubDate = normalizePublicationDate(book.pubDate);
+    if (pubDate === undefined) {
+      return Response.json(
+        {
+          error: `등록번호 ${book.regNo}의 출판일을 확인해주세요. 연도, 연월 또는 전체 날짜를 정확히 입력해주세요.`,
+        },
+        { status: 400 },
+      );
+    }
+    book.pubDate = pubDate ?? undefined;
     if (!book.title?.trim()) {
       return Response.json(
         { error: '제목이 비어있는 도서가 있습니다.' },

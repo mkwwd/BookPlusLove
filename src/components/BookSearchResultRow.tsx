@@ -4,9 +4,9 @@ import { BookShape } from '@/components/BookCard';
 import {
   BOOK_COPY_STATUS_STYLE,
   buildCallNumber,
-  extractYear,
   LIBRARY_NAME,
 } from '@/lib/bookCopy';
+import { formatPublicationDate } from '@/lib/publicationDate';
 
 export interface BookSearchResultCopy {
   id: number;
@@ -50,7 +50,7 @@ function BookThumbnail({
 }
 
 export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
-  const year = extractYear(book.pubDate);
+  const publicationDate = formatPublicationDate(book.pubDate);
   const callNumber = buildCallNumber(book.categoryCode, book.authorCode);
 
   return (
@@ -71,7 +71,7 @@ export function BookSearchResultRow({ book }: { book: BookSearchResultData }) {
           {book.author && <span>{book.author} 지음</span>}
           {book.publisher && <span>{book.publisher}</span>}
           {callNumber && <span>{callNumber}</span>}
-          {year && <span>{year}</span>}
+          {publicationDate && <span>{publicationDate}</span>}
         </div>
 
         <div className="mt-7 overflow-x-auto">

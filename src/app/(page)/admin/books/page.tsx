@@ -24,7 +24,8 @@ import PhotoCapture from '@/components/PhotoCapture';
 import { useHorizontalWheel } from '@/hooks/useHorizontalWheel';
 import { generateAuthorCode } from '@/lib/authorCode';
 import { categoryGroupLabel } from '@/lib/bookCategory';
-import { looksLikeIsbn } from '@/lib/isbn';
+import { isValidIsbn, looksLikeIsbn } from '@/lib/isbn';
+import { formatPublicationDate } from '@/lib/publicationDate';
 import { isValidRegNo, normalizeRegNoInput } from '@/lib/regNo';
 import { supabase } from '@/utils/supabase/client';
 
@@ -101,7 +102,7 @@ function EditBookForm({
   const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [page, setPage] = useState(book.page ?? '');
   const [price, setPrice] = useState(book.price ?? '');
-  const [pubDate, setPubDate] = useState(book.pubDate ?? '');
+  const [pubDate, setPubDate] = useState(formatPublicationDate(book.pubDate));
   const [authorCode, setAuthorCode] = useState(book.authorCode ?? '');
   const [categoryMain, setCategoryMain] = useState(book.categoryMain ?? '');
   const [category, setCategory] = useState(book.categoryCode ?? '');
@@ -147,7 +148,8 @@ function EditBookForm({
     if (values.publisher !== undefined) setPublisher(values.publisher);
     if (values.page !== undefined) setPage(values.page);
     if (values.price !== undefined) setPrice(values.price);
-    if (values.pubDate !== undefined) setPubDate(values.pubDate);
+    if (values.pubDate !== undefined)
+      setPubDate(formatPublicationDate(values.pubDate));
     if (values.coverUrl !== undefined) {
       setCoverUrl(values.coverUrl);
       if (coverFile) {
@@ -239,8 +241,12 @@ function EditBookForm({
       setFormError('제목은 필수입니다.');
       return;
     }
-    if (isbn.trim() && !looksLikeIsbn(isbn.trim())) {
-      setFormError('ISBN 형식이 올바르지 않습니다.');
+    if (
+      isbn.trim() &&
+      isbn.trim() !== book.isbn?.trim() &&
+      !isValidIsbn(isbn)
+    ) {
+      setFormError('ISBN은 유효한 10자리 또는 13자리 번호로 입력해주세요.');
       return;
     }
     if (!isValidRegNo(regNo.trim())) {
@@ -321,6 +327,7 @@ function EditBookForm({
             type="text"
             value={pubDate}
             onChange={(e) => setPubDate(e.target.value)}
+            onBlur={() => setPubDate(formatPublicationDate(pubDate))}
             placeholder="예: 2017년 3월 31일"
             className="w-full rounded border border-amber-900/20 bg-white/50 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
           />
@@ -582,6 +589,7 @@ export default function AdminBooksPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'recommended'>('all');
   const [searchText, setSearchText] = useState('');
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
+  const [isSaveComplete, setIsSaveComplete] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useHorizontalWheel();
 
@@ -679,7 +687,8 @@ export default function AdminBooksPage() {
     (book) =>
       !trimmedSearch ||
       book.title.includes(trimmedSearch) ||
-      (book.author ?? '').includes(trimmedSearch),
+      (book.author ?? '').includes(trimmedSearch) ||
+      book.regNo.toUpperCase().includes(trimmedSearch.toUpperCase()),
   );
 
   const totalPages = Math.max(1, Math.ceil(visibleBooks.length / PAGE_SIZE));
@@ -711,7 +720,8 @@ export default function AdminBooksPage() {
                   setSearchText(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="제목 또는 저자 검색"
+                aria-label="제목, 저자 또는 등록번호 검색"
+                placeholder="제목 / 저자 / 등록번호 검색"
                 className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
               />
             </div>
@@ -909,7 +919,7 @@ export default function AdminBooksPage() {
                         {book.isbn ?? '-'}
                       </td>
                       <td className="px-5 py-3 text-amber-800">
-                        {book.pubDate ?? '-'}
+                        {formatPublicationDate(book.pubDate) || '-'}
                       </td>
                       <td className="px-5 py-3 text-amber-800">
                         {book.page ?? '-'}
@@ -939,7 +949,10 @@ export default function AdminBooksPage() {
                           <button
                             type="button"
                             aria-label="수정"
-                            onClick={() => setEditingBook(book)}
+                            onClick={() => {
+                              setIsSaveComplete(false);
+                              setEditingBook(book);
+                            }}
                             className="text-amber-600 hover:text-amber-950">
                             <SquarePen className="h-4 w-4" />
                           </button>
@@ -986,6 +999,25 @@ export default function AdminBooksPage() {
         </>
       )}
 
+      {isSaveComplete && (
+        <div
+          role="status"
+          className="fixed right-4 bottom-6 left-4 z-50 flex items-center gap-3 rounded-lg border border-green-800/20 bg-white p-4 text-green-900 shadow-lg sm:left-auto sm:max-w-md">
+          <Check aria-hidden="true" className="h-5 w-5 shrink-0" />
+          <p className="min-w-0 flex-1 text-base break-keep">
+            도서 정보가 수정되었습니다.
+          </p>
+          <button
+            type="button"
+            aria-label="알림 닫기"
+            title="알림 닫기"
+            onClick={() => setIsSaveComplete(false)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800">
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       {editingBook && (
         <Modal title="도서 정보 수정" onClose={() => setEditingBook(null)}>
           <EditBookForm
@@ -993,6 +1025,7 @@ export default function AdminBooksPage() {
             categories={categories}
             onSaved={() => {
               setEditingBook(null);
+              setIsSaveComplete(true);
               void queryClient.invalidateQueries({ queryKey: ['admin-books'] });
             }}
             onDelete={() =>
