@@ -143,6 +143,63 @@ function nodes(tree) {
   return [tree, ...nodes(tree.props?.children)];
 }
 
+test('ISBN comparison enlarges desktop covers without cropping and keeps compact side-by-side choices on mobile', () => {
+  const { default: Compare } = load('src/components/IsbnCompareModal.tsx', {
+    react: { useState: (initial) => [initial(), () => {}] },
+    'react/jsx-runtime': {
+      jsx: (type, props) => ({ type, props }),
+      jsxs: (type, props) => ({ type, props }),
+    },
+  });
+  const urls = [
+    'https://example.com/aladin.jpg',
+    'https://example.com/library.jpg',
+    'https://example.com/current.jpg',
+  ];
+  const tree = nodes(
+    Compare({
+      fields: ['coverUrl'],
+      result: {
+        aladin: { coverUrl: urls[0] },
+        nationalLibrary: { coverUrl: urls[1] },
+      },
+      currentValues: { coverUrl: urls[2] },
+      onApply() {},
+      onClose() {},
+    }),
+  );
+  const images = tree.filter((node) => node.type === 'img');
+  assert.deepEqual(
+    images.map((node) => node.props.src),
+    urls,
+  );
+  for (const image of images) {
+    for (const className of [
+      'h-24',
+      'w-16',
+      'sm:h-48',
+      'sm:w-36',
+      'max-w-full',
+      'object-contain',
+    ])
+      assert.ok(
+        image.props.className.split(' ').includes(className),
+        className,
+      );
+    assert.ok(!image.props.className.includes('object-cover'));
+  }
+  const choices = tree.find(
+    (node) =>
+      node.type === 'div' &&
+      nodes(node).filter((child) => child.type === 'img').length === 3 &&
+      node.props.className === 'flex gap-2',
+  );
+  assert.ok(
+    choices,
+    'cover choices must remain side by side at every viewport',
+  );
+});
+
 test('successful edit closes the modal and leaves a dismissible success notice; opening another edit clears it', () => {
   const states = [];
   let cursor = 0;

@@ -184,7 +184,7 @@ export default function IsbnCompareModal({
                           <img
                             src={value}
                             alt=""
-                            className="mt-1 h-16 w-11 rounded-sm object-cover"
+                            className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
                           />
                         ) : (
                           <p className="text-sm break-words text-amber-800">
@@ -221,7 +221,7 @@ export default function IsbnCompareModal({
                       <img
                         src={currentValues.coverUrl}
                         alt=""
-                        className="mt-1 h-16 w-11 rounded-sm object-cover"
+                        className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
                       />
                     ) : (
                       <p className="text-xs text-amber-900/40">없음</p>
