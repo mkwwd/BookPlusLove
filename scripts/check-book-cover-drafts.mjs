@@ -378,6 +378,7 @@ test('reset clears only confirmed drafts and local previews without server reque
       node.props.children?.[0]?.props?.['aria-label'] === '목록 초기화',
   );
   assert.match(actions.props.className, /justify-end/);
+  assert.match(actions.props.className, /\bpt-4\b/);
   assert.match(actions.props.children[1].props.children, /등록하기/);
   button.props.onClick();
   assert.equal(draft.confirmation.messages.length, 1);

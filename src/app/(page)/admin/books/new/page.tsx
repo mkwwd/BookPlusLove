@@ -1142,7 +1142,7 @@ function BookRegisterContent() {
           </p>
         )}
 
-        <div className="flex flex-wrap justify-end gap-3">
+        <div className="flex flex-wrap justify-end gap-3 pt-4">
           <button
             type="button"
             aria-label="목록 초기화"
