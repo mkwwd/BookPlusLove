@@ -143,6 +143,57 @@ function nodes(tree) {
   return [tree, ...nodes(tree.props?.children)];
 }
 
+test('ISBN actions sit below the scroll body and preserve apply and close handlers', () => {
+  const jsx = {
+    jsx: (type, props) => ({ type, props }),
+    jsxs: (type, props) => ({ type, props }),
+  };
+  const { default: Compare } = load('src/components/IsbnCompareModal.tsx', {
+    react: { useState: (initial) => [initial(), () => {}] },
+    'react/jsx-runtime': jsx,
+  });
+  let closed = 0;
+  let applied = 0;
+  const comparison = Compare({
+    fields: ['title'],
+    result: { aladin: null, nationalLibrary: null },
+    currentValues: { title: 'Book' },
+    onClose: () => closed++,
+    onApply: () => applied++,
+  });
+  assert.ok(
+    comparison.props.footer,
+    'actions must be passed outside the scrolling content',
+  );
+  const buttons = nodes(comparison.props.footer).filter(
+    (n) => n.type === 'button',
+  );
+  assert.deepEqual(
+    buttons.map((n) => n.props.children),
+    ['취소', '가져오기'],
+  );
+  buttons[0].props.onClick();
+  buttons[1].props.onClick();
+  assert.equal(closed, 1);
+  assert.equal(applied, 1);
+  const { default: Modal } = load('src/components/Modal.tsx', {
+    'react/jsx-runtime': jsx,
+  });
+  const shell = Modal(comparison.props).props.children;
+  const [, body, footer] = shell.props.children;
+  assert.match(body.props.className, /min-h-0/);
+  assert.match(body.props.className, /overflow-y-auto/);
+  assert.equal(footer.props.children, comparison.props.footer);
+  assert.match(footer.props.className, /shrink-0/);
+  assert.ok(!nodes(body).some((n) => n.props.children === '가져오기'));
+  const ordinary = Modal({ title: 'Test', onClose() {}, children: 'Content' })
+    .props.children;
+  assert.ok(
+    !ordinary.props.children[2],
+    'existing modals must not gain an empty footer',
+  );
+});
+
 test('ISBN lookup sends a bounded request and explains a timeout', async () => {
   let duration;
   const signal = AbortSignal.abort(

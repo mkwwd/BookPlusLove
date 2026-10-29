@@ -128,7 +128,25 @@ export default function IsbnCompareModal({
   };
 
   return (
-    <Modal title="가져올 항목 선택" onClose={onClose}>
+    <Modal
+      title="가져올 항목 선택"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50">
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            가져오기
+          </button>
+        </>
+      }>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-amber-800">
           현재 값과 출처별 값을 비교해서 항목마다 하나만 고르세요.
@@ -251,20 +269,6 @@ export default function IsbnCompareModal({
             </div>
           </div>
         ))}
-      </div>
-      <div className="sticky bottom-0 -mx-6 mt-4 -mb-6 flex justify-end gap-2 border-t border-amber-900/10 bg-white px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50">
-          취소
-        </button>
-        <button
-          type="button"
-          onClick={handleApply}
-          className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-          가져오기
-        </button>
       </div>
     </Modal>
   );
