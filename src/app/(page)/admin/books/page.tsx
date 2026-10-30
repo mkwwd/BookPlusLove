@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -47,7 +47,6 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 const STATUS_OPTIONS = ['대여가능', '대여중', '분실', '폐기'];
-const PAGE_SIZE = 50;
 
 interface BookCategory {
   code: string;
@@ -77,6 +76,13 @@ interface BookRow {
   categoryCode: string | null;
   categoryMain: string | null;
   categoryLabel: string | null;
+}
+
+interface BookListResponse {
+  books: BookRow[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 function EditBookForm({
@@ -588,18 +594,38 @@ export default function AdminBooksPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'all' | 'recommended'>('all');
   const [searchText, setSearchText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
   const [isSaveComplete, setIsSaveComplete] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useHorizontalWheel();
 
-  const { data: books = [], isLoading } = useQuery({
-    queryKey: ['admin-books'],
-    queryFn: async () => {
-      const res = await fetch('/api/admin/books');
+  useEffect(() => {
+    if (searchText.trim() === searchQuery) return;
+    const timer = setTimeout(() => {
+      setSearchQuery(searchText.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText, searchQuery]);
+
+  const querySearch = activeTab === 'all' ? searchQuery : '';
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error: listError,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin-books', activeTab, querySearch, currentPage],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ page: String(currentPage) });
+      if (querySearch) params.set('q', querySearch);
+      if (activeTab === 'recommended') params.set('recommended', 'true');
+      const res = await fetch(`/api/admin/books?${params}`, { signal });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? '목록 조회에 실패했습니다.');
-      return body.books as BookRow[];
+      return body as BookListResponse;
     },
   });
 
@@ -635,6 +661,7 @@ export default function AdminBooksPage() {
     mutate: unrecommendBook,
     isPending: isUnrecommending,
     variables: unrecommendingCopyId,
+    error: unrecommendError,
   } = useMutation({
     mutationFn: async (book: BookRow) => {
       const res = await fetch(`/api/admin/books/${book.copyId}`, {
@@ -682,27 +709,38 @@ export default function AdminBooksPage() {
     },
   });
 
-  const trimmedSearch = searchText.trim();
-  const visibleBooks = books.filter(
-    (book) =>
-      !trimmedSearch ||
-      book.title.includes(trimmedSearch) ||
-      (book.author ?? '').includes(trimmedSearch) ||
-      book.regNo.toUpperCase().includes(trimmedSearch.toUpperCase()),
-  );
-
-  const totalPages = Math.max(1, Math.ceil(visibleBooks.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const pagedBooks = visibleBooks.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
-  );
+  const books = data?.books ?? [];
+  const totalPages = data
+    ? Math.max(1, Math.ceil(data.total / data.pageSize))
+    : 1;
+  const safePage = data?.page ?? currentPage;
 
   return (
     <div className="space-y-6">
       {deleteError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
           {deleteError.message}
+        </div>
+      )}
+      {unrecommendError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+          {unrecommendError.message}
+        </div>
+      )}
+      {listError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-base text-red-700">
+          <span>{listError.message}</span>
+          <button
+            type="button"
+            disabled={isFetching}
+            onClick={() => void refetch()}
+            className="underline underline-offset-4 disabled:opacity-50">
+            다시 시도
+          </button>
         </div>
       )}
 
@@ -718,8 +756,8 @@ export default function AdminBooksPage() {
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value);
-                  setCurrentPage(1);
                 }}
+                maxLength={200}
                 aria-label="제목, 저자 또는 등록번호 검색"
                 placeholder="제목 / 저자 / 등록번호 검색"
                 className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
@@ -746,7 +784,10 @@ export default function AdminBooksPage() {
       <div className="flex flex-wrap gap-2 border-b border-amber-900/20">
         <button
           type="button"
-          onClick={() => setActiveTab('all')}
+          onClick={() => {
+            setActiveTab('all');
+            setCurrentPage(1);
+          }}
           className={`border-b-2 px-4 py-3 text-base transition ${
             activeTab === 'all'
               ? 'border-red-900 text-red-900'
@@ -756,7 +797,10 @@ export default function AdminBooksPage() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('recommended')}
+          onClick={() => {
+            setActiveTab('recommended');
+            setCurrentPage(1);
+          }}
           className={`border-b-2 px-4 py-3 text-base transition ${
             activeTab === 'recommended'
               ? 'border-red-900 text-red-900'
@@ -765,6 +809,12 @@ export default function AdminBooksPage() {
           추천 도서
         </button>
       </div>
+
+      {data && !listError && (
+        <p className="text-base text-amber-800">
+          {querySearch ? '검색 결과' : '전체'} {data.total.toLocaleString()}권
+        </p>
+      )}
 
       {activeTab === 'recommended' && (
         <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
@@ -787,7 +837,15 @@ export default function AdminBooksPage() {
                     불러오는 중...
                   </td>
                 </tr>
-              ) : books.filter((b) => b.isRecommended).length === 0 ? (
+              ) : listError && !data ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-red-700">
+                    목록을 불러오지 못했습니다.
+                  </td>
+                </tr>
+              ) : books.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -797,50 +855,48 @@ export default function AdminBooksPage() {
                   </td>
                 </tr>
               ) : (
-                books
-                  .filter((b) => b.isRecommended)
-                  .map((book) => (
-                    <tr key={book.copyId}>
-                      <td className="px-5 py-3">
-                        {book.coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={book.coverUrl}
-                            alt=""
-                            className="h-14 w-10 rounded-sm object-cover"
-                          />
-                        ) : (
-                          <div className="h-14 w-10 rounded-sm bg-amber-100" />
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-amber-950">{book.title}</td>
-                      <td className="px-5 py-3 text-amber-800">
-                        {book.author ?? '-'}
-                      </td>
-                      <td className="px-5 py-3 text-amber-800">
-                        {book.publisher ?? '-'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <button
-                          type="button"
-                          disabled={
-                            isUnrecommending &&
-                            unrecommendingCopyId?.copyId === book.copyId
-                          }
-                          onClick={() => unrecommendBook(book)}
-                          className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
-                          해제
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                books.map((book) => (
+                  <tr key={book.copyId}>
+                    <td className="px-5 py-3">
+                      {book.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={book.coverUrl}
+                          alt=""
+                          className="h-14 w-10 rounded-sm object-cover"
+                        />
+                      ) : (
+                        <div className="h-14 w-10 rounded-sm bg-amber-100" />
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-amber-950">{book.title}</td>
+                    <td className="px-5 py-3 text-amber-800">
+                      {book.author ?? '-'}
+                    </td>
+                    <td className="px-5 py-3 text-amber-800">
+                      {book.publisher ?? '-'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        type="button"
+                        disabled={
+                          isUnrecommending &&
+                          unrecommendingCopyId?.copyId === book.copyId
+                        }
+                        onClick={() => unrecommendBook(book)}
+                        className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 transition hover:bg-amber-50 disabled:opacity-50">
+                        해제
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       )}
 
-      {activeTab === 'all' && pagedBooks.length > 0 && (
+      {activeTab === 'all' && books.length > 0 && (
         <p className="text-sm text-amber-800">
           → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
           <br />→ 세로 스크롤바 위에서 휠을 돌리면 아래로 스크롤돼요.
@@ -879,16 +935,26 @@ export default function AdminBooksPage() {
                       불러오는 중...
                     </td>
                   </tr>
-                ) : pagedBooks.length === 0 ? (
+                ) : listError && !data ? (
+                  <tr>
+                    <td
+                      colSpan={14}
+                      className="px-5 py-8 text-center text-red-700">
+                      목록을 불러오지 못했습니다.
+                    </td>
+                  </tr>
+                ) : books.length === 0 ? (
                   <tr>
                     <td
                       colSpan={14}
                       className="px-5 py-8 text-center text-amber-900/50">
-                      등록된 도서가 없습니다.
+                      {querySearch
+                        ? '검색 결과가 없습니다.'
+                        : '등록된 도서가 없습니다.'}
                     </td>
                   </tr>
                 ) : (
-                  pagedBooks.map((book) => (
+                  books.map((book) => (
                     <tr key={book.copyId}>
                       <td className="px-5 py-3">
                         {book.coverUrl ? (
@@ -974,31 +1040,30 @@ export default function AdminBooksPage() {
               </tbody>
             </table>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={safePage <= 1}
-                onClick={() => setCurrentPage(safePage - 1)}
-                className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
-                이전
-              </button>
-              <span className="text-base text-amber-800">
-                {safePage} / {totalPages}페이지
-              </span>
-              <button
-                type="button"
-                disabled={safePage >= totalPages}
-                onClick={() => setCurrentPage(safePage + 1)}
-                className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
-                다음
-              </button>
-            </div>
-          )}
         </>
       )}
 
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={isFetching || safePage <= 1}
+            onClick={() => setCurrentPage(safePage - 1)}
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
+            이전
+          </button>
+          <span className="text-base text-amber-800">
+            {safePage} / {totalPages}페이지
+          </span>
+          <button
+            type="button"
+            disabled={isFetching || safePage >= totalPages}
+            onClick={() => setCurrentPage(safePage + 1)}
+            className="rounded border border-amber-900/30 bg-white/40 px-4 py-2 text-base text-amber-950 transition hover:bg-amber-50 disabled:opacity-40">
+            다음
+          </button>
+        </div>
+      )}
       {isSaveComplete && (
         <div
           role="status"

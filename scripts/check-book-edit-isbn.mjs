@@ -292,6 +292,7 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
   };
   const { default: Page } = load('src/app/(page)/admin/books/page.tsx', {
     react: {
+      useEffect() {},
       useState(initial) {
         const i = cursor++;
         if (!(i in states)) states[i] = initial;
@@ -310,7 +311,10 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
         },
       }),
       useQuery: ({ queryKey }) => ({
-        data: queryKey[0] === 'admin-books' ? [book] : [],
+        data:
+          queryKey[0] === 'admin-books'
+            ? { books: [book], total: 1, page: 1, pageSize: 50 }
+            : [],
       }),
       useMutation: () => ({ mutate() {} }),
     },

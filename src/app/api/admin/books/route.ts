@@ -65,36 +65,74 @@ interface BookCopyRow {
   books: BookRow | BookRow[] | null;
 }
 
-const FETCH_BATCH_SIZE = 1000;
+const PAGE_SIZE = 50;
 
-export async function GET() {
+export async function GET(request: Request) {
   const { error } = await requireAdmin();
   if (error) return error;
 
-  // 클라이언트에서 검색/페이지네이션을 다 처리하므로 전체를 받아온다.
-  // PostgREST의 기본 max-rows(보통 1000)에 걸리지 않도록 range로 나눠서 반복 조회한다.
-  const rows: BookCopyRow[] = [];
-  for (let offset = 0; ; offset += FETCH_BATCH_SIZE) {
-    const { data, error: listError } = await supabaseServer
-      .from('book_copies')
-      .select(
-        `id, reg_no, status, donor_name, donor_user_id,
-        books(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
-          book_categories(label, main_code, book_category_groups(label)))`,
-      )
-      .order('id', { ascending: false })
-      .range(offset, offset + FETCH_BATCH_SIZE - 1)
-      .returns<BookCopyRow[]>();
-
-    if (listError) {
-      return Response.json({ error: listError.message }, { status: 500 });
-    }
-
-    rows.push(...(data ?? []));
-    if (!data || data.length < FETCH_BATCH_SIZE) break;
+  const params = new URL(request.url).searchParams;
+  const pageInput = params.get('page') ?? '1';
+  const requestedPage = Number(pageInput);
+  const search = (params.get('q') ?? '').trim();
+  const recommended = params.get('recommended') === 'true';
+  if (
+    !/^[1-9]\d*$/.test(pageInput) ||
+    !Number.isSafeInteger(requestedPage) ||
+    requestedPage > Math.floor(Number.MAX_SAFE_INTEGER / PAGE_SIZE) ||
+    search.length > 200
+  ) {
+    return Response.json(
+      { error: '페이지 번호 또는 검색어가 올바르지 않습니다.' },
+      { status: 400 },
+    );
   }
 
-  const books = rows.map((row) => {
+  // Separate the matching embed so a registration-number match retains all book metadata.
+  const query = (head: boolean) => {
+    let result = supabaseServer.from('book_copies').select(
+      `id, reg_no, status, donor_name, donor_user_id,
+        books${recommended ? '!inner' : ''}(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
+          book_categories(label, main_code, book_category_groups(label)))${search ? ', matched_books:books()' : ''}`,
+      head ? { count: 'exact', head: true } : undefined,
+    );
+    if (recommended) result = result.eq('books.is_recommended', true);
+    if (search) {
+      // A quoted, escaped regex preserves literal %, _, * and filter punctuation.
+      const pattern = JSON.stringify(
+        search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      );
+      result = result
+        .or(`title.imatch.${pattern},author.imatch.${pattern}`, {
+          referencedTable: 'matched_books',
+        })
+        .or(`reg_no.imatch.${pattern},matched_books.not.is.null`);
+    }
+    return result;
+  };
+
+  // Count without downloading rows, then clamp pages after deletion/filter changes.
+  const { count, error: countError } = await query(true);
+  if (countError)
+    return Response.json({ error: countError.message }, { status: 500 });
+  const total = count ?? 0;
+  const page = Math.min(
+    requestedPage,
+    Math.max(1, Math.ceil(total / PAGE_SIZE)),
+  );
+  if (total === 0)
+    return Response.json({ books: [], total, page, pageSize: PAGE_SIZE });
+
+  const offset = (page - 1) * PAGE_SIZE;
+  const { data, error: listError } = await query(false)
+    .order('id', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1)
+    .returns<BookCopyRow[]>();
+  if (listError) {
+    return Response.json({ error: listError.message }, { status: 500 });
+  }
+
+  const books = (data ?? []).map((row) => {
     const book = Array.isArray(row.books) ? row.books[0] : row.books;
     const category = book?.book_categories
       ? Array.isArray(book.book_categories)
@@ -128,7 +166,7 @@ export async function GET() {
     };
   });
 
-  return Response.json({ books });
+  return Response.json({ books, total, page, pageSize: PAGE_SIZE });
 }
 
 export async function POST(request: Request) {

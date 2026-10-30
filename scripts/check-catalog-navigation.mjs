@@ -25,7 +25,12 @@ function loadComponent(
       useEffect: () => {},
     },
     '@tanstack/react-query': {
-      useQuery: () => ({ data: [] }),
+      useQuery: ({ queryKey }) => ({
+        data:
+          queryKey[0] === 'admin-books'
+            ? { books: [], total: 0, page: 1, pageSize: 50 }
+            : [],
+      }),
       useQueryClient: () => ({}),
       useMutation: () => ({}),
     },
