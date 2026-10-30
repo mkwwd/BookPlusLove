@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   ImagePlus,
   PencilLine,
+  RotateCcw,
   Trash2,
   X,
 } from 'lucide-react';
@@ -305,13 +306,10 @@ function ScannedBookTable({
     mutate: lookupIsbn,
     isPending: isLookingUp,
     variables: lookupVariables,
+    reset: resetLookup,
   } = useMutation({
     mutationFn: (vars: { isbn: string; bookId: string }) =>
       fetchIsbnLookup(vars.isbn),
-    onSuccess: (result) => setLookupResult(result),
-    onError: (err: Error, vars) => {
-      setLookupErrors((prev) => ({ ...prev, [vars.bookId]: err.message }));
-    },
   });
 
   const handleLookup = (book: ScannedBook) => {
@@ -330,7 +328,15 @@ function ScannedBookTable({
       return next;
     });
     setLookupBookId(book.id);
-    lookupIsbn({ isbn: trimmed, bookId: book.id });
+    lookupIsbn(
+      { isbn: trimmed, bookId: book.id },
+      {
+        onSuccess: (result) => setLookupResult(result),
+        onError: (err: Error, vars) => {
+          setLookupErrors((prev) => ({ ...prev, [vars.bookId]: err.message }));
+        },
+      },
+    );
   };
 
   return (
@@ -489,7 +495,7 @@ function ScannedBookTable({
                             pubDate: formatPublicationDate(book.pubDate),
                           })
                         }
-                        placeholder="예: 2017년 3월 31일"
+                        placeholder="예: 2017-03-31"
                         className="w-32 rounded border border-amber-900/20 bg-white/50 px-2 py-1.5 text-sm placeholder:text-amber-900/40 focus:ring-2 focus:ring-amber-900/30 focus:outline-none"
                       />
                     </td>
@@ -521,6 +527,18 @@ function ScannedBookTable({
                             ? '조회중'
                             : '조회'}
                         </button>
+                        {isLookingUp && lookupVariables?.bookId === book.id && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetLookup();
+                              setLookupBookId(null);
+                              setLookupResult(null);
+                            }}
+                            className="shrink-0 rounded border border-amber-900/30 bg-white/50 px-2 py-1.5 text-xs whitespace-nowrap text-amber-950 transition hover:bg-amber-50">
+                            조회 취소
+                          </button>
+                        )}
                       </div>
                       {lookupErrors[book.id] && (
                         <p className="mt-1 text-xs text-red-600">
@@ -820,6 +838,7 @@ function BookRegisterContent() {
     mutate: submitEntries,
     isPending: isSubmitting,
     error: submitError,
+    reset: resetSubmission,
   } = useMutation({
     retry: false,
     mutationFn: async (books: ScannedBook[]) => {
@@ -961,6 +980,27 @@ function BookRegisterContent() {
     setJustSubmitted(false);
     setSubmitResult(null);
     submitEntries(entries);
+  };
+
+  const handleReset = () => {
+    if (isSubmitting || entries.length === 0) return;
+    if (
+      !window.confirm(
+        `등록 대기 중인 ${entries.length}권을 목록에서 비울까요? DB에 등록된 도서는 삭제되지 않습니다.`,
+      )
+    )
+      return;
+    for (const book of entries) {
+      if (book.coverUrl?.startsWith('blob:'))
+        URL.revokeObjectURL(book.coverUrl);
+    }
+    setEntries([]);
+    setFileName(null);
+    setExcelParseError(null);
+    setJustSubmitted(false);
+    setSubmitResult(null);
+    setProgress(null);
+    resetSubmission();
   };
 
   const hasInvalidRegNo = entries.some((book) => {
@@ -1119,22 +1159,33 @@ function BookRegisterContent() {
           </p>
         )}
 
-        <button
-          type="button"
-          disabled={
-            entries.length === 0 ||
-            hasInvalidRegNo ||
-            hasEmptyTitle ||
-            isSubmitting
-          }
-          onClick={handleSubmit}
-          className="w-full rounded bg-red-900 py-3 text-lg font-medium text-white transition hover:bg-red-800 disabled:opacity-50 sm:w-auto sm:px-8">
-          {isSubmitting
-            ? '등록 중...'
-            : entries.length > 0
-              ? `${entries.length}권 등록하기`
-              : '등록하기'}
-        </button>
+        <div className="flex flex-wrap justify-end gap-3 pt-4">
+          <button
+            type="button"
+            aria-label="목록 초기화"
+            disabled={entries.length === 0 || isSubmitting}
+            onClick={handleReset}
+            className="inline-flex items-center justify-center gap-2 rounded border border-amber-900/20 bg-white/50 px-4 py-3 text-lg font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900 disabled:opacity-50 sm:px-6">
+            <RotateCcw className="h-5 w-5" aria-hidden="true" />
+            초기화
+          </button>
+          <button
+            type="button"
+            disabled={
+              entries.length === 0 ||
+              hasInvalidRegNo ||
+              hasEmptyTitle ||
+              isSubmitting
+            }
+            onClick={handleSubmit}
+            className="rounded bg-red-900 px-4 py-3 text-lg font-medium text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900 disabled:opacity-50 sm:px-8">
+            {isSubmitting
+              ? '등록 중...'
+              : entries.length > 0
+                ? `${entries.length}권 등록하기`
+                : '등록하기'}
+          </button>
+        </div>
       </fieldset>
       {progress && (
         <RegistrationProgressDialog

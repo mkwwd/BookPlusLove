@@ -58,10 +58,23 @@ export interface IsbnLookupResponse {
 export async function fetchIsbnLookup(
   isbn: string,
 ): Promise<IsbnLookupResponse> {
-  const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(isbn)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
-  return body as IsbnLookupResponse;
+  const signal = AbortSignal.timeout(20_000);
+  try {
+    const res = await fetch(
+      `/api/books/isbn?isbn=${encodeURIComponent(isbn)}`,
+      { signal },
+    );
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error ?? '서지정보 조회에 실패했습니다.');
+    return body as IsbnLookupResponse;
+  } catch (error) {
+    if (signal.aborted)
+      throw new Error(
+        '조회 시간이 초과되었습니다. 잠시 후 다시 조회해주세요.',
+        { cause: error },
+      );
+    throw error;
+  }
 }
 
 export default function IsbnCompareModal({
@@ -115,7 +128,25 @@ export default function IsbnCompareModal({
   };
 
   return (
-    <Modal title="가져올 항목 선택" onClose={onClose}>
+    <Modal
+      title="가져올 항목 선택"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50">
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+            가져오기
+          </button>
+        </>
+      }>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-amber-800">
           현재 값과 출처별 값을 비교해서 항목마다 하나만 고르세요.
@@ -184,7 +215,7 @@ export default function IsbnCompareModal({
                           <img
                             src={value}
                             alt=""
-                            className="mt-1 h-16 w-11 rounded-sm object-cover"
+                            className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
                           />
                         ) : (
                           <p className="text-sm break-words text-amber-800">
@@ -221,7 +252,7 @@ export default function IsbnCompareModal({
                       <img
                         src={currentValues.coverUrl}
                         alt=""
-                        className="mt-1 h-16 w-11 rounded-sm object-cover"
+                        className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
                       />
                     ) : (
                       <p className="text-xs text-amber-900/40">없음</p>
@@ -238,20 +269,6 @@ export default function IsbnCompareModal({
             </div>
           </div>
         ))}
-      </div>
-      <div className="sticky bottom-0 -mx-6 mt-4 -mb-6 flex justify-end gap-2 border-t border-amber-900/10 bg-white px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded border border-amber-900/30 bg-white px-5 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50">
-          취소
-        </button>
-        <button
-          type="button"
-          onClick={handleApply}
-          className="rounded bg-red-900 px-5 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-          가져오기
-        </button>
       </div>
     </Modal>
   );

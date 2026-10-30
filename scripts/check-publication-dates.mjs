@@ -77,9 +77,21 @@ test('publication dates preserve precision and validate the calendar', () => {
   }
 });
 
-test('Korean display pads known components and does not hide uncertain values', () => {
-  assert.ok(fs.existsSync('src/lib/publicationDate.ts'));
+test('default display uses storage format without inventing or hiding date components', () => {
   const { formatPublicationDate } = load('src/lib/publicationDate.ts');
+  for (const [input, expected] of dateCases.filter(
+    ([input]) => input == null || typeof input === 'string',
+  )) {
+    assert.equal(
+      formatPublicationDate(input),
+      expected === undefined ? input : (expected ?? ''),
+    );
+  }
+});
+
+test('Korean detail display pads known components and does not hide uncertain values', () => {
+  assert.ok(fs.existsSync('src/lib/publicationDate.ts'));
+  const { formatKoreanPublicationDate } = load('src/lib/publicationDate.ts');
   for (const [input, expected] of [
     ['2000-08-08', '2000년 08월 08일'],
     ['2000-08', '2000년 08월'],
@@ -89,7 +101,7 @@ test('Korean display pads known components and does not hide uncertain values', 
     [' 19906-03-30 ', ' 19906-03-30 '],
     ['19906-03-30', '19906-03-30'],
   ])
-    assert.equal(formatPublicationDate(input), expected);
+    assert.equal(formatKoreanPublicationDate(input), expected);
 });
 
 test('ISBN providers return canonical dates and fall back from invalid publication dates', async () => {
