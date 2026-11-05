@@ -8,13 +8,16 @@ export async function GET() {
   if (authError) return authError;
   const { data, error } = await supabaseServer
     .from('book_category_groups')
-    .select('code, label, book_categories(count)')
+    // Reading all group fields also works before the additive color migration.
+    .select('*, book_categories(count)')
     .order('code')
     .range(0, 999);
   if (error) return catalogError(error);
   return Response.json({
-    items: data.map(({ book_categories, ...group }) => ({
-      ...group,
+    items: data.map(({ book_categories, code, label, color }) => ({
+      code,
+      label,
+      color,
       usageCount: book_categories[0]?.count ?? 0,
     })),
   });

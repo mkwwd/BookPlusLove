@@ -15,6 +15,8 @@ function load(path, dependencies = {}) {
     Response,
     console,
     require(name) {
+      if (!(name in dependencies) && name.startsWith('@/lib/'))
+        return load(`src/${name.slice(2)}.ts`);
       assert.ok(name in dependencies, name);
       return dependencies[name];
     },
@@ -29,6 +31,118 @@ const category = {
   main_code: '000',
 };
 const group = { code: '000', label: '성서' };
+
+test('category defaults match the requested palette and readable text contrast', () => {
+  const { categoryColor, categoryTextColor } = load('src/lib/categoryColor.ts');
+  const palette = [
+    '#FFEA5E',
+    '#FA6728',
+    '#D6D5D4',
+    '#14A9FF',
+    '#0089D9',
+    '#78D44A',
+    '#FFB0B9',
+    '#FFCA45',
+    '#157300',
+    '#B88F53',
+  ];
+  palette.forEach((color, index) => {
+    assert.equal(categoryColor(`${index}00`), color);
+    const channels = color
+      .slice(1)
+      .match(/../g)
+      .map((hex) => {
+        const c = parseInt(hex, 16) / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+    const luminance =
+      channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    const ratio =
+      categoryTextColor(color) === '#FFFFFF'
+        ? 1.05 / (luminance + 0.05)
+        : (luminance + 0.05) / 0.05;
+    assert.ok(ratio >= 4.5, color);
+  });
+  assert.equal(categoryColor('999'), '#D6D5D4');
+  assert.equal(categoryColor('000', '#123456'), '#123456');
+  assert.equal(categoryColor('000', 'invalid'), '#FFEA5E');
+});
+
+test('group reads include saved colors and missing migration returns actionable error', async () => {
+  const reader = setup(routes[4][0], [
+    {
+      data: [{ ...group, color: '#123456', book_categories: [{ count: 2 }] }],
+      error: null,
+    },
+  ]);
+  assert.equal(
+    (await (await reader.handlers.GET()).json()).items[0].color,
+    '#123456',
+  );
+  const writer = setup(routes[4][0], [
+    {
+      data: null,
+      error: {
+        code: 'PGRST204',
+        message:
+          "Could not find the 'color' column of 'book_category_groups' in the schema cache",
+      },
+    },
+  ]);
+  const response = await writer.handlers.POST(
+    request({ ...group, color: '#123456' }),
+  );
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).error, /book-category-group-colors.sql/);
+});
+
+test('group colors normalize opaque HEX without leaking into subcategory writes', () => {
+  for (const color of ['#ffea5e', '#FFEA5EFF', ' #ffea5eff '])
+    assert.equal(
+      validation.parseCategoryGroup({ ...group, color }).value?.color,
+      '#FFEA5E',
+    );
+  for (const color of ['', '#FFF', '#12345600', 'red', 123, null])
+    assert.ok(
+      validation.parseCategoryGroup({ ...group, color }).error,
+      String(color),
+    );
+  assert.equal('color' in validation.parseCategoryGroup(group).value, false);
+  assert.equal(
+    'color' in
+      validation.parseCategory({ ...category, color: '#123456' }).value,
+    false,
+  );
+});
+
+test('category group colors can be created and edited without changing child relationships', async () => {
+  for (const [index, method] of [
+    [4, 'POST'],
+    [5, 'PATCH'],
+  ]) {
+    const { handlers, calls } = setup(routes[index][0], [
+      { data: { code: '000' }, error: null },
+    ]);
+    const response = await handlers[method](
+      request({ ...group, color: '#ffea5eff' }),
+      groupContext,
+    );
+    assert.equal(response.status, method === 'POST' ? 201 : 200);
+    const write = calls.find(
+      (c) => c.method === (method === 'POST' ? 'insert' : 'update'),
+    );
+    assert.equal(write.args[0].color, '#FFEA5E');
+    assert.ok(calls.every((c) => c.table === 'book_category_groups'));
+  }
+  const { handlers, calls } = setup(routes[5][0], [
+    { data: { code: '000' }, error: null },
+  ]);
+  await handlers.PATCH(request(group), groupContext);
+  assert.equal(
+    'color' in calls.find((c) => c.method === 'update').args[0],
+    false,
+  );
+});
 
 test('category labels come from the parent relation, never the stale child column', () => {
   const { categoryGroupLabel } = load('src/lib/bookCategory.ts');

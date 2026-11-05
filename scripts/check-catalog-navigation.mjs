@@ -51,7 +51,15 @@ function loadComponent(
         jsx: ts.JsxEmit.ReactJSX,
       },
     }).outputText,
-    { exports, require: (name) => dependencies[name] ?? {}, ...globals },
+    {
+      exports,
+      require: (name) =>
+        dependencies[name] ??
+        (name.startsWith('@/lib/')
+          ? loadComponent(`src/${name.slice(2)}.ts`)
+          : {}),
+      ...globals,
+    },
   );
   return exports;
 }
@@ -203,6 +211,45 @@ test('group editing locks a used code but leaves its label editable', () => {
     true,
   );
   assert.ok(!inputs.find((node) => node.props.value === '성서').props.disabled);
+});
+
+test('major categories are colored cards with separate controls and editable colors', async () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, [
+    { key: '000', name: '성서', usageCount: 2, color: '#FFEA5E' },
+    { key: '800', name: '문학', usageCount: 0, color: '#157300' },
+  ]);
+  let tree = harness.render();
+  const list = nodes(tree).find((n) => n.type === 'ul');
+  assert.ok(list.props.className.includes('grid'));
+  const cards = nodes(list).filter((n) => n.type === 'li');
+  assert.equal(cards[0].props.style.backgroundColor, '#FFEA5E');
+  assert.equal(cards[1].props.style.backgroundColor, '#157300');
+  assert.equal(cards[1].props.style.color, '#FFFFFF');
+  for (const button of nodes(list).filter((n) => n.type === 'button'))
+    assert.equal(
+      nodes(button.props.children).some((n) => n.type === 'button'),
+      false,
+    );
+  nodes(tree)
+    .find((n) => n.props['aria-label'] === '성서 수정')
+    .props.onClick();
+  tree = harness.render();
+  const picker = nodes(tree).find(
+    (n) => n.type === 'input' && n.props.type === 'color',
+  );
+  assert.equal(picker.props.id, 'category-group-color');
+  assert.ok(
+    !nodes(tree).some((n) => n.props['aria-label'] === '대분류 색상 HEX'),
+  );
+  assert.equal(picker.props.value, '#FFEA5E');
+  picker.props.onChange({ target: { value: '#123456' } });
+  harness.render();
+  await harness.mutations[0].mutationFn();
+  assert.deepEqual(JSON.parse(harness.requests[0].body), {
+    code: '000',
+    label: '성서',
+    color: '#123456',
+  });
 });
 
 test('a used subcategory can move to another parent without changing its code', async () => {

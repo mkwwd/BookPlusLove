@@ -14,7 +14,7 @@ async function usedGroupError(code: string) {
   if (count)
     return Response.json(
       {
-        error: `${count}개의 소분류가 있어 코드 번호 변경이나 삭제를 할 수 없습니다. 대분류명은 수정할 수 있습니다.`,
+        error: `${count}개의 소분류가 있어 코드 번호 변경이나 삭제를 할 수 없습니다. 대분류명과 색상은 수정할 수 있습니다.`,
       },
       { status: 409 },
     );
