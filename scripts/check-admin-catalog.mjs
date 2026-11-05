@@ -38,9 +38,13 @@ test('category defaults match the requested palette and readable text contrast',
     .readFileSync('src/app/globals.css', 'utf8')
     .split('.catalog-group-card {')[1]
     .split('}')[0];
+  const glaze = surface.match(/background-image:([\s\S]*?);/)?.[1];
+  assert.ok(glaze, 'Cards should have a subtle dimensional highlight');
+  const highlight = Number(glaze.match(/rgb\(255 255 255 \/ ([\d.]+)\)/)[1]);
+  const shade = Number(glaze.match(/rgb\(0 0 0 \/ ([\d.]+)\)/)[1]);
   assert.ok(
-    !surface.includes('linear-gradient'),
-    'Card background must preserve the selected HEX color',
+    highlight <= 0.12 && shade <= 0.1,
+    'Keep the original color visible',
   );
   const palette = [
     '#FFEA5E',
@@ -60,7 +64,11 @@ test('category defaults match the requested palette and readable text contrast',
       .slice(1)
       .match(/../g)
       .map((hex) => {
-        const c = parseInt(hex, 16) / 255;
+        const base = parseInt(hex, 16) / 255;
+        const c =
+          categoryTextColor(color) === '#FFFFFF'
+            ? base * (1 - highlight) + highlight
+            : base * (1 - shade);
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       });
     const luminance =
