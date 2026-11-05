@@ -224,7 +224,18 @@ test('major categories are colored cards with separate controls and editable col
   const cards = nodes(list).filter((n) => n.type === 'li');
   assert.equal(cards[0].props.style.backgroundColor, '#FFEA5E');
   assert.equal(cards[1].props.style.backgroundColor, '#157300');
-  assert.equal(cards[1].props.style.color, '#FFFFFF');
+  assert.ok(
+    cards.every((card) => card.props.className.includes('catalog-group-card')),
+  );
+  assert.ok(
+    !fs
+      .readFileSync('src/components/CatalogManager.tsx', 'utf8')
+      .includes('BookOpen'),
+  );
+  const heading = nodes(cards[0]).find(
+    (node) => node.props.children === '성서',
+  );
+  assert.ok(heading.props.className.includes('text-3xl'));
   for (const button of nodes(list).filter((n) => n.type === 'button'))
     assert.equal(
       nodes(button.props.children).some((n) => n.type === 'button'),

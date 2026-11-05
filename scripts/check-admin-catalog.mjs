@@ -33,7 +33,13 @@ const category = {
 const group = { code: '000', label: '성서' };
 
 test('category defaults match the requested palette and readable text contrast', () => {
-  const { categoryColor, categoryTextColor } = load('src/lib/categoryColor.ts');
+  const { categoryColor } = load('src/lib/categoryColor.ts');
+  const surface = fs
+    .readFileSync('src/app/globals.css', 'utf8')
+    .split('.catalog-group-card {')[1]
+    .split('}')[0];
+  const reflection = Number(surface.match(/rgb\(255 255 255 \/ ([\d.]+)\)/)[1]);
+  const shade = Number(surface.match(/rgb\(0 0 0 \/ ([\d.]+)\)/)[1]);
   const palette = [
     '#FFEA5E',
     '#FA6728',
@@ -52,15 +58,14 @@ test('category defaults match the requested palette and readable text contrast',
       .slice(1)
       .match(/../g)
       .map((hex) => {
-        const c = parseInt(hex, 16) / 255;
+        const c =
+          (parseInt(hex, 16) / 255) * (1 - shade) * (1 - reflection) +
+          reflection;
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       });
     const luminance =
       channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-    const ratio =
-      categoryTextColor(color) === '#FFFFFF'
-        ? 1.05 / (luminance + 0.05)
-        : (luminance + 0.05) / 0.05;
+    const ratio = 1.05 / (luminance + 0.05);
     assert.ok(ratio >= 4.5, color);
   });
   assert.equal(categoryColor('999'), '#D6D5D4');
