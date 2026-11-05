@@ -23,9 +23,9 @@ export function categoryColor(code: string, color?: unknown): string {
 
 export function categoryTextColor(color: string): string {
   const channels = [1, 3, 5].map((offset) => {
-    // Match the 18% white glass surface when choosing supporting text colors.
+    // Match the 14% white glass surface when choosing supporting text colors.
     const channel =
-      (parseInt(color.slice(offset, offset + 2), 16) / 255) * 0.82 + 0.18;
+      (parseInt(color.slice(offset, offset + 2), 16) / 255) * 0.86 + 0.14;
     return channel <= 0.04045
       ? channel / 12.92
       : ((channel + 0.055) / 1.055) ** 2.4;
