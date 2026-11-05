@@ -21,7 +21,7 @@ import type {
   CategoryInput,
   ParishInput,
 } from '@/lib/adminCatalog';
-import { categoryColor } from '@/lib/categoryColor';
+import { categoryColor, categoryTextColor } from '@/lib/categoryColor';
 
 type Props =
   | { kind: 'parishes' | 'category-groups' }
@@ -42,7 +42,7 @@ const inputClass =
 const iconClass =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-amber-900/20 text-amber-900 hover:bg-amber-50 disabled:opacity-40';
 const glassIconClass =
-  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-white hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent';
+  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent';
 const PAGE_SIZE = 25;
 
 async function requestJson(url: string, init?: RequestInit) {
@@ -324,6 +324,9 @@ export default function CatalogManager(props: Props) {
                   isGroup
                     ? {
                         backgroundColor: categoryColor(row.key, row.color),
+                        color: categoryTextColor(
+                          categoryColor(row.key, row.color),
+                        ),
                       }
                     : undefined
                 }
@@ -347,7 +350,7 @@ export default function CatalogManager(props: Props) {
                           color: row.color,
                         })
                       }
-                      className="flex h-full min-h-32 w-full min-w-0 flex-col items-start gap-4 rounded pb-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                      className="flex h-full min-h-32 w-full min-w-0 flex-col items-start gap-4 rounded pb-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                       <span className="flex w-full items-center justify-between gap-3">
                         <span className="text-base font-medium tabular-nums">
                           {row.key}
@@ -357,7 +360,7 @@ export default function CatalogManager(props: Props) {
                           className="h-5 w-5 shrink-0"
                         />
                       </span>
-                      <span className="w-full text-3xl leading-snug font-semibold break-words text-white">
+                      <span className="catalog-group-title w-full text-3xl leading-snug font-semibold break-words text-white">
                         {row.name}
                       </span>
                     </button>
@@ -380,7 +383,7 @@ export default function CatalogManager(props: Props) {
                 <div
                   className={
                     isGroup
-                      ? 'mt-auto flex items-center gap-1 border-t border-white/20 pt-3'
+                      ? 'mt-auto flex items-center gap-1 border-t border-current/20 pt-3'
                       : 'flex gap-2'
                   }>
                   {isGroup && (
