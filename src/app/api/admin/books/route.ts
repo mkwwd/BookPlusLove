@@ -76,14 +76,16 @@ export async function GET(request: Request) {
   const requestedPage = Number(pageInput);
   const search = (params.get('q') ?? '').trim();
   const recommended = params.get('recommended') === 'true';
+  const sort = params.get('sort') ?? 'latest';
   if (
     !/^[1-9]\d*$/.test(pageInput) ||
     !Number.isSafeInteger(requestedPage) ||
     requestedPage > Math.floor(Number.MAX_SAFE_INTEGER / PAGE_SIZE) ||
-    search.length > 200
+    search.length > 200 ||
+    !['latest', 'reg_no', 'category', 'title'].includes(sort)
   ) {
     return Response.json(
-      { error: '페이지 번호 또는 검색어가 올바르지 않습니다.' },
+      { error: '페이지 번호, 검색어 또는 정렬 기준이 올바르지 않습니다.' },
       { status: 400 },
     );
   }
@@ -124,8 +126,25 @@ export async function GET(request: Request) {
     return Response.json({ books: [], total, page, pageSize: PAGE_SIZE });
 
   const offset = (page - 1) * PAGE_SIZE;
-  const { data, error: listError } = await query(false)
-    .order('id', { ascending: false })
+  let listQuery = query(false);
+  if (sort === 'category') {
+    // Order the copies by their related book, not just the embedded object.
+    listQuery = listQuery
+      .order('books(category_code)', { ascending: true, nullsFirst: false })
+      .order('books(author_code)', { ascending: true, nullsFirst: false });
+  } else if (sort === 'title') {
+    listQuery = listQuery.order('books(title)', {
+      ascending: true,
+      nullsFirst: false,
+    });
+  }
+  listQuery =
+    sort === 'latest'
+      ? listQuery.order('id', { ascending: false })
+      : listQuery
+          .order('reg_no', { ascending: true, nullsFirst: false })
+          .order('id', { ascending: true });
+  const { data, error: listError } = await listQuery
     .range(offset, offset + PAGE_SIZE - 1)
     .returns<BookCopyRow[]>();
   if (listError) {

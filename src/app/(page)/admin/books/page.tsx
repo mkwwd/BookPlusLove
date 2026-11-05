@@ -595,6 +595,9 @@ export default function AdminBooksPage() {
   const [editingBook, setEditingBook] = useState<BookRow | null>(null);
   const [isSaveComplete, setIsSaveComplete] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sort, setSort] = useState<'latest' | 'reg_no' | 'category' | 'title'>(
+    'latest',
+  );
   const scrollRef = useHorizontalWheel();
 
   useEffect(() => {
@@ -614,9 +617,9 @@ export default function AdminBooksPage() {
     error: listError,
     refetch,
   } = useQuery({
-    queryKey: ['admin-books', activeTab, querySearch, currentPage],
+    queryKey: ['admin-books', activeTab, querySearch, currentPage, sort],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ page: String(currentPage) });
+      const params = new URLSearchParams({ page: String(currentPage), sort });
       if (querySearch) params.set('q', querySearch);
       if (activeTab === 'recommended') params.set('recommended', 'true');
       const res = await fetch(`/api/admin/books?${params}`, { signal });
@@ -761,6 +764,19 @@ export default function AdminBooksPage() {
               />
             </div>
           )}
+          <select
+            aria-label="도서 정렬"
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as typeof sort);
+              setCurrentPage(1);
+            }}
+            className="max-w-full rounded border border-amber-900/30 bg-white px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/20 focus:outline-none">
+            <option value="latest">최신 등록순</option>
+            <option value="reg_no">등록번호순</option>
+            <option value="category">분류번호순</option>
+            <option value="title">제목순</option>
+          </select>
           <Link
             href="/admin/categories"
             className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">

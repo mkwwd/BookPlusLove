@@ -119,6 +119,36 @@ test('second page and a removed last page use the correct bounded range', async 
   }
 });
 
+test('all four sorts order the full copy result in the DB before pagination, with stable ties', async () => {
+  for (const [sort, order] of [
+    ['latest', 'id.desc'],
+    ['reg_no', 'reg_no.asc.nullslast,id.asc'],
+    [
+      'category',
+      'books(category_code).asc.nullslast,books(author_code).asc.nullslast,reg_no.asc.nullslast,id.asc',
+    ],
+    ['title', 'books(title).asc.nullslast,reg_no.asc.nullslast,id.asc'],
+  ]) {
+    const runtime = api();
+    const response = await runtime.get(
+      `?sort=${sort}&page=2&q=Book&recommended=true`,
+    );
+    assert.equal(response.status, 200);
+    const [count, rows] = runtime.calls;
+    assert.equal(count.params.get('order'), null);
+    assert.equal(rows.params.get('order'), order, sort);
+    assert.equal(
+      rows.params.get('books.order'),
+      null,
+      'must sort copies, not the embedded book alone',
+    );
+    assert.equal(rows.params.get('offset'), '50');
+    assert.equal(rows.params.get('limit'), '50');
+    assert.equal(rows.params.get('books.is_recommended'), 'eq.true');
+    assert.ok(rows.params.has('matched_books.or'));
+  }
+});
+
 test('search sends a database OR across registration number, title and author without filtering returned metadata', async () => {
   for (const input of [
     'MB005557',
@@ -187,6 +217,9 @@ test('invalid input and non-admin requests do not access the database', async ()
     '?page=1.5',
     '?page=no',
     '?page=9007199254740991',
+    '?sort=',
+    '?sort=unknown',
+    '?sort=title.desc,id',
     `?q=${'a'.repeat(201)}`,
   ]) {
     const runtime = api();
@@ -368,6 +401,69 @@ test('page controls use server totals and request the next 50 with an abort sign
   );
   assert.equal(request.options.signal, signal);
   assert.ok(runtime.query.queryKey.includes(2));
+});
+
+test('sort labels, query key and page reset follow the chosen order without clearing search', async () => {
+  const runtime = ui();
+  let tree = runtime.render();
+  const select = () =>
+    runtime
+      .render()
+      .find(
+        (node) =>
+          node.type === 'select' && node.props['aria-label'] === '도서 정렬',
+      );
+  assert.ok(select(), 'sorting control must be available');
+  assert.equal(select().props.value, 'latest');
+  assert.deepEqual(
+    nodes(select())
+      .filter((node) => node.type === 'option')
+      .map((node) => [node.props.value, node.props.children]),
+    [
+      ['latest', '최신 등록순'],
+      ['reg_no', '등록번호순'],
+      ['category', '분류번호순'],
+      ['title', '제목순'],
+    ],
+  );
+  tree
+    .find(
+      (node) => node.props?.['aria-label'] === '제목, 저자 또는 등록번호 검색',
+    )
+    .props.onChange({ target: { value: 'Book' } });
+  runtime.render();
+  runtime.flush();
+  for (const sort of ['reg_no', 'category', 'title', 'latest']) {
+    tree = runtime.render();
+    tree
+      .find((node) => node.type === 'button' && node.props.children === '다음')
+      .props.onClick();
+    const oldKey = JSON.stringify(runtime.render() && runtime.query.queryKey);
+    select().props.onChange({ target: { value: sort } });
+    runtime.render();
+    await runtime.query.queryFn({});
+    const params = new URL(runtime.calls.at(-1).url, 'http://localhost')
+      .searchParams;
+    assert.equal(params.get('sort'), sort);
+    assert.equal(params.get('page'), '1');
+    assert.equal(params.get('q'), 'Book');
+    assert.ok(runtime.query.queryKey.includes(sort));
+    assert.notEqual(JSON.stringify(runtime.query.queryKey), oldKey);
+    assert.equal(select().props.value, sort);
+  }
+  select().props.onChange({ target: { value: 'title' } });
+  runtime
+    .render()
+    .find(
+      (node) => node.type === 'button' && node.props.children === '추천 도서',
+    )
+    .props.onClick();
+  runtime.render();
+  await runtime.query.queryFn({});
+  const params = new URL(runtime.calls.at(-1).url, 'http://localhost')
+    .searchParams;
+  assert.equal(params.get('sort'), 'title');
+  assert.equal(params.get('recommended'), 'true');
 });
 
 test('search is debounced, resets to page one, and recommended tab has its own DB filter', async () => {
