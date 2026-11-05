@@ -314,6 +314,40 @@ function ui() {
   return runtime;
 }
 
+test('all-books management cells stay pinned to the right without changing edit actions', () => {
+  const runtime = ui();
+  const tree = runtime.render();
+  const header = tree.find(
+    (node) => node.type === 'th' && node.props.children === '관리',
+  );
+  const actions = tree.find(
+    (node) =>
+      node.type === 'td' &&
+      nodes(node).some((child) => child.props?.['aria-label'] === '수정'),
+  );
+  assert.ok(header);
+  assert.ok(actions);
+  for (const cell of [header, actions]) {
+    const classes = cell.props.className.split(' ');
+    for (const name of ['sticky', 'right-0', 'z-10', 'bg-white', 'min-w-24'])
+      assert.ok(classes.includes(name), `${cell.type}: ${name}`);
+  }
+  assert.ok(
+    tree.some((node) => node.props?.className?.includes('overflow-auto')),
+  );
+  const buttons = nodes(actions).filter((node) => node.type === 'button');
+  assert.deepEqual(
+    buttons.map((node) => node.props['aria-label']),
+    ['수정', '삭제'],
+  );
+  buttons[0].props.onClick();
+  assert.equal(
+    runtime.render().find((node) => node.type?.name === 'EditBookForm').props
+      .book.copyId,
+    1,
+  );
+});
+
 test('page controls use server totals and request the next 50 with an abort signal', async () => {
   const runtime = ui();
   const next = runtime

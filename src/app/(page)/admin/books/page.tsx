@@ -920,7 +920,9 @@ export default function AdminBooksPage() {
                   <th className="px-5 py-3 font-medium">기증자명</th>
                   <th className="px-5 py-3 font-medium">카테고리</th>
                   <th className="px-5 py-3 font-medium">상태</th>
-                  <th className="px-5 py-3 font-medium">관리</th>
+                  <th className="sticky right-0 z-10 w-24 min-w-24 bg-white px-5 py-3 text-center font-medium shadow-sm">
+                    관리
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-900/10">
@@ -1007,8 +1009,8 @@ export default function AdminBooksPage() {
                           {book.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <div className="flex gap-2">
+                      <td className="sticky right-0 z-10 w-24 min-w-24 bg-white px-5 py-3 shadow-sm">
+                        <div className="flex justify-center gap-2">
                           <button
                             type="button"
                             aria-label="수정"
