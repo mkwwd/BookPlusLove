@@ -34,18 +34,17 @@ const group = { code: '000', label: '성서' };
 
 test('category defaults match the requested palette and readable text contrast', () => {
   const { categoryColor, categoryTextColor } = load('src/lib/categoryColor.ts');
-  const surface = fs
-    .readFileSync('src/app/globals.css', 'utf8')
-    .split('.catalog-group-card {')[1]
-    .split('}')[0];
-  const glaze = surface.match(/background-image:([\s\S]*?);/)?.[1];
-  assert.ok(glaze, 'Cards should have a subtle dimensional highlight');
-  const highlight = Number(glaze.match(/rgb\(255 255 255 \/ ([\d.]+)\)/)[1]);
-  const shade = Number(glaze.match(/rgb\(0 0 0 \/ ([\d.]+)\)/)[1]);
+  const css = fs.readFileSync('src/app/globals.css', 'utf8');
+  const glass = [...css.matchAll(/\.catalog-group-card::after \{([^}]+)\}/g)]
+    .map((match) => match[1])
+    .find((rule) => rule.includes('backdrop-filter'));
   assert.ok(
-    highlight <= 0.12 && shade <= 0.1,
-    'Keep the original color visible',
+    glass?.includes('backdrop-filter: blur('),
+    'Use a real frosted glass layer',
   );
+  assert.match(css, /pointer-events: none/);
+  const tint = Number(glass.match(/rgb\(255 255 255 \/ ([\d.]+)\)/)[1]);
+  assert.ok(tint <= 0.2, 'Keep the category color visible under the glass');
   const palette = [
     '#FFEA5E',
     '#FA6728',
@@ -65,10 +64,7 @@ test('category defaults match the requested palette and readable text contrast',
       .match(/../g)
       .map((hex) => {
         const base = parseInt(hex, 16) / 255;
-        const c =
-          categoryTextColor(color) === '#FFFFFF'
-            ? base * (1 - highlight) + highlight
-            : base * (1 - shade);
+        const c = base * (1 - tint) + tint;
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       });
     const luminance =
