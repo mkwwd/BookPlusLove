@@ -91,9 +91,6 @@ export default function ManualBookEntryForm({
   const [manualPrice, setManualPrice] = useState('');
   const [manualPubDate, setManualPubDate] = useState('');
   const [manualVolume, setManualVolume] = useState('');
-  const [manualAladinItemId, setManualAladinItemId] = useState<number | null>(
-    null,
-  );
   const [manualCoverUrl, setManualCoverUrl] = useState('');
   const [manualCoverFile, setManualCoverFile] = useState<File | null>(null);
   const [manualCoverPreview, setManualCoverPreview] = useState('');
@@ -168,7 +165,6 @@ export default function ManualBookEntryForm({
 
   const handleApplyLookup = (
     values: Partial<Record<LookupFieldKey, string>>,
-    aladinItemId?: number,
   ) => {
     const title = values.title ?? manualTitle;
     const author = values.author ?? manualAuthor;
@@ -187,9 +183,6 @@ export default function ManualBookEntryForm({
     if (values.title !== undefined || values.author !== undefined) {
       setManualAuthorCode(generateAuthorCode(author, title) ?? '');
     }
-    // 알라딘 오픈API 약관상, 알라딘에서 가져온 항목이 하나라도 있으면
-    // 상품페이지 링크를 표시해야 해서 itemId를 같이 들고 있는다.
-    if (aladinItemId !== undefined) setManualAladinItemId(aladinItemId);
     setLookupResult(null);
   };
 
@@ -234,7 +227,6 @@ export default function ManualBookEntryForm({
       price: manualPrice.trim() || undefined,
       pubDate: manualPubDate.trim() || undefined,
       volume: manualVolume.trim() || undefined,
-      aladinItemId: manualAladinItemId ?? undefined,
       // 실제 업로드 전이라 blob 미리보기 URL을 임시로 들고 있다가,
       // 실제 등록 시점에 실제 URL로 교체한다.
       coverUrl: manualCoverPreview || manualCoverUrl.trim() || undefined,
@@ -259,7 +251,6 @@ export default function ManualBookEntryForm({
     setManualPrice('');
     setManualPubDate('');
     setManualVolume('');
-    setManualAladinItemId(null);
     setManualCoverUrl('');
     // blob 미리보기는 revoke하지 않는다 — 방금 만든 항목이 그 URL을
     // 계속 표시용으로 쓰고 있어서, 여기서 지우면 표에서 깨져 보인다.

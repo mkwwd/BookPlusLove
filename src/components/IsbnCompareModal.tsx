@@ -29,12 +29,7 @@ const LOOKUP_FIELD_LABELS: Record<LookupFieldKey, string> = {
   description: '설명',
 };
 
-export type LookupSource = 'aladin' | 'nationalLibrary';
-
-const LOOKUP_SOURCE_LABELS: Record<LookupSource, string> = {
-  aladin: '알라딘',
-  nationalLibrary: '국립중앙도서관',
-};
+type LookupSource = 'nationalLibrary' | 'none';
 
 export interface LookupBookResult {
   isbn: string;
@@ -47,11 +42,9 @@ export interface LookupBookResult {
   price?: string;
   pubDate?: string;
   volume?: string;
-  aladinItemId?: number;
 }
 
 export interface IsbnLookupResponse {
-  aladin: LookupBookResult | null;
   nationalLibrary: LookupBookResult | null;
 }
 
@@ -87,27 +80,24 @@ export default function IsbnCompareModal({
   result: IsbnLookupResponse;
   fields: LookupFieldKey[];
   currentValues?: Partial<Record<LookupFieldKey, string>>;
-  onApply: (
-    values: Partial<Record<LookupFieldKey, string>>,
-    aladinItemId?: number,
-  ) => void;
+  onApply: (values: Partial<Record<LookupFieldKey, string>>) => void;
   onClose: () => void;
 }) {
   const [fieldSelection, setFieldSelection] = useState<
-    Record<LookupFieldKey, LookupSource | 'none'>
+    Record<LookupFieldKey, LookupSource>
   >(
     () =>
       Object.fromEntries(fields.map((key) => [key, 'none'])) as Record<
         LookupFieldKey,
-        LookupSource | 'none'
+        LookupSource
       >,
   );
 
-  const handleBulkSelect = (source: LookupSource) => {
+  const handleBulkSelect = () => {
     setFieldSelection((prev) => {
       const next = { ...prev };
       for (const key of fields) {
-        if (result[source]?.[key]) next[key] = source;
+        if (result.nationalLibrary?.[key]) next[key] = 'nationalLibrary';
       }
       return next;
     });
@@ -121,10 +111,7 @@ export default function IsbnCompareModal({
       const value = result[source]?.[key];
       if (value) values[key] = value;
     }
-    const usedAladin = Object.values(fieldSelection).some(
-      (source) => source === 'aladin',
-    );
-    onApply(values, usedAladin ? result.aladin?.aladinItemId : undefined);
+    onApply(values);
   };
 
   return (
@@ -154,121 +141,104 @@ export default function IsbnCompareModal({
         <div className="flex shrink-0 gap-2">
           <button
             type="button"
-            onClick={() => handleBulkSelect('aladin')}
-            className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-xs font-medium text-amber-950 transition hover:bg-amber-50">
-            일괄 알라딘 선택
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkSelect('nationalLibrary')}
+            onClick={handleBulkSelect}
             className="rounded border border-amber-900/30 bg-white px-3 py-1.5 text-xs font-medium text-amber-950 transition hover:bg-amber-50">
             일괄 도서관 선택
           </button>
         </div>
       </div>
       <div className="space-y-3">
-        {fields.map((key) => (
-          <div key={key} className="rounded border border-amber-900/10 p-3">
-            <p className="mb-2 text-sm font-medium text-amber-950">
-              {LOOKUP_FIELD_LABELS[key]}
-            </p>
-            <div className="flex gap-2">
-              {(['aladin', 'nationalLibrary'] as LookupSource[]).map(
-                (source) => {
-                  const value = result[source]?.[key];
-                  if (!value) {
-                    return (
-                      <div
-                        key={source}
-                        className="min-w-0 flex-1 rounded border border-dashed border-amber-900/15 p-2 text-xs text-amber-900/40">
-                        {LOOKUP_SOURCE_LABELS[source]}: 정보 없음
-                      </div>
-                    );
-                  }
-                  const isSelected = fieldSelection[key] === source;
-                  return (
-                    <label
-                      key={source}
-                      className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
-                        isSelected
-                          ? 'border-red-900 bg-red-50'
-                          : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
-                      }`}>
-                      <input
-                        type="radio"
-                        name={`lookup-${key}`}
-                        checked={isSelected}
-                        onChange={() =>
-                          setFieldSelection((prev) => ({
-                            ...prev,
-                            [key]: source,
-                          }))
-                        }
-                        className="mt-1"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-amber-700">
-                          {LOOKUP_SOURCE_LABELS[source]}
+        {fields.map((key) => {
+          const value = result.nationalLibrary?.[key];
+          return (
+            <div key={key} className="rounded border border-amber-900/10 p-3">
+              <p className="mb-2 text-sm font-medium text-amber-950">
+                {LOOKUP_FIELD_LABELS[key]}
+              </p>
+              <div className="flex gap-2">
+                {!value ? (
+                  <div className="min-w-0 flex-1 rounded border border-dashed border-amber-900/15 p-2 text-xs text-amber-900/40">
+                    국립중앙도서관: 정보 없음
+                  </div>
+                ) : (
+                  <label
+                    className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
+                      fieldSelection[key] === 'nationalLibrary'
+                        ? 'border-red-900 bg-red-50'
+                        : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
+                    }`}>
+                    <input
+                      type="radio"
+                      name={`lookup-${key}`}
+                      checked={fieldSelection[key] === 'nationalLibrary'}
+                      onChange={() =>
+                        setFieldSelection((prev) => ({
+                          ...prev,
+                          [key]: 'nationalLibrary',
+                        }))
+                      }
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-amber-700">국립중앙도서관</p>
+                      {key === 'coverUrl' ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={value}
+                          alt=""
+                          className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
+                        />
+                      ) : (
+                        <p className="text-sm break-words text-amber-800">
+                          {key === 'pubDate'
+                            ? formatPublicationDate(value)
+                            : value}
                         </p>
-                        {key === 'coverUrl' ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={value}
-                            alt=""
-                            className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
-                          />
-                        ) : (
-                          <p className="text-sm break-words text-amber-800">
-                            {key === 'pubDate'
-                              ? formatPublicationDate(value)
-                              : value}
-                          </p>
-                        )}
-                      </div>
-                    </label>
-                  );
-                },
-              )}
-              <label
-                className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
-                  fieldSelection[key] === 'none'
-                    ? 'border-red-900 bg-red-50'
-                    : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
-                }`}>
-                <input
-                  type="radio"
-                  name={`lookup-${key}`}
-                  checked={fieldSelection[key] === 'none'}
-                  onChange={() =>
-                    setFieldSelection((prev) => ({ ...prev, [key]: 'none' }))
-                  }
-                  className="mt-1"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-amber-700">현재 값</p>
-                  {key === 'coverUrl' ? (
-                    currentValues?.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={currentValues.coverUrl}
-                        alt=""
-                        className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
-                      />
+                      )}
+                    </div>
+                  </label>
+                )}
+                <label
+                  className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded border p-2 ${
+                    fieldSelection[key] === 'none'
+                      ? 'border-red-900 bg-red-50'
+                      : 'border-amber-900/20 bg-white/50 hover:bg-amber-50'
+                  }`}>
+                  <input
+                    type="radio"
+                    name={`lookup-${key}`}
+                    checked={fieldSelection[key] === 'none'}
+                    onChange={() =>
+                      setFieldSelection((prev) => ({ ...prev, [key]: 'none' }))
+                    }
+                    className="mt-1"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-amber-700">현재 값</p>
+                    {key === 'coverUrl' ? (
+                      currentValues?.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={currentValues.coverUrl}
+                          alt=""
+                          className="mt-2 h-24 w-16 max-w-full rounded-sm object-contain object-left sm:h-48 sm:w-36"
+                        />
+                      ) : (
+                        <p className="text-xs text-amber-900/40">없음</p>
+                      )
                     ) : (
-                      <p className="text-xs text-amber-900/40">없음</p>
-                    )
-                  ) : (
-                    <p className="text-sm break-words text-amber-800">
-                      {(key === 'pubDate'
-                        ? formatPublicationDate(currentValues?.[key])
-                        : currentValues?.[key]) || '(비어있음)'}
-                    </p>
-                  )}
-                </div>
-              </label>
+                      <p className="text-sm break-words text-amber-800">
+                        {(key === 'pubDate'
+                          ? formatPublicationDate(currentValues?.[key])
+                          : currentValues?.[key]) || '(비어있음)'}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Modal>
   );

@@ -116,7 +116,6 @@ function EditBookForm({
   const [regNo, setRegNo] = useState(book.regNo);
   const [status, setStatus] = useState(book.status);
   const [isRecommended, setIsRecommended] = useState(book.isRecommended);
-  const [aladinItemId, setAladinItemId] = useState(book.aladinItemId);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [isbnLookupError, setIsbnLookupError] = useState<string | null>(null);
@@ -147,7 +146,6 @@ function EditBookForm({
 
   const handleApplyLookup = (
     values: Partial<Record<LookupFieldKey, string>>,
-    aladinItemId?: number,
   ) => {
     if (values.title !== undefined) setTitle(values.title);
     if (values.author !== undefined) setAuthor(values.author);
@@ -165,7 +163,6 @@ function EditBookForm({
       }
     }
 
-    if (aladinItemId !== undefined) setAladinItemId(aladinItemId);
     setLookupResult(null);
   };
 
@@ -210,7 +207,7 @@ function EditBookForm({
           regNo,
           status,
           isRecommended,
-          aladinItemId,
+          aladinItemId: book.aladinItemId,
         }),
       });
       const body = await res.json();
