@@ -77,15 +77,20 @@ export async function GET(request: Request) {
   const search = (params.get('q') ?? '').trim();
   const recommended = params.get('recommended') === 'true';
   const sort = params.get('sort') ?? 'latest';
+  const categoryCode = (params.get('category') ?? '').trim();
   if (
     !/^[1-9]\d*$/.test(pageInput) ||
     !Number.isSafeInteger(requestedPage) ||
     requestedPage > Math.floor(Number.MAX_SAFE_INTEGER / PAGE_SIZE) ||
     search.length > 200 ||
+    (categoryCode !== '' && !/^\d{3}$/.test(categoryCode)) ||
     !['latest', 'reg_no', 'category', 'title'].includes(sort)
   ) {
     return Response.json(
-      { error: '페이지 번호, 검색어 또는 정렬 기준이 올바르지 않습니다.' },
+      {
+        error:
+          '페이지 번호, 검색어, 분류코드 또는 정렬 기준이 올바르지 않습니다.',
+      },
       { status: 400 },
     );
   }
@@ -94,11 +99,12 @@ export async function GET(request: Request) {
   const query = (head: boolean) => {
     let result = supabaseServer.from('book_copies').select(
       `id, reg_no, status, donor_name, donor_user_id,
-        books${recommended ? '!inner' : ''}(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
+        books${recommended || categoryCode ? '!inner' : ''}(id, isbn, title, author, publisher, cover_url, page, price, pub_date, author_code, category_code, is_recommended, aladin_item_id,
           book_categories(label, main_code, book_category_groups(label)))${search ? ', matched_books:books()' : ''}`,
       head ? { count: 'exact', head: true } : undefined,
     );
     if (recommended) result = result.eq('books.is_recommended', true);
+    if (categoryCode) result = result.eq('books.category_code', categoryCode);
     if (search) {
       // A quoted, escaped regex preserves literal %, _, * and filter punctuation.
       const pattern = JSON.stringify(

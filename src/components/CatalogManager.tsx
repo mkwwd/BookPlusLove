@@ -371,19 +371,31 @@ export default function CatalogManager(props: Props) {
                         {row.name}
                       </span>
                     </button>
+                  ) : group ? (
+                    <Link
+                      href={`/admin/books?category=${encodeURIComponent(row.key)}`}
+                      aria-label={`${row.key} ${row.name} 도서 목록 보기`}
+                      className="block rounded py-1 text-amber-950 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-900">
+                      <span className="block text-lg font-medium break-words">
+                        <span className="mr-3 font-mono">{row.key}</span>
+                        {row.name}
+                      </span>
+                      <span className="mt-1 flex items-center gap-2 text-base text-amber-800">
+                        도서 {row.usageCount}종
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-4 w-4 shrink-0"
+                        />
+                      </span>
+                    </Link>
                   ) : (
                     <p className="text-lg font-medium break-words text-amber-950">
-                      {!isParish && (
-                        <span className="mr-3 font-mono">{row.key}</span>
-                      )}
                       {row.name}
                     </p>
                   )}
-                  {!isGroup && (
+                  {isParish && (
                     <p className="mt-1 text-base text-amber-800">
-                      {isParish
-                        ? `${row.approved ? '승인 완료' : '승인 대기'} · 회원 ${row.usageCount}명`
-                        : `도서 ${row.usageCount}종`}
+                      {`${row.approved ? '승인 완료' : '승인 대기'} · 회원 ${row.usageCount}명`}
                     </p>
                   )}
                 </div>

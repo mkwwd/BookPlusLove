@@ -210,6 +210,23 @@ test('empty results skip fetching rows and report page one', async () => {
   assert.equal(runtime.calls.length, 1);
 });
 
+test('category filters count and copies with an inner join alongside search and sorting', async () => {
+  for (const extra of ['', '&q=MB001&recommended=true&sort=title&page=2']) {
+    const runtime = api();
+    assert.equal((await runtime.get(`?category=010${extra}`)).status, 200);
+    for (const { params } of runtime.calls) {
+      assert.equal(params.get('books.category_code'), 'eq.010');
+      assert.ok(params.get('select').includes('books!inner('));
+    }
+    assert.equal(runtime.calls[1].params.get('limit'), '50');
+  }
+  const empty = api({ total: 0 });
+  const result = await (await empty.get('?category=999&page=3')).json();
+  assert.equal(result.total, 0);
+  assert.equal(result.page, 1);
+  assert.equal(empty.calls.length, 1);
+});
+
 test('invalid input and non-admin requests do not access the database', async () => {
   for (const params of [
     '?page=0',
@@ -220,6 +237,9 @@ test('invalid input and non-admin requests do not access the database', async ()
     '?sort=',
     '?sort=unknown',
     '?sort=title.desc,id',
+    '?category=01',
+    '?category=010,100',
+    '?category=abc',
     `?q=${'a'.repeat(201)}`,
   ]) {
     const runtime = api();
@@ -253,7 +273,25 @@ function nodes(tree) {
   return [tree, ...nodes(tree.props?.children)];
 }
 
-function ui() {
+test('book route passes category parameters to a keyed list so clearing or changing categories resets pagination', async () => {
+  const { default: Page } = load('src/app/(page)/admin/books/page.tsx', {
+    '@/components/AdminBookList': { default: 'AdminBookList' },
+    'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }) },
+  });
+  for (const [category, expected] of [
+    ['010', '010'],
+    [' 020 ', '020'],
+    [['030', '040'], '030'],
+    [undefined, ''],
+  ]) {
+    const tree = await Page({ searchParams: Promise.resolve({ category }) });
+    assert.equal(tree.type, 'AdminBookList');
+    assert.equal(tree.props.categoryCode, expected);
+    assert.equal(tree.key, expected);
+  }
+});
+
+function ui(categoryCode = '') {
   const states = [];
   const effects = [];
   const timers = new Map();
@@ -274,7 +312,7 @@ function ui() {
     calls: [],
   };
   const { default: Page } = load(
-    'src/app/(page)/admin/books/page.tsx',
+    'src/components/AdminBookList.tsx',
     {
       react: {
         useState(initial) {
@@ -338,7 +376,7 @@ function ui() {
   );
   runtime.render = () => {
     cursor = 0;
-    return nodes(Page());
+    return nodes(Page({ categoryCode }));
   };
   runtime.flush = () => {
     for (const callback of timers.values()) callback();
@@ -346,6 +384,42 @@ function ui() {
   };
   return runtime;
 }
+
+test('category-scoped book lists retain the filter across search, sort and pages', async () => {
+  const runtime = ui('010');
+  let tree = runtime.render();
+  assert.ok(
+    tree.some(
+      (node) =>
+        node.props['aria-label'] === '분류 필터 해제' &&
+        node.props.href === '/admin/books',
+    ),
+  );
+  tree
+    .find(
+      (node) => node.props['aria-label'] === '제목, 저자 또는 등록번호 검색',
+    )
+    .props.onChange({ target: { value: 'MB001' } });
+  runtime.render();
+  runtime.flush();
+  tree = runtime.render();
+  tree
+    .find((node) => node.props['aria-label'] === '도서 정렬')
+    .props.onChange({ target: { value: 'title' } });
+  runtime
+    .render()
+    .find((node) => node.type === 'button' && node.props.children === '다음')
+    .props.onClick();
+  runtime.render();
+  await runtime.query.queryFn({});
+  const params = new URL(runtime.calls.at(-1).url, 'http://localhost')
+    .searchParams;
+  assert.equal(params.get('category'), '010');
+  assert.equal(params.get('q'), 'MB001');
+  assert.equal(params.get('sort'), 'title');
+  assert.equal(params.get('page'), '2');
+  assert.ok(runtime.query.queryKey.includes('010'));
+});
 
 test('all-books management cells stay pinned to the right without changing edit actions', () => {
   const runtime = ui();

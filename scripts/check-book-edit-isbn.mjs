@@ -288,7 +288,7 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
     status: '대여가능',
     pubDate: null,
   };
-  const { default: Page } = load('src/app/(page)/admin/books/page.tsx', {
+  const { default: Page } = load('src/components/AdminBookList.tsx', {
     react: {
       useEffect() {},
       useState(initial) {
@@ -304,7 +304,13 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
     },
     '@tanstack/react-query': {
       useQueryClient: () => ({
-        invalidateQueries: () => {
+        invalidateQueries: ({ predicate }) => {
+          assert.equal(
+            predicate({ queryKey: ['admin-books', 'all', '010'] }),
+            true,
+          );
+          assert.equal(predicate({ queryKey: ['admin-categories'] }), true);
+          assert.equal(predicate({ queryKey: ['admin-parishes'] }), false);
           invalidations++;
         },
       }),
@@ -370,7 +376,7 @@ test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds'
     let pending;
     let error;
     const { EditBookForm } = load(
-      'src/app/(page)/admin/books/page.tsx',
+      'src/components/AdminBookList.tsx',
       {
         react: { useState: (initial) => [initial, () => {}] },
         '@tanstack/react-query': {

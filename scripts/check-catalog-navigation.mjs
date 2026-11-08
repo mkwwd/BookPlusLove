@@ -270,6 +270,30 @@ test('major categories are colored cards with separate controls and editable col
   });
 });
 
+test('subcategory names and counts open their category-scoped book list, including empty categories', () => {
+  const harness = catalogHarness(
+    { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
+    [
+      { key: '010', name: '성서일반', mainCode: '000', usageCount: 2 },
+      { key: '020', name: '성서묵상', mainCode: '000', usageCount: 0 },
+    ],
+  );
+  const tree = harness.render();
+  for (const code of ['010', '020']) {
+    const link = nodes(tree).find(
+      (node) =>
+        node.type === 'a' &&
+        node.props.href === `/admin/books?category=${code}`,
+    );
+    assert.ok(link);
+    assert.ok(nodes(link).some((node) => node.props.children === code));
+  }
+  assert.equal(
+    nodes(tree).filter((node) => node.props.title === '수정').length,
+    2,
+  );
+});
+
 test('a used subcategory can move to another parent without changing its code', async () => {
   const harness = catalogHarness(
     { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
@@ -368,7 +392,7 @@ for (const tab of ['admin', 'regular']) {
 
 for (const tab of ['all', 'recommended']) {
   test(`book ${tab} tab retains the category management link`, () => {
-    const page = loadComponent(`${adminRoot}/books/page.tsx`, {
+    const page = loadComponent('src/components/AdminBookList.tsx', {
       tab,
     }).default();
     assert.equal(
