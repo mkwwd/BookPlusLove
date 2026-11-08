@@ -33,7 +33,7 @@ const category = {
 const group = { code: '000', label: '성서' };
 
 test('category defaults match the requested palette and readable text contrast', () => {
-  const { categoryColor, categoryTextColor } = load('src/lib/categoryColor.ts');
+  const { categoryColor } = load('src/lib/categoryColor.ts');
   const css = fs.readFileSync('src/app/globals.css', 'utf8');
   const glass = [...css.matchAll(/\.catalog-group-card::after \{([^}]+)\}/g)]
     .map((match) => match[1])
@@ -44,7 +44,22 @@ test('category defaults match the requested palette and readable text contrast',
   );
   assert.match(css, /pointer-events: none/);
   const tint = Number(glass.match(/rgb\(255 255 255 \/ ([\d.]+)\)/)[1]);
-  assert.ok(tint <= 0.2, 'Keep the category color visible under the glass');
+  assert.ok(tint >= 0.8 && tint < 1, 'Use a pale translucent glass surface');
+  const textColor = css
+    .split('.catalog-group-card {')[1]
+    .split('}')[0]
+    .match(/\bcolor: (#[0-9a-f]{6});/i)[1];
+  const textChannels = textColor
+    .slice(1)
+    .match(/../g)
+    .map((hex) => {
+      const c = parseInt(hex, 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+  const textLuminance =
+    textChannels[0] * 0.2126 +
+    textChannels[1] * 0.7152 +
+    textChannels[2] * 0.0722;
   const palette = [
     '#FFEA5E',
     '#FA6728',
@@ -69,10 +84,7 @@ test('category defaults match the requested palette and readable text contrast',
       });
     const luminance =
       channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-    const ratio =
-      categoryTextColor(color) === '#FFFFFF'
-        ? 1.05 / (luminance + 0.05)
-        : (luminance + 0.05) / 0.05;
+    const ratio = (luminance + 0.05) / (textLuminance + 0.05);
     assert.ok(ratio >= 4.5, color);
   });
   assert.equal(categoryColor('999'), '#D6D5D4');

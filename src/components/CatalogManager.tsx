@@ -21,7 +21,7 @@ import type {
   CategoryInput,
   ParishInput,
 } from '@/lib/adminCatalog';
-import { categoryColor, categoryTextColor } from '@/lib/categoryColor';
+import { categoryColor } from '@/lib/categoryColor';
 
 type Props =
   | { kind: 'parishes' | 'category-groups' }
@@ -324,9 +324,6 @@ export default function CatalogManager(props: Props) {
                   isGroup
                     ? {
                         backgroundColor: categoryColor(row.key, row.color),
-                        color: categoryTextColor(
-                          categoryColor(row.key, row.color),
-                        ),
                       }
                     : undefined
                 }
@@ -350,17 +347,27 @@ export default function CatalogManager(props: Props) {
                           color: row.color,
                         })
                       }
-                      className="flex h-full min-h-32 w-full min-w-0 flex-col items-start gap-4 rounded pb-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
+                      className="flex h-full min-h-20 w-full min-w-0 flex-col items-start gap-2 rounded pb-3 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                       <span className="flex w-full items-center justify-between gap-3">
-                        <span className="text-base font-medium tabular-nums">
+                        <span className="inline-flex items-center gap-2 text-base font-medium tabular-nums">
+                          <span
+                            aria-hidden="true"
+                            className="catalog-group-swatch h-3 w-3 shrink-0 rounded-full border border-black/10"
+                            style={{
+                              backgroundColor: categoryColor(
+                                row.key,
+                                row.color,
+                              ),
+                            }}
+                          />
                           {row.key}
                         </span>
                         <ChevronRight
                           aria-hidden="true"
-                          className="h-5 w-5 shrink-0"
+                          className="h-5 w-5 shrink-0 text-stone-500"
                         />
                       </span>
-                      <span className="catalog-group-title w-full text-3xl leading-snug font-semibold break-words text-white">
+                      <span className="w-full text-3xl leading-snug font-medium break-words">
                         {row.name}
                       </span>
                     </button>
@@ -383,11 +390,11 @@ export default function CatalogManager(props: Props) {
                 <div
                   className={
                     isGroup
-                      ? 'mt-auto flex items-center gap-1 border-t border-current/20 pt-3'
+                      ? 'mt-auto flex items-center gap-1 border-t border-stone-900/10 pt-1'
                       : 'flex gap-2'
                   }>
                   {isGroup && (
-                    <span className="mr-auto pr-2 text-base">
+                    <span className="mr-auto pr-2 text-base text-stone-600">
                       소분류 {row.usageCount}개
                     </span>
                   )}

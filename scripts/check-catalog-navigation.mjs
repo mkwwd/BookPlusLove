@@ -236,6 +236,13 @@ test('major categories are colored cards with separate controls and editable col
     (node) => node.props.children === '성서',
   );
   assert.ok(heading.props.className.includes('text-3xl'));
+  assert.ok(!heading.props.className.includes('text-white'));
+  assert.equal(
+    nodes(cards[0]).find((node) =>
+      node.props.className?.includes('catalog-group-swatch'),
+    )?.props.style.backgroundColor,
+    '#FFEA5E',
+  );
   for (const button of nodes(list).filter((n) => n.type === 'button'))
     assert.equal(
       nodes(button.props.children).some((n) => n.type === 'button'),
