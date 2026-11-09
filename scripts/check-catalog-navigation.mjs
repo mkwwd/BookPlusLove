@@ -145,6 +145,42 @@ test('groups open their own child list and can return to the group list', () => 
   assert.ok(textContent(harness.render()).includes('대분류 추가'));
 });
 
+test('missing-category entry opens the book filter without editable category controls', () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, []);
+  let tree = harness.render();
+  const link = nodes(tree).find(
+    (node) =>
+      node.type === 'a' && node.props.href === '/admin/books?category=none',
+  );
+  assert.ok(link);
+  assert.ok(textContent(link).includes('분류번호 없음'));
+  assert.ok(!nodes(link).some((node) => node.type === 'button'));
+  assert.ok(!textContent(tree).includes('등록된 대분류가 없습니다.'));
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '분류코드 검색')
+    .props.onChange({ target: { value: '성서' } });
+  tree = harness.render();
+  assert.ok(
+    !nodes(tree).some(
+      (node) => node.props.href === '/admin/books?category=none',
+    ),
+  );
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '분류코드 검색')
+    .props.onChange({ target: { value: '없음' } });
+  assert.ok(
+    nodes(harness.render()).some(
+      (node) => node.props.href === '/admin/books?category=none',
+    ),
+  );
+  const parish = catalogHarness({ kind: 'parishes' }, []).render();
+  assert.ok(
+    !nodes(parish).some(
+      (node) => node.props.href === '/admin/books?category=none',
+    ),
+  );
+});
+
 test('child list is scoped and creation uses only its selected parent code', async () => {
   let returned = false;
   const harness = catalogHarness(

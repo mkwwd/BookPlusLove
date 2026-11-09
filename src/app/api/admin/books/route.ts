@@ -83,7 +83,9 @@ export async function GET(request: Request) {
     !Number.isSafeInteger(requestedPage) ||
     requestedPage > Math.floor(Number.MAX_SAFE_INTEGER / PAGE_SIZE) ||
     search.length > 200 ||
-    (categoryCode !== '' && !/^\d{3}$/.test(categoryCode)) ||
+    (categoryCode !== '' &&
+      categoryCode !== 'none' &&
+      !/^\d{3}$/.test(categoryCode)) ||
     !['latest', 'reg_no', 'category', 'title'].includes(sort)
   ) {
     return Response.json(
@@ -104,7 +106,11 @@ export async function GET(request: Request) {
       head ? { count: 'exact', head: true } : undefined,
     );
     if (recommended) result = result.eq('books.is_recommended', true);
-    if (categoryCode) result = result.eq('books.category_code', categoryCode);
+    if (categoryCode === 'none') {
+      result = result.is('books.category_code', null);
+    } else if (categoryCode) {
+      result = result.eq('books.category_code', categoryCode);
+    }
     if (search) {
       // A quoted, escaped regex preserves literal %, _, * and filter punctuation.
       const pattern = JSON.stringify(

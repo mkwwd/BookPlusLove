@@ -227,6 +227,27 @@ test('category filters count and copies with an inner join alongside search and 
   assert.equal(empty.calls.length, 1);
 });
 
+test('missing-category filter applies to count and copies alongside search, recommendation and sorting', async () => {
+  const runtime = api();
+  const response = await runtime.get(
+    '?category=none&q=MB001&recommended=true&sort=title&page=2',
+  );
+  assert.equal(response.status, 200);
+  for (const { params } of runtime.calls) {
+    assert.equal(params.get('books.category_code'), 'is.null');
+    assert.ok(params.get('select').includes('books!inner('));
+    assert.equal(params.get('books.is_recommended'), 'eq.true');
+    assert.ok(params.get('or').includes('reg_no.imatch.'));
+  }
+  assert.equal(runtime.calls[1].params.get('limit'), '50');
+  assert.equal(runtime.calls[1].params.get('offset'), '50');
+  const empty = api({ total: 0 });
+  const body = await (await empty.get('?category=none&page=2')).json();
+  assert.equal(body.total, 0);
+  assert.equal(body.page, 1);
+  assert.equal(empty.calls.length, 1);
+});
+
 test('invalid input and non-admin requests do not access the database', async () => {
   for (const params of [
     '?page=0',
@@ -419,6 +440,27 @@ test('category-scoped book lists retain the filter across search, sort and pages
   assert.equal(params.get('sort'), 'title');
   assert.equal(params.get('page'), '2');
   assert.ok(runtime.query.queryKey.includes('010'));
+});
+
+test('missing-category list displays its name, retains the query and can clear the filter', async () => {
+  const runtime = ui('none');
+  const tree = runtime.render();
+  assert.ok(tree.some((node) => node.props.children === '분류번호 없음'));
+  assert.ok(
+    tree.some(
+      (node) =>
+        node.props['aria-label'] === '분류 필터 해제' &&
+        node.props.href === '/admin/books',
+    ),
+  );
+  await runtime.query.queryFn({});
+  assert.equal(
+    new URL(runtime.calls.at(-1).url, 'http://localhost').searchParams.get(
+      'category',
+    ),
+    'none',
+  );
+  assert.ok(runtime.query.queryKey.includes('none'));
 });
 
 test('all-books management cells stay pinned to the right without changing edit actions', () => {

@@ -811,11 +811,17 @@ export default function AdminBookList({
         <div className="flex flex-wrap items-center gap-3 border-y border-amber-900/15 py-3 text-lg text-amber-950">
           <ListTree aria-hidden="true" className="h-5 w-5 shrink-0" />
           <span>
-            분류: {categoryCode}{' '}
-            {
-              categories.find((category) => category.code === categoryCode)
-                ?.label
-            }
+            {categoryCode === 'none' ? (
+              '분류번호 없음'
+            ) : (
+              <>
+                분류: {categoryCode}{' '}
+                {
+                  categories.find((category) => category.code === categoryCode)
+                    ?.label
+                }
+              </>
+            )}
           </span>
           <Link
             href="/admin/books"
@@ -999,9 +1005,11 @@ export default function AdminBookList({
                       className="px-5 py-8 text-center text-amber-900/50">
                       {querySearch
                         ? '검색 결과가 없습니다.'
-                        : categoryCode
-                          ? '이 분류에 등록된 도서가 없습니다.'
-                          : '등록된 도서가 없습니다.'}
+                        : categoryCode === 'none'
+                          ? '분류번호가 없는 도서가 없습니다.'
+                          : categoryCode
+                            ? '이 분류에 등록된 도서가 없습니다.'
+                            : '등록된 도서가 없습니다.'}
                     </td>
                   </tr>
                 ) : (

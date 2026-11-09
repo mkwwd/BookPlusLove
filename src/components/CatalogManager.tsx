@@ -207,6 +207,8 @@ export default function CatalogManager(props: Props) {
     );
   });
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const showMissingCategory =
+    isGroup && '분류번호 없음'.includes(search.trim());
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice(
     (currentPage - 1) * PAGE_SIZE,
@@ -451,8 +453,30 @@ export default function CatalogManager(props: Props) {
                 </div>
               </li>
             ))}
+            {showMissingCategory && (
+              <li
+                className="catalog-group-card flex min-w-0 flex-col rounded-lg p-5"
+                style={{ backgroundColor: '#D6D5D4' }}>
+                <div className="flex min-w-0 flex-1">
+                  <Link
+                    href="/admin/books?category=none"
+                    className="flex min-h-32 w-full min-w-0 flex-col justify-between gap-3 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
+                    <span className="text-3xl leading-snug font-medium break-words">
+                      분류번호 없음
+                    </span>
+                    <span className="flex items-center justify-between gap-2 border-t border-stone-900/10 pt-3 text-base text-stone-600">
+                      도서 목록 보기
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="h-5 w-5 shrink-0"
+                      />
+                    </span>
+                  </Link>
+                </div>
+              </li>
+            )}
           </ul>
-          {!visible.length && (
+          {!visible.length && !showMissingCategory && (
             <p className="py-8 text-center text-amber-800">
               {search.trim()
                 ? '검색 결과가 없습니다.'
