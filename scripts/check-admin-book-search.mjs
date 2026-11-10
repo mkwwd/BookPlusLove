@@ -312,7 +312,7 @@ test('book route passes category parameters to a keyed list so clearing or chang
   }
 });
 
-function ui(categoryCode = '', embedded = false) {
+function ui(categoryCode = '', categoryView = false) {
   const states = [];
   const effects = [];
   const timers = new Map();
@@ -333,7 +333,7 @@ function ui(categoryCode = '', embedded = false) {
     calls: [],
   };
   const { default: Page } = load(
-    'src/components/AdminBookList.tsx',
+    'src/components/BookManagementList.tsx',
     {
       react: {
         useState(initial) {
@@ -395,9 +395,18 @@ function ui(categoryCode = '', embedded = false) {
       },
     },
   );
+  const { default: AdminPage } = load('src/components/AdminBookList.tsx', {
+    'react/jsx-runtime': {
+      jsx: (type, props) => ({ type, props }),
+      jsxs: (type, props) => ({ type, props }),
+    },
+  });
+  const renderHeader = categoryView
+    ? undefined
+    : AdminPage({ categoryCode }).props.renderHeader;
   runtime.render = () => {
     cursor = 0;
-    return nodes(Page({ categoryCode, embedded }));
+    return nodes(Page({ categoryCode, renderHeader }));
   };
   runtime.flush = () => {
     for (const callback of timers.values()) callback();
@@ -481,7 +490,7 @@ test('search and sorting sit after the tabs and before the table while managemen
   }
 });
 
-test('embedded lists keep search and editing without links back to the full book list', async () => {
+test('category list controls keep search and editing without global navigation', async () => {
   const runtime = ui('010', true);
   const tree = runtime.render();
   assert.ok(!tree.some((node) => node.type === 'h2'));
@@ -502,6 +511,22 @@ test('embedded lists keep search and editing without links back to the full book
     ),
     '010',
   );
+});
+
+test('category views omit the global book tabs, including the missing-category view', async () => {
+  const isTab = (node) =>
+    node.type === 'button' &&
+    ['전체 도서', '추천 도서'].includes(node.props.children);
+  for (const code of ['010', 'none']) {
+    const runtime = ui(code, true);
+    assert.equal(runtime.render().filter(isTab).length, 0);
+    await runtime.query.queryFn({});
+    const params = new URL(runtime.calls.at(-1).url, 'http://localhost')
+      .searchParams;
+    assert.equal(params.get('category'), code);
+    assert.notEqual(params.get('recommended'), 'true');
+  }
+  assert.equal(ui().render().filter(isTab).length, 2);
 });
 
 test('all-books management cells stay pinned to the right without changing edit actions', () => {

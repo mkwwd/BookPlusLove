@@ -168,7 +168,7 @@ test('manual entry and edit form use ISO placeholders, initialization and blur',
 
   const edit = runtime();
   const { EditBookForm } = edit.load(
-    'src/components/AdminBookList.tsx',
+    'src/components/BookManagementList.tsx',
     '\nexport { EditBookForm };',
   );
   const tree = edit.render(EditBookForm, {

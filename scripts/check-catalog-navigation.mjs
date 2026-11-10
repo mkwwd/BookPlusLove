@@ -35,7 +35,8 @@ function loadComponent(
       useMutation: () => ({}),
     },
     'next/link': { default: 'a' },
-    '@/components/AdminBookList': { default: 'AdminBookList' },
+    '@/components/CategoryBookList': { default: 'CategoryBookList' },
+    '@/components/BookManagementList': { default: 'BookManagementList' },
     'next/navigation': { usePathname: () => pathname },
     '@/hooks/useHorizontalWheel': {
       useHorizontalWheel: () => ({ current: null }),
@@ -164,16 +165,11 @@ test('missing-category entry opens books inside the catalog and preserves search
     .props.onChange({ target: { value: '없음' } });
   nodes(harness.render()).find(isMissingButton).props.onClick();
   tree = harness.render();
-  const list = nodes(tree).find((node) => node.type === 'AdminBookList');
+  const list = nodes(tree).find((node) => node.type === 'CategoryBookList');
   assert.equal(list.props.categoryCode, 'none');
-  assert.equal(list.props.embedded, true);
-  nodes(tree)
-    .find(
-      (node) =>
-        node.type === 'button' &&
-        textContent(node).includes('대분류 목록으로 돌아가기'),
-    )
-    .props.onClick();
+  assert.equal(list.props.categoryLabel, '분류번호 없음');
+  assert.equal(list.props.backLabel, '대분류 목록으로 돌아가기');
+  list.props.onBack();
   assert.equal(
     nodes(harness.render()).find(
       (node) => node.props['aria-label'] === '분류코드 검색',
@@ -327,27 +323,45 @@ test('subcategory books open inside the catalog and return to the same child lis
     assert.ok(nodes(button).some((node) => node.props.children === code));
     button.props.onClick();
     const detail = harness.render();
-    const list = nodes(detail).find((node) => node.type === 'AdminBookList');
+    const list = nodes(detail).find((node) => node.type === 'CategoryBookList');
     assert.equal(list.props.categoryCode, code);
-    assert.equal(list.props.embedded, true);
+    assert.equal(list.props.backLabel, '소분류 목록으로 돌아가기');
     assert.ok(
       !nodes(detail).some((node) =>
         node.props.href?.startsWith('/admin/books'),
       ),
     );
-    nodes(detail)
-      .find(
-        (node) =>
-          node.type === 'button' &&
-          textContent(node).includes('소분류 목록으로 돌아가기'),
-      )
-      .props.onClick();
+    list.props.onBack();
     assert.ok(textContent(harness.render()).includes('000 성서'));
   }
   assert.equal(
     nodes(tree).filter((node) => node.props.title === '수정').length,
     2,
   );
+});
+
+test('dedicated category screen owns its heading and return action without global tabs', () => {
+  const Page = loadComponent('src/components/CategoryBookList.tsx').default;
+  for (const categoryCode of ['010', 'none']) {
+    let returned = false;
+    const tree = Page({
+      categoryCode,
+      categoryLabel: '분류 이름',
+      backLabel: '목록으로 돌아가기',
+      onBack() {
+        returned = true;
+      },
+    });
+    assert.ok(textContent(tree).includes('분류 이름 도서 목록'));
+    assert.ok(!textContent(tree).includes('추천 도서'));
+    const list = nodes(tree).find((node) => node.type === 'BookManagementList');
+    assert.equal(list.props.categoryCode, categoryCode);
+    assert.equal(list.props.renderHeader, undefined);
+    nodes(tree)
+      .find((node) => node.type === 'button')
+      .props.onClick();
+    assert.equal(returned, true);
+  }
 });
 
 test('a used subcategory can move to another parent without changing its code', async () => {
@@ -448,9 +462,14 @@ for (const tab of ['admin', 'regular']) {
 
 for (const tab of ['all', 'recommended']) {
   test(`book ${tab} tab retains the category management link`, () => {
-    const page = loadComponent('src/components/AdminBookList.tsx', {
+    const screen = loadComponent('src/components/AdminBookList.tsx', {
       tab,
     }).default();
+    const page = screen.props.renderHeader({
+      activeTab: tab,
+      categories: [],
+      onTabChange() {},
+    });
     assert.equal(
       nodes(page).filter(
         (node) => node.type === 'a' && node.props.href === '/admin/categories',

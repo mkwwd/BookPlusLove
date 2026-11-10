@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import AdminBookList from '@/components/AdminBookList';
+import CategoryBookList from '@/components/CategoryBookList';
 import Modal from '@/components/Modal';
 import type {
   CategoryGroupInput,
@@ -222,24 +222,15 @@ export default function CatalogManager(props: Props) {
 
   if (selectedCategory) {
     return (
-      <div className="space-y-6">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory(null)}
-          className="inline-flex min-h-11 items-center gap-2 text-base text-amber-800 hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
-          <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
-          {group ? '소분류 목록으로 돌아가기' : '대분류 목록으로 돌아가기'}
-        </button>
-        <h2 className="max-w-full min-w-0 font-serif text-3xl break-words text-amber-950">
-          {selectedCategory.code !== 'none' && `${selectedCategory.code} `}
-          {selectedCategory.label} 도서 목록
-        </h2>
-        <AdminBookList
-          key={selectedCategory.code}
-          categoryCode={selectedCategory.code}
-          embedded
-        />
-      </div>
+      <CategoryBookList
+        key={selectedCategory.code}
+        categoryCode={selectedCategory.code}
+        categoryLabel={selectedCategory.label}
+        backLabel={
+          group ? '소분류 목록으로 돌아가기' : '대분류 목록으로 돌아가기'
+        }
+        onBack={() => setSelectedCategory(null)}
+      />
     );
   }
 

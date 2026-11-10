@@ -288,7 +288,7 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
     status: '대여가능',
     pubDate: null,
   };
-  const { default: Page } = load('src/components/AdminBookList.tsx', {
+  const { default: Page } = load('src/components/BookManagementList.tsx', {
     react: {
       useEffect() {},
       useState(initial) {
@@ -376,7 +376,7 @@ test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds'
     let pending;
     let error;
     const { EditBookForm } = load(
-      'src/components/AdminBookList.tsx',
+      'src/components/BookManagementList.tsx',
       {
         react: { useState: (initial) => [initial, () => {}] },
         '@tanstack/react-query': {
