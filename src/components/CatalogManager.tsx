@@ -24,9 +24,21 @@ import type {
 } from '@/lib/adminCatalog';
 import { categoryColor } from '@/lib/categoryColor';
 
+interface CatalogNavigation {
+  groupCode: string;
+  categoryCode: string;
+  open: (group: string, category?: string) => void;
+  back: (group?: string) => void;
+}
 type Props =
-  | { kind: 'parishes' | 'category-groups' }
-  | { kind: 'categories'; group: CategoryGroupInput; onBack: () => void };
+  | { kind: 'parishes' }
+  | { kind: 'category-groups'; navigation: CatalogNavigation }
+  | {
+      kind: 'categories';
+      group: CategoryGroupInput;
+      onBack: () => void;
+      navigation: CatalogNavigation;
+    };
 type ParishRow = ParishInput & { id: number; usageCount: number };
 type CategoryRow = CategoryInput & { usageCount: number };
 type GroupRow = CategoryGroupInput & { usageCount: number };
@@ -69,6 +81,7 @@ export default function CatalogManager(props: Props) {
   const isParish = kind === 'parishes';
   const isGroup = kind === 'category-groups';
   const group = props.kind === 'categories' ? props.group : null;
+  const navigation = props.kind === 'parishes' ? null : props.navigation;
   const itemName = isParish ? '본당' : isGroup ? '대분류' : '소분류';
   const title = isParish
     ? '본당 관리'
@@ -83,13 +96,6 @@ export default function CatalogManager(props: Props) {
   const [editing, setEditing] = useState<Entry | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState<CategoryGroupInput | null>(
-    null,
-  );
-  const [selectedCategory, setSelectedCategory] = useState<{
-    code: string;
-    label: string;
-  } | null>(null);
   const [form, setForm] = useState({
     name: '',
     approved: true,
@@ -126,6 +132,17 @@ export default function CatalogManager(props: Props) {
   });
   const groupsUnavailable = needsGroups && (groups.isPending || groups.isError);
   const entries = list.data ?? [];
+  const selectedGroup = isGroup
+    ? entries.find((row) => row.key === navigation?.groupCode)
+    : undefined;
+  const selectedCategory =
+    isGroup && navigation?.categoryCode === 'none'
+      ? { key: 'none', name: '분류번호 없음' }
+      : group &&
+        entries.find(
+          (row) =>
+            row.key === navigation?.categoryCode && row.mainCode === group.code,
+        );
   const refresh = async () => {
     await Promise.all(
       [
@@ -223,13 +240,13 @@ export default function CatalogManager(props: Props) {
   if (selectedCategory) {
     return (
       <CategoryBookList
-        key={selectedCategory.code}
-        categoryCode={selectedCategory.code}
-        categoryLabel={selectedCategory.label}
+        key={selectedCategory.key}
+        categoryCode={selectedCategory.key}
+        categoryLabel={selectedCategory.name}
         backLabel={
           group ? '소분류 목록으로 돌아가기' : '대분류 목록으로 돌아가기'
         }
-        onBack={() => setSelectedCategory(null)}
+        onBack={() => navigation!.back(group?.code)}
       />
     );
   }
@@ -238,9 +255,14 @@ export default function CatalogManager(props: Props) {
     return (
       <CatalogManager
         kind="categories"
-        key={selectedGroup.code}
-        group={selectedGroup}
-        onBack={() => setSelectedGroup(null)}
+        key={selectedGroup.key}
+        group={{
+          code: selectedGroup.key,
+          label: selectedGroup.name,
+          color: selectedGroup.color,
+        }}
+        navigation={navigation!}
+        onBack={() => navigation!.back()}
       />
     );
   }
@@ -361,13 +383,7 @@ export default function CatalogManager(props: Props) {
                     <button
                       type="button"
                       aria-label={`${row.key} ${row.name} 소분류 보기`}
-                      onClick={() =>
-                        setSelectedGroup({
-                          code: row.key,
-                          label: row.name,
-                          color: row.color,
-                        })
-                      }
+                      onClick={() => navigation!.open(row.key)}
                       className="flex h-full min-h-20 w-full min-w-0 flex-col items-start gap-2 rounded pb-3 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                       <span className="flex w-full items-center justify-between gap-3">
                         <span className="inline-flex items-center gap-2 text-base font-medium tabular-nums">
@@ -395,9 +411,7 @@ export default function CatalogManager(props: Props) {
                   ) : group ? (
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedCategory({ code: row.key, label: row.name })
-                      }
+                      onClick={() => navigation!.open(group.code, row.key)}
                       aria-label={`${row.key} ${row.name} 도서 목록 보기`}
                       className="block w-full rounded py-1 text-left text-amber-950 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-900">
                       <span className="block text-lg font-medium break-words">
@@ -483,12 +497,7 @@ export default function CatalogManager(props: Props) {
                   <button
                     type="button"
                     aria-label="분류번호 없음 도서 목록 보기"
-                    onClick={() =>
-                      setSelectedCategory({
-                        code: 'none',
-                        label: '분류번호 없음',
-                      })
-                    }
+                    onClick={() => navigation!.open('', 'none')}
                     className="flex min-h-32 w-full min-w-0 flex-col justify-between gap-3 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                     <span className="text-3xl leading-snug font-medium break-words">
                       분류번호 없음

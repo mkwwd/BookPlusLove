@@ -67,6 +67,17 @@ function loadComponent(
 }
 
 function catalogHarness(props, entries, groupEntries = []) {
+  const navigation = {
+    groupCode: props.group?.code ?? '',
+    categoryCode: '',
+    open(groupCode, categoryCode = '') {
+      Object.assign(navigation, { groupCode, categoryCode });
+    },
+    back(groupCode = '') {
+      Object.assign(navigation, { groupCode, categoryCode: '' });
+    },
+  };
+  props = { ...props, navigation };
   const states = [];
   let cursor = 0;
   const mutations = [];
@@ -129,6 +140,84 @@ const textContent = (node) =>
     : Array.isArray(node)
       ? node.map(textContent).join('')
       : textContent(node?.props?.children ?? '');
+
+function navigationHarness(initial = '/admin/categories') {
+  const stack = [{ url: initial, state: null }];
+  let index = 0;
+  const history = {
+    get state() {
+      return stack[index].state;
+    },
+    pushState(state, unused, url) {
+      stack.splice(++index);
+      stack.push({ state, url });
+    },
+    replaceState(state, unused, url) {
+      stack[index] = { state, url };
+    },
+    back() {
+      index = Math.max(0, index - 1);
+    },
+    forward() {
+      index = Math.min(stack.length - 1, index + 1);
+    },
+  };
+  const window = {
+    history,
+    get location() {
+      return new URL(stack[index].url, 'http://localhost');
+    },
+  };
+  const Page = loadComponent('src/components/CategoryCatalog.tsx', {
+    overrides: {
+      'next/navigation': {
+        usePathname: () => window.location.pathname,
+        useSearchParams: () => new URLSearchParams(window.location.search),
+      },
+      '@/components/CatalogManager': { default: 'CatalogManager' },
+    },
+    globals: { window, URLSearchParams },
+  }).default;
+  return { history, stack, render: Page, url: () => stack[index].url };
+}
+
+test('category URL history restores the child list on browser back and books on forward', () => {
+  const harness = navigationHarness();
+  harness.render().props.navigation.open('000');
+  assert.equal(harness.url(), '/admin/categories?group=000');
+  harness.render().props.navigation.open('000', '010');
+  assert.equal(harness.url(), '/admin/categories?group=000&category=010');
+  assert.equal(harness.render().props.navigation.categoryCode, '010');
+  harness.history.back();
+  assert.equal(harness.render().props.navigation.groupCode, '000');
+  assert.equal(harness.render().props.navigation.categoryCode, '');
+  harness.history.forward();
+  assert.equal(harness.render().props.navigation.categoryCode, '010');
+  harness.render().props.navigation.back('000');
+  assert.equal(harness.url(), '/admin/categories?group=000');
+  harness.render().props.navigation.back();
+  assert.equal(harness.url(), '/admin/categories');
+  assert.equal(
+    harness.stack.length,
+    3,
+    'in-app back must not add duplicate history entries',
+  );
+});
+
+test('category deep links restore selection and return safely without previous catalog history', () => {
+  const harness = navigationHarness('/admin/categories?group=100&category=110');
+  assert.equal(harness.render().props.navigation.categoryCode, '110');
+  harness.render().props.navigation.back('100');
+  assert.equal(harness.url(), '/admin/categories?group=100');
+  assert.equal(harness.stack.length, 1);
+  harness.render().props.navigation.back();
+  harness.render().props.navigation.open('', 'none');
+  assert.equal(harness.url(), '/admin/categories?category=none');
+  harness.history.back();
+  assert.equal(harness.render().props.navigation.categoryCode, '');
+  harness.history.forward();
+  assert.equal(harness.render().props.navigation.categoryCode, 'none');
+});
 
 test('groups open their own child list and can return to the group list', () => {
   const harness = catalogHarness({ kind: 'category-groups' }, [
