@@ -35,6 +35,7 @@ function loadComponent(
       useMutation: () => ({}),
     },
     'next/link': { default: 'a' },
+    '@/components/AdminBookList': { default: 'AdminBookList' },
     'next/navigation': { usePathname: () => pathname },
     '@/hooks/useHorizontalWheel': {
       useHorizontalWheel: () => ({ current: null }),
@@ -145,40 +146,42 @@ test('groups open their own child list and can return to the group list', () => 
   assert.ok(textContent(harness.render()).includes('대분류 추가'));
 });
 
-test('missing-category entry opens the book filter without editable category controls', () => {
+test('missing-category entry opens books inside the catalog and preserves search on return', () => {
   const harness = catalogHarness({ kind: 'category-groups' }, []);
   let tree = harness.render();
-  const link = nodes(tree).find(
-    (node) =>
-      node.type === 'a' && node.props.href === '/admin/books?category=none',
-  );
-  assert.ok(link);
-  assert.ok(textContent(link).includes('분류번호 없음'));
-  assert.ok(!nodes(link).some((node) => node.type === 'button'));
+  const isMissingButton = (node) =>
+    node.type === 'button' &&
+    node.props['aria-label'] === '분류번호 없음 도서 목록 보기';
+  assert.ok(nodes(tree).some(isMissingButton));
   assert.ok(!textContent(tree).includes('등록된 대분류가 없습니다.'));
   nodes(tree)
     .find((node) => node.props['aria-label'] === '분류코드 검색')
     .props.onChange({ target: { value: '성서' } });
   tree = harness.render();
-  assert.ok(
-    !nodes(tree).some(
-      (node) => node.props.href === '/admin/books?category=none',
-    ),
-  );
+  assert.ok(!nodes(tree).some(isMissingButton));
   nodes(tree)
     .find((node) => node.props['aria-label'] === '분류코드 검색')
     .props.onChange({ target: { value: '없음' } });
-  assert.ok(
-    nodes(harness.render()).some(
-      (node) => node.props.href === '/admin/books?category=none',
-    ),
+  nodes(harness.render()).find(isMissingButton).props.onClick();
+  tree = harness.render();
+  const list = nodes(tree).find((node) => node.type === 'AdminBookList');
+  assert.equal(list.props.categoryCode, 'none');
+  assert.equal(list.props.embedded, true);
+  nodes(tree)
+    .find(
+      (node) =>
+        node.type === 'button' &&
+        textContent(node).includes('대분류 목록으로 돌아가기'),
+    )
+    .props.onClick();
+  assert.equal(
+    nodes(harness.render()).find(
+      (node) => node.props['aria-label'] === '분류코드 검색',
+    ).props.value,
+    '없음',
   );
   const parish = catalogHarness({ kind: 'parishes' }, []).render();
-  assert.ok(
-    !nodes(parish).some(
-      (node) => node.props.href === '/admin/books?category=none',
-    ),
-  );
+  assert.ok(!nodes(parish).some(isMissingButton));
 });
 
 test('child list is scoped and creation uses only its selected parent code', async () => {
@@ -306,7 +309,7 @@ test('major categories are colored cards with separate controls and editable col
   });
 });
 
-test('subcategory names and counts open their category-scoped book list, including empty categories', () => {
+test('subcategory books open inside the catalog and return to the same child list', () => {
   const harness = catalogHarness(
     { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
     [
@@ -316,13 +319,30 @@ test('subcategory names and counts open their category-scoped book list, includi
   );
   const tree = harness.render();
   for (const code of ['010', '020']) {
-    const link = nodes(tree).find(
+    const button = nodes(harness.render()).find(
       (node) =>
-        node.type === 'a' &&
-        node.props.href === `/admin/books?category=${code}`,
+        node.type === 'button' && node.props['aria-label']?.startsWith(code),
     );
-    assert.ok(link);
-    assert.ok(nodes(link).some((node) => node.props.children === code));
+    assert.ok(button);
+    assert.ok(nodes(button).some((node) => node.props.children === code));
+    button.props.onClick();
+    const detail = harness.render();
+    const list = nodes(detail).find((node) => node.type === 'AdminBookList');
+    assert.equal(list.props.categoryCode, code);
+    assert.equal(list.props.embedded, true);
+    assert.ok(
+      !nodes(detail).some((node) =>
+        node.props.href?.startsWith('/admin/books'),
+      ),
+    );
+    nodes(detail)
+      .find(
+        (node) =>
+          node.type === 'button' &&
+          textContent(node).includes('소분류 목록으로 돌아가기'),
+      )
+      .props.onClick();
+    assert.ok(textContent(harness.render()).includes('000 성서'));
   }
   assert.equal(
     nodes(tree).filter((node) => node.props.title === '수정').length,

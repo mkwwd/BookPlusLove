@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import AdminBookList from '@/components/AdminBookList';
 import Modal from '@/components/Modal';
 import type {
   CategoryGroupInput,
@@ -85,6 +86,10 @@ export default function CatalogManager(props: Props) {
   const [selectedGroup, setSelectedGroup] = useState<CategoryGroupInput | null>(
     null,
   );
+  const [selectedCategory, setSelectedCategory] = useState<{
+    code: string;
+    label: string;
+  } | null>(null);
   const [form, setForm] = useState({
     name: '',
     approved: true,
@@ -214,6 +219,29 @@ export default function CatalogManager(props: Props) {
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
+
+  if (selectedCategory) {
+    return (
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory(null)}
+          className="inline-flex min-h-11 items-center gap-2 text-base text-amber-800 hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {group ? '소분류 목록으로 돌아가기' : '대분류 목록으로 돌아가기'}
+        </button>
+        <h2 className="max-w-full min-w-0 font-serif text-3xl break-words text-amber-950">
+          {selectedCategory.code !== 'none' && `${selectedCategory.code} `}
+          {selectedCategory.label} 도서 목록
+        </h2>
+        <AdminBookList
+          key={selectedCategory.code}
+          categoryCode={selectedCategory.code}
+          embedded
+        />
+      </div>
+    );
+  }
 
   if (isGroup && selectedGroup) {
     return (
@@ -374,10 +402,13 @@ export default function CatalogManager(props: Props) {
                       </span>
                     </button>
                   ) : group ? (
-                    <Link
-                      href={`/admin/books?category=${encodeURIComponent(row.key)}`}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedCategory({ code: row.key, label: row.name })
+                      }
                       aria-label={`${row.key} ${row.name} 도서 목록 보기`}
-                      className="block rounded py-1 text-amber-950 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-900">
+                      className="block w-full rounded py-1 text-left text-amber-950 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-900">
                       <span className="block text-lg font-medium break-words">
                         <span className="mr-3 font-mono">{row.key}</span>
                         {row.name}
@@ -389,7 +420,7 @@ export default function CatalogManager(props: Props) {
                           className="h-4 w-4 shrink-0"
                         />
                       </span>
-                    </Link>
+                    </button>
                   ) : (
                     <p className="text-lg font-medium break-words text-amber-950">
                       {row.name}
@@ -458,8 +489,15 @@ export default function CatalogManager(props: Props) {
                 className="catalog-group-card flex min-w-0 flex-col rounded-lg p-5"
                 style={{ backgroundColor: '#D6D5D4' }}>
                 <div className="flex min-w-0 flex-1">
-                  <Link
-                    href="/admin/books?category=none"
+                  <button
+                    type="button"
+                    aria-label="분류번호 없음 도서 목록 보기"
+                    onClick={() =>
+                      setSelectedCategory({
+                        code: 'none',
+                        label: '분류번호 없음',
+                      })
+                    }
                     className="flex min-h-32 w-full min-w-0 flex-col justify-between gap-3 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                     <span className="text-3xl leading-snug font-medium break-words">
                       분류번호 없음
@@ -471,7 +509,7 @@ export default function CatalogManager(props: Props) {
                         className="h-5 w-5 shrink-0"
                       />
                     </span>
-                  </Link>
+                  </button>
                 </div>
               </li>
             )}

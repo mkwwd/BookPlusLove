@@ -312,7 +312,7 @@ test('book route passes category parameters to a keyed list so clearing or chang
   }
 });
 
-function ui(categoryCode = '') {
+function ui(categoryCode = '', embedded = false) {
   const states = [];
   const effects = [];
   const timers = new Map();
@@ -397,7 +397,7 @@ function ui(categoryCode = '') {
   );
   runtime.render = () => {
     cursor = 0;
-    return nodes(Page({ categoryCode }));
+    return nodes(Page({ categoryCode, embedded }));
   };
   runtime.flush = () => {
     for (const callback of timers.values()) callback();
@@ -479,6 +479,29 @@ test('search and sorting sit after the tabs and before the table while managemen
   for (const href of ['/admin/categories', '/admin/books/new']) {
     assert.ok(index((node) => node.props.href === href) < tab);
   }
+});
+
+test('embedded lists keep search and editing without links back to the full book list', async () => {
+  const runtime = ui('010', true);
+  const tree = runtime.render();
+  assert.ok(!tree.some((node) => node.type === 'h2'));
+  assert.ok(
+    !tree.some((node) => node.props['aria-label'] === '분류 필터 해제'),
+  );
+  assert.ok(!tree.some((node) => node.props.href?.startsWith('/admin/')));
+  assert.ok(
+    tree.some(
+      (node) => node.props['aria-label'] === '제목, 저자 또는 등록번호 검색',
+    ),
+  );
+  assert.ok(tree.some((node) => node.props['aria-label'] === '수정'));
+  await runtime.query.queryFn({});
+  assert.equal(
+    new URL(runtime.calls.at(-1).url, 'http://localhost').searchParams.get(
+      'category',
+    ),
+    '010',
+  );
 });
 
 test('all-books management cells stay pinned to the right without changing edit actions', () => {

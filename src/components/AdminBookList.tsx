@@ -589,7 +589,8 @@ function EditBookForm({
 
 export default function AdminBookList({
   categoryCode = '',
-}: { categoryCode?: string } = {}) {
+  embedded = false,
+}: { categoryCode?: string; embedded?: boolean } = {}) {
   const queryClient = useQueryClient();
   const refreshBookCatalog = () =>
     queryClient.invalidateQueries({
@@ -757,28 +758,30 @@ export default function AdminBookList({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
+      {!embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
 
-        <div className="flex max-w-full flex-wrap items-center gap-2">
-          <Link
-            href="/admin/categories"
-            className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
-            <ListTree aria-hidden="true" className="h-4 w-4 shrink-0" />
-            분류코드 관리
-          </Link>
-          {activeTab === 'all' && (
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <Link
-              href="/admin/books/new"
-              className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
-              <Plus className="h-4 w-4" />
-              도서 등록
+              href="/admin/categories"
+              className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
+              <ListTree aria-hidden="true" className="h-4 w-4 shrink-0" />
+              분류코드 관리
             </Link>
-          )}
+            {activeTab === 'all' && (
+              <Link
+                href="/admin/books/new"
+                className="flex items-center gap-1.5 rounded bg-red-900 px-4 py-2.5 text-base font-medium text-white transition hover:bg-red-800">
+                <Plus className="h-4 w-4" />
+                도서 등록
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {categoryCode && (
+      {categoryCode && !embedded && (
         <div className="flex flex-wrap items-center gap-3 border-y border-amber-900/15 py-3 text-lg text-amber-950">
           <ListTree aria-hidden="true" className="h-5 w-5 shrink-0" />
           <span>
