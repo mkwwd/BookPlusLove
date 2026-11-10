@@ -463,6 +463,24 @@ test('missing-category list displays its name, retains the query and can clear t
   assert.ok(runtime.query.queryKey.includes('none'));
 });
 
+test('search and sorting sit after the tabs and before the table while management links stay in the heading', () => {
+  const tree = ui().render();
+  const index = (predicate) => tree.findIndex(predicate);
+  const search = index(
+    (node) => node.props['aria-label'] === '제목, 저자 또는 등록번호 검색',
+  );
+  const sort = index((node) => node.props['aria-label'] === '도서 정렬');
+  const tab = index(
+    (node) => node.type === 'button' && node.props.children === '추천 도서',
+  );
+  const table = index((node) => node.type === 'table');
+  assert.ok(search > tab && search < table);
+  assert.ok(sort > tab && sort < table);
+  for (const href of ['/admin/categories', '/admin/books/new']) {
+    assert.ok(index((node) => node.props.href === href) < tab);
+  }
+});
+
 test('all-books management cells stay pinned to the right without changing edit actions', () => {
   const runtime = ui();
   const tree = runtime.render();

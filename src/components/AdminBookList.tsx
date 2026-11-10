@@ -761,35 +761,6 @@ export default function AdminBookList({
         <h2 className="font-serif text-3xl text-amber-950">도서 목록 관리</h2>
 
         <div className="flex max-w-full flex-wrap items-center gap-2">
-          {activeTab === 'all' && (
-            <div className="relative">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => {
-                  setSearchText(e.target.value);
-                }}
-                maxLength={200}
-                aria-label="제목, 저자 또는 등록번호 검색"
-                placeholder="제목 / 저자 / 등록번호 검색"
-                className="w-64 rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
-              />
-            </div>
-          )}
-          <select
-            aria-label="도서 정렬"
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value as typeof sort);
-              setCurrentPage(1);
-            }}
-            className="max-w-full rounded border border-amber-900/30 bg-white px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/20 focus:outline-none">
-            <option value="latest">최신 등록순</option>
-            <option value="reg_no">등록번호순</option>
-            <option value="category">분류번호순</option>
-            <option value="title">제목순</option>
-          </select>
           <Link
             href="/admin/categories"
             className="flex items-center gap-1.5 rounded border border-amber-900/30 bg-white/40 px-4 py-2.5 text-base font-medium text-amber-950 transition hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
@@ -868,6 +839,46 @@ export default function AdminBookList({
           {data.total.toLocaleString()}권
         </p>
       )}
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        {activeTab === 'all' && books.length > 0 && (
+          <p className="text-sm text-amber-800">
+            → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
+            <br />→ 세로 스크롤바 위에서 휠을 돌리면 아래로 스크롤돼요.
+          </p>
+        )}
+        <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
+          {activeTab === 'all' && (
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-amber-950" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                }}
+                maxLength={200}
+                aria-label="제목, 저자 또는 등록번호 검색"
+                placeholder="제목 / 저자 / 등록번호 검색"
+                className="w-full rounded border border-amber-900/30 bg-white/40 py-2.5 pr-4 pl-9 text-base placeholder:text-amber-900/50 focus:ring-2 focus:ring-amber-900/20 focus:outline-none"
+              />
+            </div>
+          )}
+          <select
+            aria-label="도서 정렬"
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as typeof sort);
+              setCurrentPage(1);
+            }}
+            className="max-w-full rounded border border-amber-900/30 bg-white px-3 py-2.5 text-base text-amber-950 focus:ring-2 focus:ring-amber-900/20 focus:outline-none">
+            <option value="latest">최신 등록순</option>
+            <option value="reg_no">등록번호순</option>
+            <option value="category">분류번호순</option>
+            <option value="title">제목순</option>
+          </select>
+        </div>
+      </div>
 
       {activeTab === 'recommended' && (
         <div className="overflow-x-auto rounded-lg border border-amber-900/20 bg-white/40 shadow-sm backdrop-blur-sm">
@@ -949,12 +960,6 @@ export default function AdminBookList({
         </div>
       )}
 
-      {activeTab === 'all' && books.length > 0 && (
-        <p className="text-sm text-amber-800">
-          → 표를 옆으로 스크롤하면 나머지 항목을 볼 수 있어요.
-          <br />→ 세로 스크롤바 위에서 휠을 돌리면 아래로 스크롤돼요.
-        </p>
-      )}
       {activeTab === 'all' && (
         <>
           <div
