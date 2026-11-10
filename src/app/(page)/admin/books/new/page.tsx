@@ -734,7 +734,7 @@ function ScannedBookTable({
               description: current.description,
             };
           })()}
-          onApply={(values, aladinItemId) => {
+          onApply={(values) => {
             if (values.coverUrl !== undefined) {
               setCoverErrors((prev) => ({ ...prev, [lookupBookId]: '' }));
             }
@@ -743,7 +743,6 @@ function ScannedBookTable({
               ...(values.pubDate !== undefined
                 ? { pubDate: formatPublicationDate(values.pubDate) }
                 : {}),
-              ...(aladinItemId !== undefined ? { aladinItemId } : {}),
             });
             setLookupResult(null);
             setLookupBookId(null);

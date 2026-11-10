@@ -15,16 +15,30 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import CategoryBookList from '@/components/CategoryBookList';
 import Modal from '@/components/Modal';
 import type {
   CategoryGroupInput,
   CategoryInput,
   ParishInput,
 } from '@/lib/adminCatalog';
+import { categoryColor } from '@/lib/categoryColor';
 
+interface CatalogNavigation {
+  groupCode: string;
+  categoryCode: string;
+  open: (group: string, category?: string) => void;
+  back: (group?: string) => void;
+}
 type Props =
-  | { kind: 'parishes' | 'category-groups' }
-  | { kind: 'categories'; group: CategoryGroupInput; onBack: () => void };
+  | { kind: 'parishes' }
+  | { kind: 'category-groups'; navigation: CatalogNavigation }
+  | {
+      kind: 'categories';
+      group: CategoryGroupInput;
+      onBack: () => void;
+      navigation: CatalogNavigation;
+    };
 type ParishRow = ParishInput & { id: number; usageCount: number };
 type CategoryRow = CategoryInput & { usageCount: number };
 type GroupRow = CategoryGroupInput & { usageCount: number };
@@ -34,11 +48,14 @@ interface Entry {
   usageCount: number;
   approved?: boolean;
   mainCode?: string;
+  color?: string;
 }
 const inputClass =
   'w-full rounded border border-amber-900/25 bg-white px-3 py-2.5 text-base text-amber-950 disabled:bg-gray-100';
 const iconClass =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-amber-900/20 text-amber-900 hover:bg-amber-50 disabled:opacity-40';
+const glassIconClass =
+  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent';
 const PAGE_SIZE = 25;
 
 async function requestJson(url: string, init?: RequestInit) {
@@ -55,6 +72,7 @@ async function fetchCategoryGroups(): Promise<Entry[]> {
     key: row.code,
     name: row.label,
     usageCount: row.usageCount,
+    color: categoryColor(row.code, row.color),
   }));
 }
 
@@ -63,6 +81,7 @@ export default function CatalogManager(props: Props) {
   const isParish = kind === 'parishes';
   const isGroup = kind === 'category-groups';
   const group = props.kind === 'categories' ? props.group : null;
+  const navigation = props.kind === 'parishes' ? null : props.navigation;
   const itemName = isParish ? '본당' : isGroup ? '대분류' : '소분류';
   const title = isParish
     ? '본당 관리'
@@ -77,14 +96,12 @@ export default function CatalogManager(props: Props) {
   const [editing, setEditing] = useState<Entry | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState<CategoryGroupInput | null>(
-    null,
-  );
   const [form, setForm] = useState({
     name: '',
     approved: true,
     code: '',
     mainCode: group?.code ?? '',
+    color: categoryColor(''),
   });
 
   const list = useQuery<Entry[]>({
@@ -115,6 +132,17 @@ export default function CatalogManager(props: Props) {
   });
   const groupsUnavailable = needsGroups && (groups.isPending || groups.isError);
   const entries = list.data ?? [];
+  const selectedGroup = isGroup
+    ? entries.find((row) => row.key === navigation?.groupCode)
+    : undefined;
+  const selectedCategory =
+    isGroup && navigation?.categoryCode === 'none'
+      ? { key: 'none', name: '분류번호 없음' }
+      : group &&
+        entries.find(
+          (row) =>
+            row.key === navigation?.categoryCode && row.mainCode === group.code,
+        );
   const refresh = async () => {
     await Promise.all(
       [
@@ -139,6 +167,7 @@ export default function CatalogManager(props: Props) {
                   code: form.code,
                   label: form.name,
                   ...(group ? { main_code: form.mainCode } : {}),
+                  ...(isGroup ? { color: form.color } : {}),
                 },
           ),
         },
@@ -179,6 +208,7 @@ export default function CatalogManager(props: Props) {
       approved: row?.approved ?? true,
       code: row?.key ?? '',
       mainCode: row?.mainCode ?? group?.code ?? '',
+      color: categoryColor(row?.key ?? '', row?.color),
     });
     save.reset();
     remove.reset();
@@ -199,19 +229,40 @@ export default function CatalogManager(props: Props) {
     );
   });
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const showMissingCategory =
+    isGroup && '분류번호 없음'.includes(search.trim());
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
 
+  if (selectedCategory) {
+    return (
+      <CategoryBookList
+        key={selectedCategory.key}
+        categoryCode={selectedCategory.key}
+        categoryLabel={selectedCategory.name}
+        backLabel={
+          group ? '소분류 목록으로 돌아가기' : '대분류 목록으로 돌아가기'
+        }
+        onBack={() => navigation!.back(group?.code)}
+      />
+    );
+  }
+
   if (isGroup && selectedGroup) {
     return (
       <CatalogManager
         kind="categories"
-        key={selectedGroup.code}
-        group={selectedGroup}
-        onBack={() => setSelectedGroup(null)}
+        key={selectedGroup.key}
+        group={{
+          code: selectedGroup.key,
+          label: selectedGroup.name,
+          color: selectedGroup.color,
+        }}
+        navigation={navigation!}
+        onBack={() => navigation!.back()}
       />
     );
   }
@@ -303,45 +354,90 @@ export default function CatalogManager(props: Props) {
       ) : (
         <>
           <p className="text-amber-800">총 {filtered.length}개</p>
-          <ul className="divide-y divide-amber-900/15 border-y border-amber-900/20">
+          <ul
+            className={
+              !isParish
+                ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                : 'divide-y divide-amber-900/15 border-y border-amber-900/20'
+            }>
             {visible.map((row) => (
               <li
                 key={row.key}
-                className="flex flex-wrap items-center justify-between gap-3 py-4">
-                <div className="min-w-0 flex-1 basis-48">
-                  {isGroup ? (
+                style={
+                  !isParish
+                    ? {
+                        backgroundColor: isGroup
+                          ? categoryColor(row.key, row.color)
+                          : '#D6D5D4',
+                      }
+                    : undefined
+                }
+                className={
+                  !isParish
+                    ? 'catalog-group-card flex min-w-0 flex-col rounded-lg p-5'
+                    : 'flex flex-wrap items-center justify-between gap-3 py-4'
+                }>
+                <div
+                  className={
+                    !isParish ? 'min-w-0 flex-1' : 'min-w-0 flex-1 basis-48'
+                  }>
+                  {!isParish ? (
                     <button
                       type="button"
-                      aria-label={`${row.key} ${row.name} 소분류 보기`}
+                      aria-label={`${row.key} ${row.name} ${isGroup ? '소분류 보기' : '도서 목록 보기'}`}
                       onClick={() =>
-                        setSelectedGroup({ code: row.key, label: row.name })
+                        isGroup
+                          ? navigation!.open(row.key)
+                          : navigation!.open(group!.code, row.key)
                       }
-                      className="flex min-h-11 max-w-full items-center gap-3 text-left text-lg font-medium text-amber-950 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900">
-                      <span className="shrink-0 font-mono">{row.key}</span>
-                      <span className="min-w-0 break-words">{row.name}</span>
-                      <ChevronRight
-                        aria-hidden="true"
-                        size={18}
-                        className="shrink-0"
-                      />
+                      className="flex h-full min-h-20 w-full min-w-0 flex-col items-start gap-2 rounded pb-3 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
+                      <span className="flex w-full items-center justify-between gap-3">
+                        <span className="inline-flex items-center gap-2 text-base font-medium tabular-nums">
+                          <span
+                            aria-hidden="true"
+                            className="catalog-group-swatch h-3 w-3 shrink-0 rounded-full border border-black/10"
+                            style={{
+                              backgroundColor: categoryColor(
+                                group?.code ?? row.key,
+                                group?.color ?? row.color,
+                              ),
+                            }}
+                          />
+                          {row.key}
+                        </span>
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-5 w-5 shrink-0 text-stone-500"
+                        />
+                      </span>
+                      <span className="w-full text-3xl leading-snug font-medium break-words">
+                        {row.name}
+                      </span>
                     </button>
                   ) : (
                     <p className="text-lg font-medium break-words text-amber-950">
-                      {!isParish && (
-                        <span className="mr-3 font-mono">{row.key}</span>
-                      )}
                       {row.name}
                     </p>
                   )}
-                  <p className="mt-1 text-base text-amber-800">
-                    {isParish
-                      ? `${row.approved ? '승인 완료' : '승인 대기'} · 회원 ${row.usageCount}명`
-                      : isGroup
+                  {isParish && (
+                    <p className="mt-1 text-base text-amber-800">
+                      {`${row.approved ? '승인 완료' : '승인 대기'} · 회원 ${row.usageCount}명`}
+                    </p>
+                  )}
+                </div>
+                <div
+                  className={
+                    !isParish
+                      ? 'mt-auto flex items-center gap-1 border-t border-stone-900/10 pt-1'
+                      : 'flex gap-2'
+                  }>
+                  {!isParish && (
+                    <span className="mr-auto pr-2 text-base text-stone-600">
+                      {isGroup
                         ? `소분류 ${row.usageCount}개`
                         : `도서 ${row.usageCount}종`}
-                  </p>
-                </div>
-                <div className="flex gap-2">
+                    </span>
+                  )}
                   {isParish && !row.approved && (
                     <button
                       type="button"
@@ -359,7 +455,7 @@ export default function CatalogManager(props: Props) {
                     aria-label={`${row.name} 수정`}
                     disabled={busy}
                     onClick={() => openForm(row)}
-                    className={iconClass}>
+                    className={!isParish ? glassIconClass : iconClass}>
                     <SquarePen size={18} />
                   </button>
                   <button
@@ -377,14 +473,38 @@ export default function CatalogManager(props: Props) {
                         remove.mutate(row);
                       }
                     }}
-                    className={iconClass}>
+                    className={!isParish ? glassIconClass : iconClass}>
                     <Trash2 size={18} />
                   </button>
                 </div>
               </li>
             ))}
+            {showMissingCategory && (
+              <li
+                className="catalog-group-card flex min-w-0 flex-col rounded-lg p-5"
+                style={{ backgroundColor: '#D6D5D4' }}>
+                <div className="flex min-w-0 flex-1">
+                  <button
+                    type="button"
+                    aria-label="분류번호 없음 도서 목록 보기"
+                    onClick={() => navigation!.open('', 'none')}
+                    className="flex min-h-32 w-full min-w-0 flex-col justify-between gap-3 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
+                    <span className="text-3xl leading-snug font-medium break-words">
+                      분류번호 없음
+                    </span>
+                    <span className="flex items-center justify-between gap-2 border-t border-stone-900/10 pt-3 text-base text-stone-600">
+                      도서 목록 보기
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="h-5 w-5 shrink-0"
+                      />
+                    </span>
+                  </button>
+                </div>
+              </li>
+            )}
           </ul>
-          {!visible.length && (
+          {!visible.length && !showMissingCategory && (
             <p className="py-8 text-center text-amber-800">
               {search.trim()
                 ? '검색 결과가 없습니다.'
@@ -459,7 +579,14 @@ export default function CatalogManager(props: Props) {
                     disabled={!!editing?.usageCount}
                     value={form.code}
                     onChange={(event) =>
-                      setForm({ ...form, code: event.target.value })
+                      setForm({
+                        ...form,
+                        code: event.target.value,
+                        color:
+                          !editing && form.color === categoryColor(form.code)
+                            ? categoryColor(event.target.value)
+                            : form.color,
+                      })
                     }
                     className={inputClass}
                   />
@@ -484,6 +611,26 @@ export default function CatalogManager(props: Props) {
                   className={inputClass}
                 />
               </label>
+              {isGroup && (
+                <div className="space-y-2 text-amber-950">
+                  <label htmlFor="category-group-color" className="block">
+                    색상
+                  </label>
+                  <input
+                    id="category-group-color"
+                    type="color"
+                    aria-label="대분류 색상 선택"
+                    value={categoryColor(form.code, form.color)}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        color: event.target.value.toUpperCase(),
+                      })
+                    }
+                    className="h-14 w-full cursor-pointer rounded border border-amber-900/25 bg-white p-1"
+                  />
+                </div>
+              )}
               {isParish && (
                 <label className="flex items-center gap-3 text-amber-950">
                   <input

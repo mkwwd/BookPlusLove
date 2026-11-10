@@ -156,7 +156,7 @@ test('ISBN actions sit below the scroll body and preserve apply and close handle
   let applied = 0;
   const comparison = Compare({
     fields: ['title'],
-    result: { aladin: null, nationalLibrary: null },
+    result: { nationalLibrary: null },
     currentValues: { title: 'Book' },
     onClose: () => closed++,
     onApply: () => applied++,
@@ -229,7 +229,6 @@ test('ISBN comparison enlarges desktop covers without cropping and keeps compact
     },
   });
   const urls = [
-    'https://example.com/aladin.jpg',
     'https://example.com/library.jpg',
     'https://example.com/current.jpg',
   ];
@@ -237,10 +236,9 @@ test('ISBN comparison enlarges desktop covers without cropping and keeps compact
     Compare({
       fields: ['coverUrl'],
       result: {
-        aladin: { coverUrl: urls[0] },
-        nationalLibrary: { coverUrl: urls[1] },
+        nationalLibrary: { coverUrl: urls[0] },
       },
-      currentValues: { coverUrl: urls[2] },
+      currentValues: { coverUrl: urls[1] },
       onApply() {},
       onClose() {},
     }),
@@ -268,7 +266,7 @@ test('ISBN comparison enlarges desktop covers without cropping and keeps compact
   const choices = tree.find(
     (node) =>
       node.type === 'div' &&
-      nodes(node).filter((child) => child.type === 'img').length === 3 &&
+      nodes(node).filter((child) => child.type === 'img').length === 2 &&
       node.props.className === 'flex gap-2',
   );
   assert.ok(
@@ -290,8 +288,9 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
     status: '대여가능',
     pubDate: null,
   };
-  const { default: Page } = load('src/app/(page)/admin/books/page.tsx', {
+  const { default: Page } = load('src/components/BookManagementList.tsx', {
     react: {
+      useEffect() {},
       useState(initial) {
         const i = cursor++;
         if (!(i in states)) states[i] = initial;
@@ -305,12 +304,21 @@ test('successful edit closes the modal and leaves a dismissible success notice; 
     },
     '@tanstack/react-query': {
       useQueryClient: () => ({
-        invalidateQueries: () => {
+        invalidateQueries: ({ predicate }) => {
+          assert.equal(
+            predicate({ queryKey: ['admin-books', 'all', '010'] }),
+            true,
+          );
+          assert.equal(predicate({ queryKey: ['admin-categories'] }), true);
+          assert.equal(predicate({ queryKey: ['admin-parishes'] }), false);
           invalidations++;
         },
       }),
       useQuery: ({ queryKey }) => ({
-        data: queryKey[0] === 'admin-books' ? [book] : [],
+        data:
+          queryKey[0] === 'admin-books'
+            ? { books: [book], total: 1, page: 1, pageSize: 50 }
+            : [],
       }),
       useMutation: () => ({ mutate() {} }),
     },
@@ -368,7 +376,7 @@ test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds'
     let pending;
     let error;
     const { EditBookForm } = load(
-      'src/app/(page)/admin/books/page.tsx',
+      'src/components/BookManagementList.tsx',
       {
         react: { useState: (initial) => [initial, () => {}] },
         '@tanstack/react-query': {
@@ -406,6 +414,7 @@ test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds'
           isbn: '0-8044-2957-X',
           regNo: 'MB000001',
           status: '대여가능',
+          aladinItemId: 12345,
         },
         categories: [],
         onSaved: () => {
@@ -421,6 +430,11 @@ test('edit form accepts an old ISBN and calls onSaved only after PATCH succeeds'
     assert.ok(pending, 'Save mutation must run for an ISBN-10 book');
     await pending;
     assert.equal(sent.isbn, '0-8044-2957-X');
+    assert.equal(
+      sent.aladinItemId,
+      12345,
+      'existing attribution must survive edits',
+    );
     assert.equal(saved, ok ? 1 : 0);
     assert.equal(Boolean(error), !ok);
   }

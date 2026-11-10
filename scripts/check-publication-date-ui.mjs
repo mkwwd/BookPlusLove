@@ -168,7 +168,7 @@ test('manual entry and edit form use ISO placeholders, initialization and blur',
 
   const edit = runtime();
   const { EditBookForm } = edit.load(
-    'src/app/(page)/admin/books/page.tsx',
+    'src/components/BookManagementList.tsx',
     '\nexport { EditBookForm };',
   );
   const tree = edit.render(EditBookForm, {
@@ -185,7 +185,7 @@ test('manual entry and edit form use ISO placeholders, initialization and blur',
   );
 });
 
-test('ISBN comparison shows both providers and current date in ISO format', () => {
+test('ISBN comparison shows only the library and current date in ISO format', () => {
   const ui = runtime();
   const Compare = ui.load('src/components/IsbnCompareModal.tsx').default;
   const tree = ui.render(Compare, {
@@ -201,9 +201,49 @@ test('ISBN comparison shows both providers and current date in ISO format', () =
   const text = tree
     .map((node) => node.props.children)
     .filter((value) => typeof value === 'string');
-  for (const value of ['1983-05-01', '1996-01-01', '1994-04'])
+  for (const value of ['1996-01-01', '1994-04'])
     assert.ok(text.includes(value), value);
+  assert.ok(!text.includes('1983-05-01'));
+  assert.ok(!text.some((value) => value.includes('알라딘')));
   assert.ok(!text.some((value) => /\d년/.test(value)));
+});
+
+test('library selection applies only available fields and keeps current values by default', () => {
+  const ui = runtime();
+  const Compare = ui.load('src/components/IsbnCompareModal.tsx').default;
+  const applied = [];
+  const props = {
+    fields: ['title', 'author'],
+    result: { nationalLibrary: { title: 'Library title', author: '' } },
+    currentValues: { title: 'Existing title', author: 'Existing author' },
+    onApply: (...args) => applied.push(args),
+    onClose() {},
+  };
+  const apply = () => {
+    const tree = ui.render(Compare, props);
+    nodes(tree[0].props.footer)
+      .find((n) => n.props.children === '가져오기')
+      .props.onClick();
+  };
+  apply();
+  assert.deepEqual(JSON.parse(JSON.stringify(applied.pop())), [{}]);
+  ui.render(Compare, props)
+    .find((n) => n.props.children === '일괄 도서관 선택')
+    .props.onClick();
+  apply();
+  assert.deepEqual(JSON.parse(JSON.stringify(applied.pop())), [
+    { title: 'Library title' },
+  ]);
+  ui.render(Compare, props)
+    .find(
+      (n) =>
+        n.type === 'input' &&
+        n.props.name === 'lookup-title' &&
+        !n.props.checked,
+    )
+    .props.onChange();
+  apply();
+  assert.deepEqual(JSON.parse(JSON.stringify(applied.pop())), [{}]);
 });
 
 test('only the public book detail uses Korean publication dates', () => {

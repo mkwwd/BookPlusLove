@@ -1,3 +1,5 @@
+import { normalizeCategoryColor } from '@/lib/categoryColor';
+
 export interface ParishInput {
   parishname: string;
   is_verified: boolean;
@@ -6,6 +8,7 @@ export interface ParishInput {
 export interface CategoryGroupInput {
   code: string;
   label: string;
+  color?: string;
 }
 
 export interface CategoryInput extends CategoryGroupInput {
@@ -39,6 +42,14 @@ export function parseCategoryGroup(body: unknown): Parsed<CategoryGroupInput> {
   if (!value.label || value.label.length > 100) {
     return { error: '분류명을 1~100자로 입력해주세요.' };
   }
+  if (input?.color !== undefined) {
+    const color = normalizeCategoryColor(input.color);
+    if (!color)
+      return {
+        error: '색상은 #RRGGBB 형식의 불투명한 HEX 값으로 입력해주세요.',
+      };
+    return { value: { ...value, color } };
+  }
   return { value };
 }
 
@@ -50,5 +61,6 @@ export function parseCategory(body: unknown): Parsed<CategoryInput> {
     typeof input?.main_code === 'string' ? input.main_code.trim() : '';
   if (!/^\d{3}$/.test(mainCode))
     return { error: '대분류코드는 세 자리 숫자로 입력해주세요.' };
-  return { value: { ...parsed.value!, main_code: mainCode } };
+  const { code, label } = parsed.value!;
+  return { value: { code, label, main_code: mainCode } };
 }

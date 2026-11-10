@@ -104,42 +104,68 @@ test('Korean detail display pads known components and does not hide uncertain va
     assert.equal(formatKoreanPublicationDate(input), expected);
 });
 
-test('ISBN providers return canonical dates and fall back from invalid publication dates', async () => {
+test('ISBN lookup only calls the national library and falls back from invalid dates', async () => {
+  const requests = [];
   const { GET } = load(
     'src/app/api/books/isbn/route.ts',
     {},
     {
       process: { env: { ALADIN_TTB_KEY: 'test', NL_SEOJI_API_KEY: 'test' } },
-      fetch: async (url) =>
-        url.hostname === 'www.aladin.co.kr'
-          ? {
-              ok: true,
-              text: async () =>
-                JSON.stringify({
-                  item: [{ title: 'Book', pubDate: '2000-08-08' }],
-                }),
-            }
-          : {
-              ok: true,
-              json: async () => ({
-                docs: [
-                  {
-                    TITLE: 'Book',
-                    PUBLISH_PREDATE: '20000230',
-                    REAL_PUBLISH_DATE: '200008',
-                  },
-                ],
-              }),
-            },
+      fetch: async (url) => {
+        requests.push(url);
+        return {
+          ok: true,
+          json: async () => ({
+            docs: [
+              {
+                TITLE: 'Book',
+                PUBLISH_PREDATE: '20000230',
+                REAL_PUBLISH_DATE: '200008',
+              },
+            ],
+          }),
+        };
+      },
     },
   );
   const response = await GET({
-    url: 'https://example.test/api/books/isbn?isbn=9781234567897',
+    url: 'https://example.test/api/books/isbn?isbn=0-306-40615-2',
   });
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.aladin.pubDate, '2000-08-08');
+  assert.deepEqual(
+    requests.map((url) => url.hostname),
+    ['www.nl.go.kr'],
+  );
+  assert.equal(requests[0].searchParams.get('isbn'), '9780306406157');
+  assert.equal('aladin' in data, false);
   assert.equal(data.nationalLibrary.pubDate, '2000-08');
+});
+
+test('ISBN lookup requires the library key and handles missing input or results', async () => {
+  for (const [isbn, env, expected] of [
+    ['', {}, 400],
+    ['9780306406157', { ALADIN_TTB_KEY: 'retired' }, 500],
+    ['9780306406157', { NL_SEOJI_API_KEY: 'test' }, 404],
+  ]) {
+    let calls = 0;
+    const { GET } = load(
+      'src/app/api/books/isbn/route.ts',
+      {},
+      {
+        process: { env },
+        fetch: async () => {
+          calls++;
+          return { ok: true, json: async () => ({ docs: [] }) };
+        },
+      },
+    );
+    const response = await GET({
+      url: `https://example.test/api/books/isbn?isbn=${isbn}`,
+    });
+    assert.equal(response.status, expected);
+    assert.equal(calls, expected === 404 ? 1 : 0);
+  }
 });
 
 function routeFixture(existingDate = null) {

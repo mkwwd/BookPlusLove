@@ -25,11 +25,18 @@ function loadComponent(
       useEffect: () => {},
     },
     '@tanstack/react-query': {
-      useQuery: () => ({ data: [] }),
+      useQuery: ({ queryKey }) => ({
+        data:
+          queryKey[0] === 'admin-books'
+            ? { books: [], total: 0, page: 1, pageSize: 50 }
+            : [],
+      }),
       useQueryClient: () => ({}),
       useMutation: () => ({}),
     },
     'next/link': { default: 'a' },
+    '@/components/CategoryBookList': { default: 'CategoryBookList' },
+    '@/components/BookManagementList': { default: 'BookManagementList' },
     'next/navigation': { usePathname: () => pathname },
     '@/hooks/useHorizontalWheel': {
       useHorizontalWheel: () => ({ current: null }),
@@ -46,12 +53,31 @@ function loadComponent(
         jsx: ts.JsxEmit.ReactJSX,
       },
     }).outputText,
-    { exports, require: (name) => dependencies[name] ?? {}, ...globals },
+    {
+      exports,
+      require: (name) =>
+        dependencies[name] ??
+        (name.startsWith('@/lib/')
+          ? loadComponent(`src/${name.slice(2)}.ts`)
+          : {}),
+      ...globals,
+    },
   );
   return exports;
 }
 
 function catalogHarness(props, entries, groupEntries = []) {
+  const navigation = {
+    groupCode: props.group?.code ?? '',
+    categoryCode: '',
+    open(groupCode, categoryCode = '') {
+      Object.assign(navigation, { groupCode, categoryCode });
+    },
+    back(groupCode = '') {
+      Object.assign(navigation, { groupCode, categoryCode: '' });
+    },
+  };
+  props = { ...props, navigation };
   const states = [];
   let cursor = 0;
   const mutations = [];
@@ -115,6 +141,84 @@ const textContent = (node) =>
       ? node.map(textContent).join('')
       : textContent(node?.props?.children ?? '');
 
+function navigationHarness(initial = '/admin/categories') {
+  const stack = [{ url: initial, state: null }];
+  let index = 0;
+  const history = {
+    get state() {
+      return stack[index].state;
+    },
+    pushState(state, unused, url) {
+      stack.splice(++index);
+      stack.push({ state, url });
+    },
+    replaceState(state, unused, url) {
+      stack[index] = { state, url };
+    },
+    back() {
+      index = Math.max(0, index - 1);
+    },
+    forward() {
+      index = Math.min(stack.length - 1, index + 1);
+    },
+  };
+  const window = {
+    history,
+    get location() {
+      return new URL(stack[index].url, 'http://localhost');
+    },
+  };
+  const Page = loadComponent('src/components/CategoryCatalog.tsx', {
+    overrides: {
+      'next/navigation': {
+        usePathname: () => window.location.pathname,
+        useSearchParams: () => new URLSearchParams(window.location.search),
+      },
+      '@/components/CatalogManager': { default: 'CatalogManager' },
+    },
+    globals: { window, URLSearchParams },
+  }).default;
+  return { history, stack, render: Page, url: () => stack[index].url };
+}
+
+test('category URL history restores the child list on browser back and books on forward', () => {
+  const harness = navigationHarness();
+  harness.render().props.navigation.open('000');
+  assert.equal(harness.url(), '/admin/categories?group=000');
+  harness.render().props.navigation.open('000', '010');
+  assert.equal(harness.url(), '/admin/categories?group=000&category=010');
+  assert.equal(harness.render().props.navigation.categoryCode, '010');
+  harness.history.back();
+  assert.equal(harness.render().props.navigation.groupCode, '000');
+  assert.equal(harness.render().props.navigation.categoryCode, '');
+  harness.history.forward();
+  assert.equal(harness.render().props.navigation.categoryCode, '010');
+  harness.render().props.navigation.back('000');
+  assert.equal(harness.url(), '/admin/categories?group=000');
+  harness.render().props.navigation.back();
+  assert.equal(harness.url(), '/admin/categories');
+  assert.equal(
+    harness.stack.length,
+    3,
+    'in-app back must not add duplicate history entries',
+  );
+});
+
+test('category deep links restore selection and return safely without previous catalog history', () => {
+  const harness = navigationHarness('/admin/categories?group=100&category=110');
+  assert.equal(harness.render().props.navigation.categoryCode, '110');
+  harness.render().props.navigation.back('100');
+  assert.equal(harness.url(), '/admin/categories?group=100');
+  assert.equal(harness.stack.length, 1);
+  harness.render().props.navigation.back();
+  harness.render().props.navigation.open('', 'none');
+  assert.equal(harness.url(), '/admin/categories?category=none');
+  harness.history.back();
+  assert.equal(harness.render().props.navigation.categoryCode, '');
+  harness.history.forward();
+  assert.equal(harness.render().props.navigation.categoryCode, 'none');
+});
+
 test('groups open their own child list and can return to the group list', () => {
   const harness = catalogHarness({ kind: 'category-groups' }, [
     { key: '000', name: '성서', usageCount: 2 },
@@ -130,6 +234,39 @@ test('groups open their own child list and can return to the group list', () => 
   assert.equal(tree.props.group.code, '100');
   tree.props.onBack();
   assert.ok(textContent(harness.render()).includes('대분류 추가'));
+});
+
+test('missing-category entry opens books inside the catalog and preserves search on return', () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, []);
+  let tree = harness.render();
+  const isMissingButton = (node) =>
+    node.type === 'button' &&
+    node.props['aria-label'] === '분류번호 없음 도서 목록 보기';
+  assert.ok(nodes(tree).some(isMissingButton));
+  assert.ok(!textContent(tree).includes('등록된 대분류가 없습니다.'));
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '분류코드 검색')
+    .props.onChange({ target: { value: '성서' } });
+  tree = harness.render();
+  assert.ok(!nodes(tree).some(isMissingButton));
+  nodes(tree)
+    .find((node) => node.props['aria-label'] === '분류코드 검색')
+    .props.onChange({ target: { value: '없음' } });
+  nodes(harness.render()).find(isMissingButton).props.onClick();
+  tree = harness.render();
+  const list = nodes(tree).find((node) => node.type === 'CategoryBookList');
+  assert.equal(list.props.categoryCode, 'none');
+  assert.equal(list.props.categoryLabel, '분류번호 없음');
+  assert.equal(list.props.backLabel, '대분류 목록으로 돌아가기');
+  list.props.onBack();
+  assert.equal(
+    nodes(harness.render()).find(
+      (node) => node.props['aria-label'] === '분류코드 검색',
+    ).props.value,
+    '없음',
+  );
+  const parish = catalogHarness({ kind: 'parishes' }, []).render();
+  assert.ok(!nodes(parish).some(isMissingButton));
 });
 
 test('child list is scoped and creation uses only its selected parent code', async () => {
@@ -198,6 +335,181 @@ test('group editing locks a used code but leaves its label editable', () => {
     true,
   );
   assert.ok(!inputs.find((node) => node.props.value === '성서').props.disabled);
+});
+
+test('major categories are colored cards with separate controls and editable colors', async () => {
+  const harness = catalogHarness({ kind: 'category-groups' }, [
+    { key: '000', name: '성서', usageCount: 2, color: '#FFEA5E' },
+    { key: '800', name: '문학', usageCount: 0, color: '#157300' },
+  ]);
+  let tree = harness.render();
+  const list = nodes(tree).find((n) => n.type === 'ul');
+  assert.ok(list.props.className.includes('grid'));
+  const cards = nodes(list).filter((n) => n.type === 'li');
+  assert.equal(cards[0].props.style.backgroundColor, '#FFEA5E');
+  assert.equal(cards[1].props.style.backgroundColor, '#157300');
+  assert.ok(
+    cards.every((card) => card.props.className.includes('catalog-group-card')),
+  );
+  assert.ok(
+    !fs
+      .readFileSync('src/components/CatalogManager.tsx', 'utf8')
+      .includes('BookOpen'),
+  );
+  const heading = nodes(cards[0]).find(
+    (node) => node.props.children === '성서',
+  );
+  assert.ok(heading.props.className.includes('text-3xl'));
+  assert.ok(!heading.props.className.includes('text-white'));
+  assert.equal(
+    nodes(cards[0]).find((node) =>
+      node.props.className?.includes('catalog-group-swatch'),
+    )?.props.style.backgroundColor,
+    '#FFEA5E',
+  );
+  for (const button of nodes(list).filter((n) => n.type === 'button'))
+    assert.equal(
+      nodes(button.props.children).some((n) => n.type === 'button'),
+      false,
+    );
+  nodes(tree)
+    .find((n) => n.props['aria-label'] === '성서 수정')
+    .props.onClick();
+  tree = harness.render();
+  const picker = nodes(tree).find(
+    (n) => n.type === 'input' && n.props.type === 'color',
+  );
+  assert.equal(picker.props.id, 'category-group-color');
+  assert.ok(
+    !nodes(tree).some((n) => n.props['aria-label'] === '대분류 색상 HEX'),
+  );
+  assert.equal(picker.props.value, '#FFEA5E');
+  picker.props.onChange({ target: { value: '#123456' } });
+  harness.render();
+  await harness.mutations[0].mutationFn();
+  assert.deepEqual(JSON.parse(harness.requests[0].body), {
+    code: '000',
+    label: '성서',
+    color: '#123456',
+  });
+});
+
+test('subcategory cards use neutral backgrounds, parent-color swatches and separate controls', () => {
+  const harness = catalogHarness(
+    {
+      kind: 'categories',
+      group: { code: '000', label: '성서', color: '#123456' },
+      onBack() {},
+    },
+    [
+      { key: '010', name: '성서일반', mainCode: '000', usageCount: 2 },
+      { key: '020', name: '성서묵상', mainCode: '000', usageCount: 0 },
+    ],
+  );
+  const tree = harness.render();
+  const list = nodes(tree).find((node) => node.type === 'ul');
+  assert.ok(list.props.className.includes('grid'));
+  const cards = nodes(list).filter((node) => node.type === 'li');
+  assert.equal(cards.length, 2);
+  for (const card of cards) {
+    assert.ok(card.props.className.includes('catalog-group-card'));
+    assert.equal(card.props.style.backgroundColor, '#D6D5D4');
+    assert.equal(
+      nodes(card).find((node) =>
+        node.props.className?.includes('catalog-group-swatch'),
+      ).props.style.backgroundColor,
+      '#123456',
+    );
+    const open = nodes(card).find(
+      (node) =>
+        node.type === 'button' &&
+        node.props['aria-label']?.endsWith('도서 목록 보기'),
+    );
+    assert.ok(open);
+    assert.ok(
+      !nodes(open.props.children).some((node) => node.type === 'button'),
+    );
+    assert.ok(nodes(card).some((node) => node.props.title === '수정'));
+  }
+  assert.ok(textContent(cards[0]).includes('도서 2종'));
+  assert.ok(textContent(cards[1]).includes('도서 0종'));
+  assert.equal(
+    nodes(tree).find((node) => node.props['aria-label'] === '성서일반 삭제')
+      .props.disabled,
+    true,
+  );
+  assert.equal(
+    nodes(tree).find((node) => node.props['aria-label'] === '성서묵상 삭제')
+      .props.disabled,
+    false,
+  );
+  const parish = catalogHarness({ kind: 'parishes' }, [
+    { key: '1', name: '본당', usageCount: 1, approved: true },
+  ]).render();
+  assert.ok(
+    !nodes(parish)
+      .find((node) => node.type === 'ul')
+      .props.className.includes('grid'),
+  );
+});
+
+test('subcategory books open inside the catalog and return to the same child list', () => {
+  const harness = catalogHarness(
+    { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
+    [
+      { key: '010', name: '성서일반', mainCode: '000', usageCount: 2 },
+      { key: '020', name: '성서묵상', mainCode: '000', usageCount: 0 },
+    ],
+  );
+  const tree = harness.render();
+  for (const code of ['010', '020']) {
+    const button = nodes(harness.render()).find(
+      (node) =>
+        node.type === 'button' && node.props['aria-label']?.startsWith(code),
+    );
+    assert.ok(button);
+    assert.ok(textContent(button).includes(code));
+    button.props.onClick();
+    const detail = harness.render();
+    const list = nodes(detail).find((node) => node.type === 'CategoryBookList');
+    assert.equal(list.props.categoryCode, code);
+    assert.equal(list.props.backLabel, '소분류 목록으로 돌아가기');
+    assert.ok(
+      !nodes(detail).some((node) =>
+        node.props.href?.startsWith('/admin/books'),
+      ),
+    );
+    list.props.onBack();
+    assert.ok(textContent(harness.render()).includes('000 성서'));
+  }
+  assert.equal(
+    nodes(tree).filter((node) => node.props.title === '수정').length,
+    2,
+  );
+});
+
+test('dedicated category screen owns its heading and return action without global tabs', () => {
+  const Page = loadComponent('src/components/CategoryBookList.tsx').default;
+  for (const categoryCode of ['010', 'none']) {
+    let returned = false;
+    const tree = Page({
+      categoryCode,
+      categoryLabel: '분류 이름',
+      backLabel: '목록으로 돌아가기',
+      onBack() {
+        returned = true;
+      },
+    });
+    assert.ok(textContent(tree).includes('분류 이름 도서 목록'));
+    assert.ok(!textContent(tree).includes('추천 도서'));
+    const list = nodes(tree).find((node) => node.type === 'BookManagementList');
+    assert.equal(list.props.categoryCode, categoryCode);
+    assert.equal(list.props.renderHeader, undefined);
+    nodes(tree)
+      .find((node) => node.type === 'button')
+      .props.onClick();
+    assert.equal(returned, true);
+  }
 });
 
 test('a used subcategory can move to another parent without changing its code', async () => {
@@ -298,9 +610,14 @@ for (const tab of ['admin', 'regular']) {
 
 for (const tab of ['all', 'recommended']) {
   test(`book ${tab} tab retains the category management link`, () => {
-    const page = loadComponent(`${adminRoot}/books/page.tsx`, {
+    const screen = loadComponent('src/components/AdminBookList.tsx', {
       tab,
     }).default();
+    const page = screen.props.renderHeader({
+      activeTab: tab,
+      categories: [],
+      onTabChange() {},
+    });
     assert.equal(
       nodes(page).filter(
         (node) => node.type === 'a' && node.props.href === '/admin/categories',

@@ -1,6 +1,18 @@
 import { supabaseServer } from './server';
 
 export function catalogError(error: { code?: string; message: string }) {
+  if (
+    ['42703', 'PGRST204'].includes(error.code ?? '') &&
+    error.message.includes('color') &&
+    error.message.includes('book_category_groups')
+  )
+    return Response.json(
+      {
+        error:
+          '대분류 색상 저장을 위해 book-category-group-colors.sql을 먼저 실행해주세요.',
+      },
+      { status: 503 },
+    );
   if (error.code === '23505')
     return Response.json(
       { error: '동일한 이름 또는 코드가 이미 등록되어 있습니다.' },
