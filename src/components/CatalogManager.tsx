@@ -356,7 +356,7 @@ export default function CatalogManager(props: Props) {
           <p className="text-amber-800">총 {filtered.length}개</p>
           <ul
             className={
-              isGroup
+              !isParish
                 ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                 : 'divide-y divide-amber-900/15 border-y border-amber-900/20'
             }>
@@ -364,26 +364,32 @@ export default function CatalogManager(props: Props) {
               <li
                 key={row.key}
                 style={
-                  isGroup
+                  !isParish
                     ? {
-                        backgroundColor: categoryColor(row.key, row.color),
+                        backgroundColor: isGroup
+                          ? categoryColor(row.key, row.color)
+                          : '#D6D5D4',
                       }
                     : undefined
                 }
                 className={
-                  isGroup
+                  !isParish
                     ? 'catalog-group-card flex min-w-0 flex-col rounded-lg p-5'
                     : 'flex flex-wrap items-center justify-between gap-3 py-4'
                 }>
                 <div
                   className={
-                    isGroup ? 'min-w-0 flex-1' : 'min-w-0 flex-1 basis-48'
+                    !isParish ? 'min-w-0 flex-1' : 'min-w-0 flex-1 basis-48'
                   }>
-                  {isGroup ? (
+                  {!isParish ? (
                     <button
                       type="button"
-                      aria-label={`${row.key} ${row.name} 소분류 보기`}
-                      onClick={() => navigation!.open(row.key)}
+                      aria-label={`${row.key} ${row.name} ${isGroup ? '소분류 보기' : '도서 목록 보기'}`}
+                      onClick={() =>
+                        isGroup
+                          ? navigation!.open(row.key)
+                          : navigation!.open(group!.code, row.key)
+                      }
                       className="flex h-full min-h-20 w-full min-w-0 flex-col items-start gap-2 rounded pb-3 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
                       <span className="flex w-full items-center justify-between gap-3">
                         <span className="inline-flex items-center gap-2 text-base font-medium tabular-nums">
@@ -392,8 +398,8 @@ export default function CatalogManager(props: Props) {
                             className="catalog-group-swatch h-3 w-3 shrink-0 rounded-full border border-black/10"
                             style={{
                               backgroundColor: categoryColor(
-                                row.key,
-                                row.color,
+                                group?.code ?? row.key,
+                                group?.color ?? row.color,
                               ),
                             }}
                           />
@@ -406,24 +412,6 @@ export default function CatalogManager(props: Props) {
                       </span>
                       <span className="w-full text-3xl leading-snug font-medium break-words">
                         {row.name}
-                      </span>
-                    </button>
-                  ) : group ? (
-                    <button
-                      type="button"
-                      onClick={() => navigation!.open(group.code, row.key)}
-                      aria-label={`${row.key} ${row.name} 도서 목록 보기`}
-                      className="block w-full rounded py-1 text-left text-amber-950 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-900">
-                      <span className="block text-lg font-medium break-words">
-                        <span className="mr-3 font-mono">{row.key}</span>
-                        {row.name}
-                      </span>
-                      <span className="mt-1 flex items-center gap-2 text-base text-amber-800">
-                        도서 {row.usageCount}종
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="h-4 w-4 shrink-0"
-                        />
                       </span>
                     </button>
                   ) : (
@@ -439,13 +427,15 @@ export default function CatalogManager(props: Props) {
                 </div>
                 <div
                   className={
-                    isGroup
+                    !isParish
                       ? 'mt-auto flex items-center gap-1 border-t border-stone-900/10 pt-1'
                       : 'flex gap-2'
                   }>
-                  {isGroup && (
+                  {!isParish && (
                     <span className="mr-auto pr-2 text-base text-stone-600">
-                      소분류 {row.usageCount}개
+                      {isGroup
+                        ? `소분류 ${row.usageCount}개`
+                        : `도서 ${row.usageCount}종`}
                     </span>
                   )}
                   {isParish && !row.approved && (
@@ -465,7 +455,7 @@ export default function CatalogManager(props: Props) {
                     aria-label={`${row.name} 수정`}
                     disabled={busy}
                     onClick={() => openForm(row)}
-                    className={isGroup ? glassIconClass : iconClass}>
+                    className={!isParish ? glassIconClass : iconClass}>
                     <SquarePen size={18} />
                   </button>
                   <button
@@ -483,7 +473,7 @@ export default function CatalogManager(props: Props) {
                         remove.mutate(row);
                       }
                     }}
-                    className={isGroup ? glassIconClass : iconClass}>
+                    className={!isParish ? glassIconClass : iconClass}>
                     <Trash2 size={18} />
                   </button>
                 </div>

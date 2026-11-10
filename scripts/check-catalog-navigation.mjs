@@ -394,6 +394,65 @@ test('major categories are colored cards with separate controls and editable col
   });
 });
 
+test('subcategory cards use neutral backgrounds, parent-color swatches and separate controls', () => {
+  const harness = catalogHarness(
+    {
+      kind: 'categories',
+      group: { code: '000', label: '성서', color: '#123456' },
+      onBack() {},
+    },
+    [
+      { key: '010', name: '성서일반', mainCode: '000', usageCount: 2 },
+      { key: '020', name: '성서묵상', mainCode: '000', usageCount: 0 },
+    ],
+  );
+  const tree = harness.render();
+  const list = nodes(tree).find((node) => node.type === 'ul');
+  assert.ok(list.props.className.includes('grid'));
+  const cards = nodes(list).filter((node) => node.type === 'li');
+  assert.equal(cards.length, 2);
+  for (const card of cards) {
+    assert.ok(card.props.className.includes('catalog-group-card'));
+    assert.equal(card.props.style.backgroundColor, '#D6D5D4');
+    assert.equal(
+      nodes(card).find((node) =>
+        node.props.className?.includes('catalog-group-swatch'),
+      ).props.style.backgroundColor,
+      '#123456',
+    );
+    const open = nodes(card).find(
+      (node) =>
+        node.type === 'button' &&
+        node.props['aria-label']?.endsWith('도서 목록 보기'),
+    );
+    assert.ok(open);
+    assert.ok(
+      !nodes(open.props.children).some((node) => node.type === 'button'),
+    );
+    assert.ok(nodes(card).some((node) => node.props.title === '수정'));
+  }
+  assert.ok(textContent(cards[0]).includes('도서 2종'));
+  assert.ok(textContent(cards[1]).includes('도서 0종'));
+  assert.equal(
+    nodes(tree).find((node) => node.props['aria-label'] === '성서일반 삭제')
+      .props.disabled,
+    true,
+  );
+  assert.equal(
+    nodes(tree).find((node) => node.props['aria-label'] === '성서묵상 삭제')
+      .props.disabled,
+    false,
+  );
+  const parish = catalogHarness({ kind: 'parishes' }, [
+    { key: '1', name: '본당', usageCount: 1, approved: true },
+  ]).render();
+  assert.ok(
+    !nodes(parish)
+      .find((node) => node.type === 'ul')
+      .props.className.includes('grid'),
+  );
+});
+
 test('subcategory books open inside the catalog and return to the same child list', () => {
   const harness = catalogHarness(
     { kind: 'categories', group: { code: '000', label: '성서' }, onBack() {} },
@@ -409,7 +468,7 @@ test('subcategory books open inside the catalog and return to the same child lis
         node.type === 'button' && node.props['aria-label']?.startsWith(code),
     );
     assert.ok(button);
-    assert.ok(nodes(button).some((node) => node.props.children === code));
+    assert.ok(textContent(button).includes(code));
     button.props.onClick();
     const detail = harness.render();
     const list = nodes(detail).find((node) => node.type === 'CategoryBookList');
